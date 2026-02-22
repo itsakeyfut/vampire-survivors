@@ -5,3 +5,6 @@ Cargo.lock
 
 save/
 TODO.md
+
+## Ignore other game project for reference
+docs/suika-game/
