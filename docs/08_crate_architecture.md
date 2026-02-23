@@ -2,11 +2,12 @@
 
 ## 1. クレート構成概要
 
-4クレート構成を採用。責務ごとにクレートを分離し、将来的な再利用性と並列コンパイルの恩恵を得る。
+5クレート構成を採用。責務ごとにクレートを分離し、将来的な再利用性と並列コンパイルの恩恵を得る。
 
 ```
 vampire-survivors (workspace)
 ├── app/core/           → クレート名: vs-core
+├── app/ui/             → クレート名: vs-ui
 ├── app/audio/          → クレート名: vs-audio
 ├── app/assets/         → クレート名: vs-assets
 └── app/vampire-survivors/ → クレート名: vs（バイナリ）
@@ -44,7 +45,6 @@ pub mod constants;
 pub mod types;
 pub mod spatial_grid;
 pub mod systems;
-pub mod ui;
 
 use bevy::prelude::*;
 
@@ -71,9 +71,7 @@ impl Plugin for GameCorePlugin {
             .add_event::<events::GameOverEvent>()
             .add_event::<events::VictoryEvent>()
             // システム登録（詳細はsystems/mod.rsを参照）
-            .add_plugins(systems::GameSystemsPlugin)
-            // UIプラグイン
-            .add_plugins(ui::GameUIPlugin);
+            .add_plugins(systems::GameSystemsPlugin);
     }
 }
 ```
@@ -106,41 +104,92 @@ vs-core
 │
 ├── spatial_grid.rs   空間パーティショニング
 │
-├── systems/          ゲームシステム群
-│   ├── mod.rs        GameSystemsPlugin（全システムの登録）
-│   ├── player.rs     移動・入力処理
-│   ├── enemy.rs      スポーン・AI・移動
-│   ├── boss.rs       ボスAI・フェーズ
-│   ├── weapons.rs    武器クールダウン・発射
-│   ├── projectile.rs 投射体移動・寿命
-│   ├── collision.rs  衝突判定
-│   ├── damage.rs     ダメージ適用
-│   ├── xp.rs         XP・吸収
-│   ├── level_up.rs   レベルアップ・選択肢
-│   ├── passive.rs    パッシブ効果計算
-│   ├── evolution.rs  武器進化
-│   ├── treasure.rs   宝箱
-│   ├── meta.rs       メタ進行
-│   ├── gold.rs       ゴールド
-│   ├── camera.rs     カメラ追従
-│   ├── map.rs        背景マップ
-│   └── effects.rs    ビジュアルエフェクト
-│
-└── ui/               UI実装
-    ├── mod.rs        GameUIPlugin
-    ├── hud.rs        ゲームプレイHUD
-    ├── title.rs      タイトル画面
-    ├── character_select.rs キャラクター選択
-    ├── level_up.rs   レベルアップカード
-    ├── pause.rs      ポーズ
-    ├── game_over.rs  ゲームオーバー
-    ├── victory.rs    勝利
-    └── meta_shop.rs  ゴールドショップ
+└── systems/          ゲームシステム群
+    ├── mod.rs        GameSystemsPlugin（全システムの登録）
+    ├── player.rs     移動・入力処理
+    ├── enemy.rs      スポーン・AI・移動
+    ├── boss.rs       ボスAI・フェーズ
+    ├── weapons.rs    武器クールダウン・発射
+    ├── projectile.rs 投射体移動・寿命
+    ├── collision.rs  衝突判定
+    ├── damage.rs     ダメージ適用
+    ├── xp.rs         XP・吸収
+    ├── level_up.rs   レベルアップ・選択肢
+    ├── passive.rs    パッシブ効果計算
+    ├── evolution.rs  武器進化
+    ├── treasure.rs   宝箱
+    ├── meta.rs       メタ進行
+    ├── gold.rs       ゴールド
+    ├── map.rs        背景マップ
+    └── effects.rs    ビジュアルエフェクト
 ```
 
 ---
 
-### 2.2 vs-audio（オーディオ管理）
+### 2.2 vs-ui（UI・カメラ管理）
+
+**責務**: 直交投影カメラのセットアップと、全UI画面・HUDの実装。`vs-core` のコンポーネント・状態に依存するため、独立クレートとして分離。
+
+```toml
+# app/ui/Cargo.toml
+[package]
+name = "vs-ui"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { workspace = true }
+vs-core = { path = "../core" }
+```
+
+**公開API:**
+
+```rust
+// app/ui/src/lib.rs
+use bevy::prelude::*;
+use vs_core::states::AppState;
+
+pub mod camera;
+
+pub struct GameUIPlugin;
+
+impl Plugin for GameUIPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            // カメラはStartupで常駐（タイトル・メニューでも使用）
+            .add_systems(Startup, camera::setup_camera)
+            // プレイヤー追従はPlaying状態でのみ実行
+            .add_systems(
+                Update,
+                camera::camera_follow_player.run_if(in_state(AppState::Playing)),
+            );
+    }
+}
+```
+
+**内部モジュール構成:**
+
+```
+vs-ui
+├── camera.rs           カメラセットアップ・プレイヤー追従
+├── hud.rs              ゲームプレイHUD（HP・XP・タイマー・武器アイコン）
+├── title.rs            タイトル画面
+├── character_select.rs キャラクター選択画面
+├── level_up.rs         レベルアップ選択UI（カード形式3択）
+├── pause.rs            ポーズ画面
+├── game_over.rs        ゲームオーバー画面
+├── victory.rs          勝利画面
+└── meta_shop.rs        ゴールドショップUI
+```
+
+**vs-coreとの連携:**
+- `vs_core::components::Player` を参照してカメラ追従を実装
+- `vs_core::states::AppState` を参照してUI画面を切り替え
+- `vs_core::resources::GameData` を参照してHUDを更新
+
+---
+
+### 2.3 vs-audio（オーディオ管理）
 
 **責務**: BGMのシーン別切り替えと、ゲームイベントに応じたSFX再生を管理する。
 
@@ -183,7 +232,7 @@ impl Plugin for GameAudioPlugin {
 
 ---
 
-### 2.3 vs-assets（アセット管理）
+### 2.4 vs-assets（アセット管理）
 
 **責務**: ゲームで使用するアセット（スプライト・フォント）のロードと管理。オーディオアセットは vs-audio が直接ロードするため、ここではスプライトとフォントのみ扱う。
 
@@ -247,7 +296,7 @@ pub struct FontAssets {
 
 ---
 
-### 2.4 vs（メインバイナリ）
+### 2.5 vs（メインバイナリ）
 
 **責務**: Bevyアプリの初期化と全プラグインの統合のみ。ゲームロジックはここに書かない。
 
@@ -264,8 +313,9 @@ path = "src/main.rs"
 
 [dependencies]
 bevy = { workspace = true }
-vs-core  = { path = "../core" }
-vs-audio = { path = "../audio" }
+vs-core   = { path = "../core" }
+vs-ui     = { path = "../ui" }
+vs-audio  = { path = "../audio" }
 vs-assets = { path = "../assets" }
 ```
 
@@ -275,13 +325,14 @@ use bevy::prelude::*;
 use vs_assets::GameAssetsPlugin;
 use vs_audio::GameAudioPlugin;
 use vs_core::GameCorePlugin;
+use vs_ui::GameUIPlugin;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Vampire Survivors Clone".into(),
-                resolution: (1280.0, 720.0).into(),
+                resolution: (1280, 720).into(),
                 resizable: false,
                 ..default()
             }),
@@ -289,8 +340,10 @@ fn main() {
         }))
         // アセットを最初にロード（他プラグインが参照するため）
         .add_plugins(GameAssetsPlugin)
-        // ゲームコアロジック
+        // コアゲームロジック（ECS、システム）
         .add_plugins(GameCorePlugin)
+        // UI・カメラ（GameCorePluginのAppState + Playerに依存）
+        .add_plugins(GameUIPlugin)
         // オーディオ（coreのイベントを受け取るため後で追加）
         .add_plugins(GameAudioPlugin)
         .run();
@@ -301,7 +354,30 @@ fn main() {
 
 ## 3. クレート間のインポート例
 
-### 3.1 vs-audio から vs-core を参照
+### 3.1 vs-ui から vs-core を参照
+
+```rust
+// app/ui/src/camera.rs
+use bevy::prelude::*;
+use vs_core::components::Player;
+use vs_core::constants::CAMERA_LERP_SPEED;
+
+pub fn camera_follow_player(
+    time: Res<Time>,
+    player_q: Query<&Transform, With<Player>>,
+    mut camera_q: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
+) {
+    let Ok(player_tf) = player_q.single() else { return; };
+    let Ok(mut camera_tf) = camera_q.single_mut() else { return; };
+    let target = player_tf.translation.truncate();
+    let current = camera_tf.translation.truncate();
+    let lerped = current.lerp(target, CAMERA_LERP_SPEED * time.delta_secs());
+    camera_tf.translation.x = lerped.x;
+    camera_tf.translation.y = lerped.y;
+}
+```
+
+### 3.2 vs-audio から vs-core を参照
 
 ```rust
 // app/audio/src/bgm.rs
@@ -320,7 +396,7 @@ pub fn manage_bgm(
 }
 ```
 
-### 3.2 vs-audio でイベントを受け取る
+### 3.3 vs-audio でイベントを受け取る
 
 ```rust
 // app/audio/src/sfx.rs
@@ -346,6 +422,7 @@ pub fn play_sfx_on_events(
 resolver = "2"
 members = [
     "app/core",
+    "app/ui",
     "app/audio",
     "app/assets",
     "app/vampire-survivors",
@@ -379,13 +456,16 @@ codegen-units = 1
 - `vs-audio` が `vs-core` の型に依存する場合は `pub use vs_core::types::*;` で参照
 
 ### 5.2 循環依存の防止
-- `vs-core` → 他のゲームクレートへの依存は禁止
-- 依存方向: `vs` → `vs-core`, `vs-audio`, `vs-assets`
-- `vs-audio` → `vs-core`（許可）
-- `vs-assets` → （他ゲームクレートへの依存なし）
+- `vs-core` → 他のゲームクレートへの依存は禁止（最も基本的なクレート）
+- 依存方向:
+  - `vs` → `vs-core`, `vs-ui`, `vs-audio`, `vs-assets`
+  - `vs-ui` → `vs-core`（Player コンポーネント・AppState を参照）
+  - `vs-audio` → `vs-core`（イベント・状態を参照）
+  - `vs-assets` → （他ゲームクレートへの依存なし）
 
 ### 5.3 プラグイン追加順序
 アセットが他プラグインより先にロードされるよう、`GameAssetsPlugin` を最初に追加する：
 1. `GameAssetsPlugin`（アセットロード）
-2. `GameCorePlugin`（ゲームロジック・UI）
-3. `GameAudioPlugin`（オーディオ、Coreのイベントを受け取る）
+2. `GameCorePlugin`（コアゲームロジック・ECS）
+3. `GameUIPlugin`（UI・カメラ、CoreのAppState + Playerに依存）
+4. `GameAudioPlugin`（オーディオ、Coreのイベントを受け取る）

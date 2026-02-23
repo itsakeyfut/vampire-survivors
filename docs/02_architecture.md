@@ -315,7 +315,7 @@ pub struct AudioHandles {
 #### 2.4.1 システムカテゴリと実行タイミング
 
 **Startupシステム:**
-- `setup_camera`: カメラのセットアップ
+- `setup_camera`: カメラのセットアップ（**vs-ui** が担当）
 - `load_assets`: アセット読み込み（スプライト・BGM・SFX）
 - `setup_map`: 背景マップの初期生成
 
@@ -359,10 +359,10 @@ pub struct AudioHandles {
    - `spawn_treasure`: 宝箱のスポーン
    - `update_difficulty`: 時間に応じた難易度更新
 
-7. **カメラシステム**
+7. **カメラシステム**（**vs-ui** が担当）
    - `camera_follow_player`: カメラのプレイヤー追従
 
-8. **UIシステム**
+8. **UIシステム**（**vs-ui** が担当）
    - `update_hud`: HUD表示更新（HP・XP・タイマー・武器アイコン等）
 
 9. **エフェクトシステム**
@@ -523,22 +523,35 @@ impl SpatialGrid {
 
 ## 4. カメラシステム
 
+カメラ関連の実装は **vs-ui クレート** (`app/ui/src/camera.rs`) に配置する。
+UIとカメラを vs-core から分離することで、テスタビリティと今後のUI拡張性を確保する。
+
 ### 4.1 プレイヤー追従カメラ
 
 ```rust
+// app/ui/src/camera.rs
+use bevy::prelude::*;
+use vs_core::components::Player;
+use vs_core::constants::CAMERA_LERP_SPEED;
+
+pub fn setup_camera(mut commands: Commands) {
+    commands.spawn((Camera2d, Transform::from_xyz(0.0, 0.0, 999.9)));
+}
+
 pub fn camera_follow_player(
-    player_query: Query<&Transform, With<Player>>,
-    mut camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
     time: Res<Time>,
+    player_q: Query<&Transform, With<Player>>,
+    mut camera_q: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
 ) {
-    let Ok(player_transform) = player_query.get_single() else { return };
-    let Ok(mut camera_transform) = camera_query.get_single_mut() else { return };
+    let Ok(player_tf) = player_q.single() else { return; };
+    let Ok(mut camera_tf) = camera_q.single_mut() else { return; };
 
-    let target = player_transform.translation;
-
-    // スムーズ追従（補間）
-    let lerp_factor = 1.0 - (-10.0 * time.delta_secs()).exp();
-    camera_transform.translation = camera_transform.translation.lerp(target, lerp_factor);
+    let target = player_tf.translation.truncate();
+    let current = camera_tf.translation.truncate();
+    // 指数補間（CAMERA_LERP_SPEED × Δt）
+    let lerped = current.lerp(target, CAMERA_LERP_SPEED * time.delta_secs());
+    camera_tf.translation.x = lerped.x;
+    camera_tf.translation.y = lerped.y;
 }
 ```
 
@@ -615,28 +628,39 @@ pub struct VictoryEvent {
 
 ## 6. プラグイン構成
 
+5クレート構成。カメラ・UIは `vs-ui` クレートの `GameUIPlugin` が担当する。
+
 ```rust
-// main.rs での構成
+// app/vampire-survivors/src/main.rs
+use bevy::prelude::*;
+use vs_assets::GameAssetsPlugin;
+use vs_audio::GameAudioPlugin;
+use vs_core::GameCorePlugin;
+use vs_ui::GameUIPlugin;
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Vampire Survivors Clone".into(),
-                resolution: (1280.0, 720.0).into(),
+                resolution: (1280, 720).into(),
+                resizable: false,
                 ..default()
             }),
             ..default()
         }))
-        .add_plugins(AudioPlugin)        // bevy_kira_audio
-        // カスタムプラグイン
-        .add_plugins(GameCorePlugin)     // コアゲームロジック
-        .add_plugins(GameAudioPlugin)    // BGM/SFX管理
-        .add_plugins(GameAssetsPlugin)   // アセット管理
-        // バイナリ固有のプラグイン
+        // Load assets first (other plugins may reference them)
+        .add_plugins(GameAssetsPlugin)
+        // Core game logic (ECS, systems)
+        .add_plugins(GameCorePlugin)
+        // UI and camera (depends on GameCorePlugin for AppState + Player)
+        .add_plugins(GameUIPlugin)
+        // Audio (receives core events for BGM/SFX switching)
+        .add_plugins(GameAudioPlugin)
         .run();
 }
 
-// GameCorePlugin の構成例
+// GameCorePlugin: コアゲームロジック（カメラ・UIは含まない）
 pub struct GameCorePlugin;
 impl Plugin for GameCorePlugin {
     fn build(&self, app: &mut App) {
@@ -655,9 +679,24 @@ impl Plugin for GameCorePlugin {
             .add_event::<BossSpawnedEvent>()
             .add_event::<GameOverEvent>()
             .add_event::<VictoryEvent>()
-            // システム登録
-            .add_systems(Startup, (setup_camera, setup_map))
+            // システム登録（プレイヤー・敵・武器・衝突・XP・メタ等）
+            .add_systems(OnEnter(AppState::Playing), spawn_player)
             .add_systems(Update, (/* 各システム */));
+    }
+}
+
+// GameUIPlugin: カメラ・UI画面（vs-ui クレート）
+pub struct GameUIPlugin;
+impl Plugin for GameUIPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            // カメラは常駐（タイトル・メニューでも使用）
+            .add_systems(Startup, camera::setup_camera)
+            // プレイヤー追従はPlaying状態でのみ実行
+            .add_systems(
+                Update,
+                camera::camera_follow_player.run_if(in_state(AppState::Playing)),
+            );
     }
 }
 ```

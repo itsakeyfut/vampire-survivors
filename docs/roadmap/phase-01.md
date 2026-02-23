@@ -10,7 +10,7 @@
 Cargoワークスペース・開発環境・設計ドキュメントを整備し、空のウィンドウが開く状態にする。
 
 ### スコープ
-- 4クレート構成のワークスペース設定
+- 5クレート構成のワークスペース設定
 - 全設計ドキュメントの作成（このロードマップの作成で完了）
 - 開発環境の整備（justfile・.gitignore等）
 - 基本的な main.rs の作成
@@ -35,11 +35,11 @@ Cargoワークスペース・開発環境・設計ドキュメントを整備し
 **ラベル**: task, phase-1
 
 **説明**:
-4クレート構成のCargoワークスペースを設定し、各クレートの基本構造を作成する。
+5クレート構成のCargoワークスペースを設定し、各クレートの基本構造を作成する。
 
 **受け入れ基準**:
 - [ ] `Cargo.toml`（ワークスペースルート）が作成されている
-- [ ] `app/core/`, `app/audio/`, `app/assets/`, `app/vampire-survivors/` の4クレートが定義されている
+- [ ] `app/core/`, `app/ui/`, `app/audio/`, `app/assets/`, `app/vampire-survivors/` の5クレートが定義されている
 - [ ] 各クレートの `Cargo.toml` と `src/lib.rs`（または `main.rs`）が作成されている
 - [ ] `cargo build` が成功する
 - [ ] `cargo run -p vs` でウィンドウが開く
@@ -52,6 +52,7 @@ Cargoワークスペース・開発環境・設計ドキュメントを整備し
 resolver = "2"
 members = [
     "app/core",
+    "app/ui",
     "app/audio",
     "app/assets",
     "app/vampire-survivors",
@@ -196,7 +197,7 @@ build:
 
 - [ ] `cargo build` が成功する
 - [ ] `cargo run -p vs` でウィンドウが開く（1280x720、タイトル「Vampire Survivors Clone」）
-- [ ] 4クレートが正しく設定されている
+- [ ] 5クレートが正しく設定されている
 - [ ] ディレクトリ構造が設計書通りに作成されている
 - [ ] justfile が機能する
 
