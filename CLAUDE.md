@@ -47,14 +47,15 @@ cargo test -p vs-core -- --nocapture       # Tests with stdout
 
 ## Crate Architecture
 
-Four-crate workspace under `app/`:
+Five-crate workspace under `app/`:
 
 | Crate | Path | Purpose |
 |---|---|---|
 | `vs-core` | `app/core/` | All game logic, ECS components/resources/systems |
+| `vs-ui` | `app/ui/` | Camera, UI screens, HUD (depends on vs-core) |
 | `vs-audio` | `app/audio/` | BGM/SFX via bevy_kira_audio |
 | `vs-assets` | `app/assets/` | Sprite/font/audio asset loading |
-| `vs` | `app/vampire-survivors/` | Binary: wires the three plugins together |
+| `vs` | `app/vampire-survivors/` | Binary: wires the four plugins together |
 
 Assets live in `app/vampire-survivors/assets/` (Bevy resolves paths relative to the binary crate).
 

@@ -10,5 +10,6 @@ path = "src/main.rs"
 [dependencies]
 bevy = { workspace = true }
 vs-core = { path = "../core" }
+vs-ui = { path = "../ui" }
 vs-audio = { path = "../audio" }
 vs-assets = { path = "../assets" }

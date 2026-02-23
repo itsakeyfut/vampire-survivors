@@ -18,9 +18,6 @@ use crate::{
 /// The camera is positioned at the origin for now; issue #8 (task 2.3) will
 /// make it smoothly follow the player.
 pub fn spawn_player(mut commands: Commands) {
-    // Static 2D camera — will be enhanced to follow the player in issue #8.
-    commands.spawn((DespawnOnExit(AppState::Playing), Camera2d));
-
     // Player entity: cyan circle sprite + all required ECS components.
     commands.spawn((
         DespawnOnExit(AppState::Playing),
