@@ -264,14 +264,15 @@ mod tests {
         assert_eq!(mp.total_gold, 0);
     }
 
-    fn spawn_entity() -> Entity {
-        // Use a real World to get a valid Entity with proper bits for Bevy 0.17+.
-        World::new().spawn_empty().id()
+    fn make_entities(n: usize) -> Vec<Entity> {
+        // Spawn all entities from a single World so each gets a unique ID.
+        let mut world = World::new();
+        (0..n).map(|_| world.spawn_empty().id()).collect()
     }
 
     #[test]
     fn spatial_grid_insert_and_get_nearby() {
-        let entity = spawn_entity();
+        let entity = make_entities(1)[0];
         let mut grid = SpatialGrid::new(64.0);
         grid.insert(Vec2::ZERO, entity);
 
@@ -281,7 +282,7 @@ mod tests {
 
     #[test]
     fn spatial_grid_clear() {
-        let entity = spawn_entity();
+        let entity = make_entities(1)[0];
         let mut grid = SpatialGrid::new(64.0);
         grid.insert(Vec2::ZERO, entity);
         grid.clear();
@@ -290,7 +291,7 @@ mod tests {
 
     #[test]
     fn spatial_grid_entity_not_in_distant_cell() {
-        let entity = spawn_entity();
+        let entity = make_entities(1)[0];
         let mut grid = SpatialGrid::new(64.0);
         // Insert far from origin
         grid.insert(Vec2::new(1000.0, 1000.0), entity);
