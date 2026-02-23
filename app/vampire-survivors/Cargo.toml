@@ -1,0 +1,14 @@
+[package]
+name = "vs"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "vs"
+path = "src/main.rs"
+
+[dependencies]
+bevy = { workspace = true }
+vs-core = { path = "../core" }
+vs-audio = { path = "../audio" }
+vs-assets = { path = "../assets" }
