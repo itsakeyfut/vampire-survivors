@@ -13,8 +13,8 @@ use bevy::prelude::*;
 /// Playing ←──── LevelUp (returns after choice)
 ///   │  ↑
 ///   │  │ ESC
-///   ↓  │
-/// Paused → Playing (resume) / Title (quit)
+///   │  ↓
+///   │  Paused → Playing (resume) / Title (quit)
 ///   │
 ///   ├──→ GameOver  (HP = 0)
 ///   └──→ Victory   (boss defeated)
