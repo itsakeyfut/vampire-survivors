@@ -34,8 +34,18 @@ Now proceed with implementing this issue.
    - Audio (BGM/SFX)
    - Game State Management
    - Visual Effects
-4. Review related documentation (docs/01-10)
-5. Plan the implementation approach
+4. **Read the suika-game reference** — `docs/suika-game/` contains a complete working Bevy implementation. Find and read the relevant file(s) before writing any code:
+   - Camera → `app/ui/src/camera.rs`
+   - UI screens (title/pause/game-over) → `app/ui/src/screens/`
+   - HUD → `app/ui/src/screens/hud/`
+   - UI styles/components → `app/ui/src/styles.rs`, `app/ui/src/components.rs`
+   - Spawn / input / collision / score systems → `app/core/src/systems/`
+   - Visual effects (flash, shake, particles) → `app/core/src/systems/effects/`
+   - Resources, events, persistence, plugin wiring → `app/core/src/{resources/,events.rs,persistence.rs,lib.rs}`
+   - Audio (BGM + SFX) → `app/audio/src/`
+   - Asset loading → `app/assets/src/lib.rs`
+5. Review related documentation (docs/01-10)
+6. Plan the implementation approach
 
 **Implementation checklist:**
 - [ ] Follow Rust naming conventions and coding style
