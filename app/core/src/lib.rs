@@ -1,34 +1,55 @@
 pub mod components;
 pub mod constants;
+pub mod player;
 pub mod resources;
 pub mod states;
 pub mod types;
 
 use bevy::prelude::*;
 
+use player::{player_movement, spawn_player};
 use resources::{
     EnemySpawner, GameData, LevelUpChoices, MetaProgress, SelectedCharacter, SpatialGrid,
     TreasureSpawner,
 };
 use states::AppState;
 
-/// Core game plugin. Registers states, inserts default resources, and will
-/// add systems as subsequent phases are implemented.
+/// Core game plugin. Registers states, inserts default resources, and wires up
+/// all gameplay systems.
 pub struct GameCorePlugin;
 
 impl Plugin for GameCorePlugin {
     fn build(&self, app: &mut App) {
         app
-            // Game state machine
+            // ---------------------------------------------------------------
+            // State machine
+            // ---------------------------------------------------------------
             .init_state::<AppState>()
-            // Per-run resources (reset when a new run begins)
+            // ---------------------------------------------------------------
+            // Per-run resources  (reset when a new run begins)
+            // ---------------------------------------------------------------
             .insert_resource(GameData::default())
             .insert_resource(EnemySpawner::default())
             .insert_resource(TreasureSpawner::default())
             .insert_resource(SpatialGrid::default())
             .insert_resource(LevelUpChoices::default())
             .insert_resource(SelectedCharacter::default())
+            // ---------------------------------------------------------------
             // Persistent meta-progression (loaded from save/meta.json)
-            .insert_resource(MetaProgress::load());
+            // ---------------------------------------------------------------
+            .insert_resource(MetaProgress::load())
+            // ---------------------------------------------------------------
+            // Playing state — player lifecycle
+            // ---------------------------------------------------------------
+            // StateScoped entities (camera + player) are despawned automatically
+            // on OnExit(Playing), so no explicit cleanup system is needed.
+            .add_systems(OnEnter(AppState::Playing), spawn_player)
+            // ---------------------------------------------------------------
+            // Playing state — per-frame gameplay systems
+            // ---------------------------------------------------------------
+            .add_systems(
+                Update,
+                player_movement.run_if(in_state(AppState::Playing)),
+            );
     }
 }
