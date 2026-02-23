@@ -1,0 +1,155 @@
+name: "PBI (Product Backlog Item)"
+description: "Detailed specification for major features"
+title: "[PBI] "
+labels: ["enhancement", "pbi"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Product Backlog Item
+        Use this template for major features that need detailed specifications.
+
+        **When to use:**
+        - Simple feature idea → Use Feature Request template
+        - Complex feature needing specs → Use this PBI template
+
+  - type: textarea
+    id: feature-title
+    attributes:
+      label: Feature Title
+      description: Briefly describe the feature to be implemented
+      placeholder: |
+        Example: Implement weapon evolution system
+        Example: Add boss Death with 3 phases
+        Example: Implement meta progression gold shop
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User Story
+      description: "Describe in the format: 'who', 'what', 'why'"
+      placeholder: |
+        As a [player/developer],
+        I want [what to achieve],
+        So that [value/benefit obtained].
+
+        Example:
+        As a player,
+        I want my weapons to evolve when I have both the weapon at max level and the required passive,
+        So that I feel rewarded for strategic build planning.
+      value: |
+        As a [player/developer],
+        I want [what to achieve],
+        So that [value/benefit obtained].
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Specific conditions for completion (checklist format)
+      placeholder: |
+        Example (for weapon evolution):
+        - [ ] AC1: Evolution triggers when weapon is max level AND required passive is owned
+        - [ ] AC2: Evolution can be triggered via treasure chest
+        - [ ] AC3: Evolved weapon replaces base weapon in inventory
+        - [ ] AC4: Evolved weapon has unique visual appearance
+        - [ ] AC5: All 6 evolutions (Whip→BloodyTear, etc.) are implemented
+      value: |
+        - [ ] AC1:
+        - [ ] AC2:
+        - [ ] AC3:
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "P0: Critical (Core mechanic)"
+        - "P1: High (Important feature)"
+        - "P2: Medium (Nice to have)"
+        - "P3: Low (Polish/Extra)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Implementation Phase
+      description: Which phase should this be in? (Ref: docs/06_implementation_plan.md)
+      options:
+        - "Phase 1: Project Setup"
+        - "Phase 2: Player Movement & Camera"
+        - "Phase 3: Enemy System"
+        - "Phase 4: Weapon System (Basic)"
+        - "Phase 5: Collision & Damage"
+        - "Phase 6: XP & Level-up"
+        - "Phase 7: All Weapons"
+        - "Phase 8: Passives & Evolution"
+        - "Phase 9: Enemy Variety"
+        - "Phase 10: Boss System"
+        - "Phase 11: UI/HUD"
+        - "Phase 12: Character Select"
+        - "Phase 13: Treasure System"
+        - "Phase 14: Meta Progression"
+        - "Phase 15: Audio"
+        - "Phase 16: Effects & Polish"
+        - "Phase 17: Pixel Art Integration"
+        - "Future"
+    validations:
+      required: false
+
+  - type: textarea
+    id: technical-design
+    attributes:
+      label: Technical Design (Optional)
+      description: High-level design or implementation notes
+      placeholder: |
+        - Add can_evolve_weapon() function checking weapon level + passive inventory
+        - Create WeaponEvolutionEvent to trigger evolution
+        - Update WeaponState.weapon_type and set evolved = true
+        - Apply evolved weapon's stats (damage multiplier, area, etc.)
+    validations:
+      required: false
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Other features or tasks this depends on
+      placeholder: |
+        - Requires: #42 (Weapon system implementation)
+        - Requires: #55 (Passive item system)
+        - Blocks: #67 (Treasure chest evolution trigger)
+    validations:
+      required: false
+
+  - type: textarea
+    id: test-plan
+    attributes:
+      label: Test Plan (Optional)
+      description: How to verify this feature works correctly
+      placeholder: |
+        1. Equip Whip and level it to max (Lv.8)
+        2. Pick up Hollow Heart passive
+        3. Open a treasure chest
+        4. Verify evolution fires and Whip becomes Bloody Tear
+        5. Verify Bloody Tear has higher damage and area
+        6. Verify evolution does not trigger again after evolving
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I've confirmed this hasn't been proposed in existing Issues
+          required: true
+        - label: I've checked the documentation for related designs
+          required: false

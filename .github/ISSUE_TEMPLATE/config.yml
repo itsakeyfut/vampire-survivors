@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Discussions
+    url: https://github.com/itsakeyfut/vampire-survivors/discussions
+    about: Please use Discussions for questions and discussions
+  - name: Documentation
+    url: https://github.com/itsakeyfut/vampire-survivors/tree/main/docs
+    about: View documentation here

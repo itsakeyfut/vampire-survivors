@@ -1,0 +1,175 @@
+name: "Bug Report"
+description: "Report bugs or issues"
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug Report
+        If you've found a bug or issue, please use this template to report it.
+        The more detailed your description, the faster we can identify and fix the problem.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem Description
+      description: Briefly describe what problem is occurring
+      placeholder: |
+        Example: Enemies stop spawning after 10 minutes
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Describe the specific steps to reproduce the problem
+      placeholder: |
+        1. Launch the game
+        2. Play for 10 minutes
+        3. Notice no new enemies spawn
+        4. Enemy count stays at 0
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: Describe how it should behave
+      placeholder: |
+        Example: Enemies should continuously spawn according to the spawn table, increasing in difficulty over time
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: Describe what actually happens
+      placeholder: |
+        Example: Enemy spawning stops completely after 10 minutes; no new enemies appear
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Select the severity of this issue
+      options:
+        - "Critical: Game crashes or core mechanic broken"
+        - "High: Major features unusable or progression impossible"
+        - "Medium: Some features have issues but workarounds exist"
+        - "Low: Visual glitches or minor issues"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: Select the feature category where the issue occurs
+      options:
+        - "Weapon Systems"
+        - "Enemy AI & Spawning"
+        - "Collision Detection (Manual)"
+        - "XP & Level-up System"
+        - "Boss System"
+        - "Treasure System"
+        - "Meta Progression & Gold Shop"
+        - "UI & HUD"
+        - "Input Controls"
+        - "Audio (BGM/SFX)"
+        - "Game State Management"
+        - "Visual Effects"
+        - "Performance"
+        - "Asset Loading"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Describe the environment where the issue occurred
+      placeholder: |
+        - OS: Windows 11
+        - Build Mode: Debug / Release
+        - Rust Version: 1.93.0
+        - GPU: NVIDIA RTX 3060
+        - Screen Resolution: 1920x1080
+      value: |
+        - OS:
+        - Build Mode:
+        - Rust Version:
+        - GPU:
+        - Screen Resolution:
+    validations:
+      required: false
+
+  - type: textarea
+    id: error-messages
+    attributes:
+      label: Error Messages & Logs
+      description: Paste console output or error messages if any
+      placeholder: |
+        ```
+        thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: ...'
+        ```
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots & Videos
+      description: If possible, paste links to screenshots or videos showing the issue
+      placeholder: |
+        ![Screenshot](URL)
+        or
+        Video of the issue: [Link]
+    validations:
+      required: false
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: If you've found a way to work around the issue, describe it here
+      placeholder: |
+        Example: Restarting the game allows enemy spawning to resume
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Information
+      description: Any other information that might help resolve the issue
+      placeholder: |
+        - This issue only occurs after specific weapon evolution
+        - Started occurring after recent commits
+        - Related Issue: #123
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Please confirm the following before submitting
+      options:
+        - label: I've confirmed this issue hasn't been reported in existing Issues
+          required: true
+        - label: I've confirmed the issue can be reproduced on the latest main branch
+          required: false
+        - label: This is a runtime issue, not a build error
+          required: false

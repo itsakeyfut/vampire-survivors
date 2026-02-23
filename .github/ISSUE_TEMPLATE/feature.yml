@@ -1,0 +1,162 @@
+name: "Feature Request"
+description: "Propose new features or share ideas"
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Request
+        Use this template if you have a new feature proposal or idea for the Vampire Survivors clone.
+
+  - type: textarea
+    id: feature-summary
+    attributes:
+      label: Feature Summary
+      description: Briefly describe the proposed feature
+      placeholder: |
+        Example: Add screen shake effect when player takes damage
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation & Background
+      description: Explain why this feature is needed and what problem it solves
+      placeholder: |
+        Example: The current damage feedback is too subtle. Adding screen shake
+        would make the game feel more impactful and help players notice when
+        they are taking damage, similar to the original Vampire Survivors.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Implementation
+      description: If you have ideas on how this should be implemented, describe them here
+      placeholder: |
+        Example:
+        - Add a ScreenShake resource with duration and intensity fields
+        - Trigger on PlayerDamagedEvent
+        - Apply camera offset using sine wave with decay
+        - Stop when duration expires
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Describe any other approaches or alternatives you've considered
+      placeholder: |
+        Example:
+        - Flash the screen red instead of screen shake
+        - Controller rumble feedback (platform-specific)
+    validations:
+      required: false
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: Select the category this feature relates to
+      options:
+        - "Weapon Systems"
+        - "Enemy AI & Spawning"
+        - "Collision Detection"
+        - "XP & Level-up System"
+        - "Boss System"
+        - "Treasure System"
+        - "Meta Progression & Gold Shop"
+        - "UI & HUD"
+        - "Input Controls"
+        - "Audio (BGM/SFX)"
+        - "Visual Effects & Particles"
+        - "Performance & Optimization"
+        - "Accessibility"
+        - "Developer Tools"
+        - "Asset Management"
+        - "Other"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority (Proposer's Perspective)
+      description: How important do you think this feature is?
+      options:
+        - "P0: Essential (Game cannot function without this)"
+        - "P1: Important (Core mechanic or standard feature)"
+        - "P2: Nice to have (Enhances experience)"
+        - "P3: Would be nice (Polish or extra feature)"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Implementation Phase (Suggestion)
+      description: In which phase do you think this should be implemented? (Ref: docs/06_implementation_plan.md)
+      options:
+        - "Phase 1-2: Core Setup (Project structure, player movement)"
+        - "Phase 3-4: Basic Systems (Enemies, weapons)"
+        - "Phase 5-6: Core Loop (Collision, XP, level-up)"
+        - "Phase 7-8: Full Weapons (All weapons, passives, evolution)"
+        - "Phase 9-10: Enemy Variety & Boss"
+        - "Phase 11-13: UI, Characters, Treasure"
+        - "Phase 14: Meta Progression"
+        - "Phase 15-16: Audio & Polish"
+        - "Phase 17: Pixel Art Integration"
+        - "Future: Post-release features"
+    validations:
+      required: false
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Reference Implementations & Similar Features
+      description: If there are implementation examples in other games, describe them
+      placeholder: |
+        - Vampire Survivors: Uses escalating enemy density after 15 minutes
+        - Brotato: Uses per-item stat bonuses displayed in UI
+        - 20 Minutes Till Dawn: Uses unique weapon upgrade trees
+    validations:
+      required: false
+
+  - type: textarea
+    id: design-docs
+    attributes:
+      label: Related Design Documents
+      description: If there are related design documents or Issues, describe them
+      placeholder: |
+        - Mentioned in docs/03_gameplay_systems.md Section 4
+        - Related to #123 (visual effects system implementation)
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-notes
+    attributes:
+      label: Additional Information
+      description: Any other useful information
+      placeholder: |
+        - This feature would significantly improve game feel
+        - Implementation difficulty is expected to be moderate
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Please confirm the following before submitting
+      options:
+        - label: I've confirmed this feature hasn't been proposed in existing Issues
+          required: true
+        - label: I've checked the documentation and confirmed this isn't already planned
+          required: false
+        - label: This is a new feature proposal, not a bug fix
+          required: false
