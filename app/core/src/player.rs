@@ -147,12 +147,24 @@ mod tests {
         let entity = q.single(app.world()).expect("player entity should exist");
 
         let w = app.world();
-        assert!(w.get::<PlayerStats>(entity).is_some(), "missing PlayerStats");
+        assert!(
+            w.get::<PlayerStats>(entity).is_some(),
+            "missing PlayerStats"
+        );
         assert!(w.get::<Transform>(entity).is_some(), "missing Transform");
         assert!(w.get::<Sprite>(entity).is_some(), "missing Sprite");
-        assert!(w.get::<CircleCollider>(entity).is_some(), "missing CircleCollider");
-        assert!(w.get::<WeaponInventory>(entity).is_some(), "missing WeaponInventory");
-        assert!(w.get::<PassiveInventory>(entity).is_some(), "missing PassiveInventory");
+        assert!(
+            w.get::<CircleCollider>(entity).is_some(),
+            "missing CircleCollider"
+        );
+        assert!(
+            w.get::<WeaponInventory>(entity).is_some(),
+            "missing WeaponInventory"
+        );
+        assert!(
+            w.get::<PassiveInventory>(entity).is_some(),
+            "missing PassiveInventory"
+        );
     }
 
     /// The placeholder sprite must be 24×24 px.

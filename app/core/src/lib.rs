@@ -47,9 +47,6 @@ impl Plugin for GameCorePlugin {
             // ---------------------------------------------------------------
             // Playing state — per-frame gameplay systems
             // ---------------------------------------------------------------
-            .add_systems(
-                Update,
-                player_movement.run_if(in_state(AppState::Playing)),
-            );
+            .add_systems(Update, player_movement.run_if(in_state(AppState::Playing)));
     }
 }
