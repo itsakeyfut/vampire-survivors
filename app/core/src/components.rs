@@ -134,8 +134,11 @@ impl Enemy {
     }
 
     /// Apply `amount` damage, clamping `current_hp` to zero.
+    ///
+    /// Negative values are treated as zero (no healing side-effect).
     pub fn take_damage(&mut self, amount: f32) {
-        self.current_hp = (self.current_hp - amount).max(0.0);
+        let dmg = amount.max(0.0);
+        self.current_hp = (self.current_hp - dmg).max(0.0);
     }
 }
 
@@ -346,5 +349,14 @@ mod tests {
         e.take_damage(9999.0);
         assert_eq!(e.current_hp, 0.0);
         assert!(e.is_dead());
+    }
+
+    #[test]
+    fn enemy_take_damage_negative_is_noop() {
+        use crate::types::EnemyType;
+        let mut e = Enemy::from_type(EnemyType::Bat, 1.0);
+        let before = e.current_hp;
+        e.take_damage(-5.0); // must not heal
+        assert_eq!(e.current_hp, before);
     }
 }
