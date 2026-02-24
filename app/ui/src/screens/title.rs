@@ -110,11 +110,8 @@ mod tests {
         app.update(); // Playing → Title (fires OnEnter(Title))
         app.update(); // let spawned nodes settle
 
-        let node_count = app
-            .world_mut()
-            .query_filtered::<Entity, With<Node>>()
-            .iter(app.world())
-            .count();
+        let mut node_q = app.world_mut().query_filtered::<Entity, With<Node>>();
+        let node_count = node_q.iter(app.world()).count();
         assert!(
             node_count > 0,
             "title screen should spawn at least one Node"
@@ -135,11 +132,8 @@ mod tests {
         app.update();
         app.update();
 
-        let button_count = app
-            .world_mut()
-            .query_filtered::<Entity, With<Button>>()
-            .iter(app.world())
-            .count();
+        let mut button_q = app.world_mut().query_filtered::<Entity, With<Button>>();
+        let button_count = button_q.iter(app.world()).count();
         assert_eq!(
             button_count, 1,
             "title screen should have exactly one button"
