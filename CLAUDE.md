@@ -74,12 +74,29 @@ Default state is `Title`. To test `Playing`-state systems during development, te
 ## vs-core Module Layout
 
 - `states.rs` — `AppState` enum
-- `types.rs` — domain enums (`WeaponType`, `EnemyType`, `CharacterType`, etc.) — no Bevy deps
 - `constants.rs` — all numeric constants; `PlayerStats::default()` reads from here
-- `components.rs` — all ECS components (`Player`, `Enemy`, `Projectile`, `CircleCollider`, …)
-- `resources.rs` — `GameData`, `SpatialGrid`, `MetaProgress`, spawner resources
-- `player.rs` — `spawn_player` (OnEnter Playing) + `player_movement` (Update)
 - `lib.rs` — `GameCorePlugin`: registers state, all resources, and wires systems
+- `types/` — domain enums without Bevy deps; re-exported via `types/mod.rs`
+  - `weapon.rs` — `WeaponType`, `WeaponState`, `PassiveItemType`, `PassiveState`, `WhipSide`
+  - `enemy.rs` — `EnemyType`, `AIType`, `BossPhase`
+  - `character.rs` — `CharacterType`, `MetaUpgradeType`
+  - `game.rs` — `TreasureContent`, `UpgradeChoice`
+- `components/` — all ECS components; re-exported via `components/mod.rs`
+  - `player.rs` — `Player`, `PlayerStats`, `WeaponInventory`, `PassiveInventory`, `InvincibilityTimer`
+  - `enemy.rs` — `Enemy`, `EnemyAI`, `DamageFlash`
+  - `weapon.rs` — `Projectile`, `ProjectileVelocity`, `OrbitWeapon`, `AuraWeapon`
+  - `collectible.rs` — `ExperienceGem`, `GoldCoin`, `Treasure`
+  - `physics.rs` — `CircleCollider`, `AttractedToPlayer`
+- `resources/` — all ECS resources; re-exported via `resources/mod.rs`
+  - `game_data.rs` — `GameData`
+  - `spawner.rs` — `EnemySpawner`, `TreasureSpawner`
+  - `level_up.rs` — `LevelUpChoices`
+  - `meta.rs` — `MetaProgress`, `SelectedCharacter`
+  - `spatial.rs` — `SpatialGrid`
+- `systems/` — per-frame gameplay systems
+  - `player.rs` — `spawn_player` (OnEnter Playing) + `player_movement` (Update)
+  - `game_timer.rs` — `update_game_timer` (Update)
+  - `difficulty.rs`, `enemy_ai.rs`, `enemy_cull.rs`, `enemy_spawn.rs`
 
 ## Collision Detection
 

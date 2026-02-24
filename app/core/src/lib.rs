@@ -1,7 +1,5 @@
 pub mod components;
 pub mod constants;
-pub mod game;
-pub mod player;
 pub mod resources;
 pub mod states;
 pub mod systems;
@@ -9,8 +7,6 @@ pub mod types;
 
 use bevy::prelude::*;
 
-use game::update_game_timer;
-use player::{player_movement, spawn_player};
 use resources::{
     EnemySpawner, GameData, LevelUpChoices, MetaProgress, SelectedCharacter, SpatialGrid,
     TreasureSpawner,
@@ -20,6 +16,8 @@ use systems::difficulty::update_difficulty;
 use systems::enemy_ai::move_enemies;
 use systems::enemy_cull::cull_distant_enemies;
 use systems::enemy_spawn::spawn_enemies;
+use systems::game_timer::update_game_timer;
+use systems::player::{player_movement, spawn_player};
 
 /// Core game plugin. Registers states, inserts default resources, and wires up
 /// all gameplay systems.

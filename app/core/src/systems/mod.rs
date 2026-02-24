@@ -7,3 +7,5 @@ pub mod difficulty;
 pub mod enemy_ai;
 pub mod enemy_cull;
 pub mod enemy_spawn;
+pub mod game_timer;
+pub mod player;
