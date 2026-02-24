@@ -16,6 +16,7 @@ use resources::{
     TreasureSpawner,
 };
 use states::AppState;
+use systems::difficulty::update_difficulty;
 use systems::enemy_ai::move_enemies;
 use systems::enemy_spawn::spawn_enemies;
 
@@ -57,7 +58,8 @@ impl Plugin for GameCorePlugin {
                 (
                     player_movement,
                     update_game_timer,
-                    spawn_enemies,
+                    update_difficulty.after(update_game_timer),
+                    spawn_enemies.after(update_difficulty),
                     move_enemies.after(player_movement),
                 )
                     .run_if(in_state(AppState::Playing)),

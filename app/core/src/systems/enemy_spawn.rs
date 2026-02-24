@@ -1,24 +1,18 @@
-//! Enemy spawn system — timer-based, off-screen, difficulty-scaled.
+//! Enemy spawn system — timer-based, off-screen.
 //!
-//! Each frame [`spawn_enemies`] checks [`EnemySpawner`] and, once the
-//! effective spawn interval elapses, picks a random position just outside the
-//! visible viewport and spawns either a [`EnemyType::Bat`] or
-//! [`EnemyType::Skeleton`] (50 / 50).
-//!
-//! Difficulty scales with run time: every 60 seconds the
-//! `difficulty_multiplier` increases by `0.1`, which shortens the spawn
-//! interval and raises enemy HP.
+//! Each frame [`spawn_enemies`] reads the current [`EnemySpawner`] state
+//! (set by [`super::difficulty::update_difficulty`]) and, once the effective
+//! spawn interval elapses, picks a random position just outside the visible
+//! viewport and spawns either a [`EnemyType::Bat`] or [`EnemyType::Skeleton`]
+//! (50 / 50).
 
 use bevy::{prelude::*, state::state_scoped::DespawnOnExit};
 use rand::RngExt;
 
 use crate::{
     components::{CircleCollider, Enemy, EnemyAI},
-    constants::{
-        COLLIDER_BAT, COLLIDER_SKELETON, ENEMY_MAX_COUNT, ENEMY_SPAWN_BASE_INTERVAL, WINDOW_HEIGHT,
-        WINDOW_WIDTH,
-    },
-    resources::{EnemySpawner, GameData},
+    constants::{COLLIDER_BAT, COLLIDER_SKELETON, ENEMY_MAX_COUNT, WINDOW_HEIGHT, WINDOW_WIDTH},
+    resources::EnemySpawner,
     states::AppState,
     types::{AIType, EnemyType},
 };
@@ -34,42 +28,24 @@ use crate::{
 const SPAWN_MARGIN: f32 = 60.0;
 
 // ---------------------------------------------------------------------------
-// Public helpers (pure functions — easy to unit-test)
-// ---------------------------------------------------------------------------
-
-/// Compute the difficulty multiplier from run elapsed time.
-///
-/// Grows by `0.1` per minute elapsed, starting at `1.0`.
-/// e.g. 0 min → 1.0, 1 min → 1.1, 10 min → 2.0, 30 min → 4.0.
-pub fn difficulty_from_elapsed(elapsed_secs: f32) -> f32 {
-    let minutes = (elapsed_secs / 60.0).floor();
-    1.0 + minutes * 0.1
-}
-
-/// Compute the effective spawn interval given the current difficulty.
-///
-/// Interval shrinks as difficulty grows: `BASE / difficulty`.
-pub fn effective_spawn_interval(difficulty: f32) -> f32 {
-    ENEMY_SPAWN_BASE_INTERVAL / difficulty.max(1.0)
-}
-
-// ---------------------------------------------------------------------------
 // System
 // ---------------------------------------------------------------------------
 
 /// Spawns enemies off-screen at a timer-driven rate while in
 /// [`AppState::Playing`].
 ///
+/// Reads `difficulty_multiplier` and `spawn_interval` from [`EnemySpawner`],
+/// which are kept up-to-date by
+/// [`super::difficulty::update_difficulty`] (runs earlier in the same frame).
+///
 /// Each frame this system:
 /// 1. Returns early when [`EnemySpawner::active`] is `false`.
-/// 2. Updates `difficulty_multiplier` from [`GameData::elapsed_time`].
-/// 3. Throttles when the current enemy count reaches [`ENEMY_MAX_COUNT`].
-/// 4. Accumulates delta time; spawns once the effective interval elapses.
-/// 5. Picks a random off-screen edge position and a random enemy type.
+/// 2. Throttles when the current enemy count reaches [`ENEMY_MAX_COUNT`].
+/// 3. Accumulates delta time; spawns once the effective interval elapses.
+/// 4. Picks a random off-screen edge position and a random enemy type.
 pub fn spawn_enemies(
     mut commands: Commands,
     mut spawner: ResMut<EnemySpawner>,
-    game_data: Res<GameData>,
     time: Res<Time>,
     camera_q: Query<&Transform, With<Camera2d>>,
     enemy_q: Query<(), With<Enemy>>,
@@ -77,10 +53,6 @@ pub fn spawn_enemies(
     if !spawner.active {
         return;
     }
-
-    // Update difficulty and derived spawn interval from elapsed run time.
-    spawner.difficulty_multiplier = difficulty_from_elapsed(game_data.elapsed_time);
-    spawner.spawn_interval = effective_spawn_interval(spawner.difficulty_multiplier);
 
     // Throttle: do not exceed the enemy cap.
     if enemy_q.iter().count() >= ENEMY_MAX_COUNT {
@@ -196,68 +168,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::resources::GameData;
-
-    // -----------------------------------------------------------------------
-    // Pure-function unit tests
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn difficulty_starts_at_one() {
-        assert!(
-            (difficulty_from_elapsed(0.0) - 1.0).abs() < f32::EPSILON,
-            "difficulty at t=0 should be 1.0"
-        );
-    }
-
-    #[test]
-    fn difficulty_increases_by_point_one_per_minute() {
-        let one_min = difficulty_from_elapsed(60.0);
-        let two_min = difficulty_from_elapsed(120.0);
-        assert!(
-            (one_min - 1.1).abs() < f32::EPSILON,
-            "expected 1.1 at 1 min, got {one_min}"
-        );
-        assert!(
-            (two_min - 1.2).abs() < f32::EPSILON,
-            "expected 1.2 at 2 min, got {two_min}"
-        );
-    }
-
-    #[test]
-    fn difficulty_does_not_increase_within_a_minute() {
-        // 0 s and 59 s should both yield the same multiplier.
-        let at_zero = difficulty_from_elapsed(0.0);
-        let at_59 = difficulty_from_elapsed(59.9);
-        assert!(
-            (at_zero - at_59).abs() < f32::EPSILON,
-            "difficulty should not increase before a full minute elapses"
-        );
-    }
-
-    #[test]
-    fn effective_interval_shrinks_with_difficulty() {
-        let base = effective_spawn_interval(1.0);
-        let harder = effective_spawn_interval(2.0);
-        assert!(
-            harder < base,
-            "interval at difficulty 2 ({harder}) should be less than at 1 ({base})"
-        );
-        assert!(
-            (base - ENEMY_SPAWN_BASE_INTERVAL).abs() < f32::EPSILON,
-            "interval at difficulty 1.0 should equal the base constant"
-        );
-    }
-
-    #[test]
-    fn effective_interval_clamps_difficulty_below_one() {
-        let clamped = effective_spawn_interval(0.5);
-        let base = effective_spawn_interval(1.0);
-        assert!(
-            (clamped - base).abs() < f32::EPSILON,
-            "difficulty below 1.0 should be clamped to 1.0"
-        );
-    }
+    use crate::constants::ENEMY_SPAWN_BASE_INTERVAL;
 
     // -----------------------------------------------------------------------
     // Integration tests (ECS App)
@@ -267,7 +178,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin));
         app.init_state::<AppState>();
-        app.insert_resource(GameData::default());
         app.insert_resource(EnemySpawner::default());
         app
     }
@@ -382,32 +292,5 @@ mod tests {
         );
         assert!(w.get::<Transform>(entity).is_some(), "missing Transform");
         assert!(w.get::<Sprite>(entity).is_some(), "missing Sprite");
-    }
-
-    /// Difficulty multiplier in `EnemySpawner` must be updated on each call.
-    #[test]
-    fn spawn_enemies_updates_difficulty_multiplier() {
-        use bevy::ecs::system::RunSystemOnce as _;
-        use std::time::Duration;
-
-        let mut app = build_playing_app();
-
-        // Simulate 2 minutes of elapsed run time.
-        app.world_mut().resource_mut::<GameData>().elapsed_time = 120.0;
-
-        app.world_mut()
-            .resource_mut::<Time>()
-            .advance_by(Duration::from_secs_f32(1.0 / 60.0));
-
-        app.world_mut()
-            .run_system_once(spawn_enemies)
-            .expect("spawn_enemies should run");
-
-        let diff = app.world().resource::<EnemySpawner>().difficulty_multiplier;
-        let expected = difficulty_from_elapsed(120.0);
-        assert!(
-            (diff - expected).abs() < f32::EPSILON,
-            "difficulty should be {expected} at 2 min, got {diff}"
-        );
     }
 }
