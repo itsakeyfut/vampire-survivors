@@ -11,6 +11,7 @@ use rand::RngExt;
 
 use crate::{
     components::{CircleCollider, Enemy, EnemyAI},
+    config::EnemyParams,
     constants::{COLLIDER_BAT, COLLIDER_SKELETON, ENEMY_MAX_COUNT, WINDOW_HEIGHT, WINDOW_WIDTH},
     resources::EnemySpawner,
     states::AppState,
@@ -49,13 +50,18 @@ pub fn spawn_enemies(
     time: Res<Time>,
     camera_q: Query<&Transform, With<Camera2d>>,
     enemy_q: Query<(), With<Enemy>>,
+    enemy_cfg: EnemyParams,
 ) {
     if !spawner.active {
         return;
     }
 
-    // Throttle: do not exceed the enemy cap.
-    if enemy_q.iter().count() >= ENEMY_MAX_COUNT {
+    // Throttle: do not exceed the enemy cap (from config or constant fallback).
+    let max_count = enemy_cfg
+        .get()
+        .map(|c| c.max_count)
+        .unwrap_or(ENEMY_MAX_COUNT);
+    if enemy_q.iter().count() >= max_count {
         return;
     }
 
@@ -80,11 +86,18 @@ pub fn spawn_enemies(
         EnemyType::Skeleton
     };
 
+    // Derive collider radius from config, falling back to constants.
+    let collider_radius = enemy_cfg
+        .get()
+        .map(|c| c.stats_for(enemy_type).collider_radius)
+        .unwrap_or_else(|| fallback_collider_radius(enemy_type));
+
     spawn_enemy(
         &mut commands,
         enemy_type,
         spawn_pos,
         spawner.difficulty_multiplier,
+        collider_radius,
     );
 }
 
@@ -123,13 +136,22 @@ fn random_off_screen_position(cam_pos: Vec2) -> Vec2 {
     }
 }
 
-/// Placeholder color and collider radius for each spawn-eligible enemy type.
-fn enemy_visuals(enemy_type: EnemyType) -> (Color, f32) {
+/// Placeholder colour for each spawn-eligible enemy type.
+fn enemy_color(enemy_type: EnemyType) -> Color {
     match enemy_type {
-        EnemyType::Bat => (Color::srgb(0.5, 0.1, 0.8), COLLIDER_BAT),
-        EnemyType::Skeleton => (Color::srgb(0.9, 0.9, 0.8), COLLIDER_SKELETON),
+        EnemyType::Bat => Color::srgb(0.5, 0.1, 0.8),
+        EnemyType::Skeleton => Color::srgb(0.9, 0.9, 0.8),
         // Fallback for future types added before they get explicit visuals.
-        _ => (Color::srgb(0.7, 0.3, 0.3), 10.0),
+        _ => Color::srgb(0.7, 0.3, 0.3),
+    }
+}
+
+/// Fallback collider radius from constants when config is not loaded.
+fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
+    match enemy_type {
+        EnemyType::Bat => COLLIDER_BAT,
+        EnemyType::Skeleton => COLLIDER_SKELETON,
+        _ => 10.0,
     }
 }
 
@@ -138,8 +160,14 @@ fn enemy_visuals(enemy_type: EnemyType) -> (Color, f32) {
 /// Derives stats via [`Enemy::from_type`], attaches a placeholder
 /// `Sprite` circle, and tags the entity with
 /// [`DespawnOnExit(AppState::Playing)`] for automatic cleanup.
-fn spawn_enemy(commands: &mut Commands, enemy_type: EnemyType, position: Vec2, difficulty: f32) {
-    let (color, radius) = enemy_visuals(enemy_type);
+fn spawn_enemy(
+    commands: &mut Commands,
+    enemy_type: EnemyType,
+    position: Vec2,
+    difficulty: f32,
+    collider_radius: f32,
+) {
+    let color = enemy_color(enemy_type);
 
     commands.spawn((
         Enemy::from_type(enemy_type, difficulty),
@@ -148,10 +176,12 @@ fn spawn_enemy(commands: &mut Commands, enemy_type: EnemyType, position: Vec2, d
             attack_timer: 0.0,
             attack_range: 20.0,
         },
-        CircleCollider { radius },
+        CircleCollider {
+            radius: collider_radius,
+        },
         Sprite {
             color,
-            custom_size: Some(Vec2::splat(radius * 2.0)),
+            custom_size: Some(Vec2::splat(collider_radius * 2.0)),
             ..default()
         },
         Transform::from_translation(position.extend(5.0)),

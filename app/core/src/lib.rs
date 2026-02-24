@@ -1,4 +1,5 @@
 pub mod components;
+pub mod config;
 pub mod constants;
 pub mod resources;
 pub mod states;

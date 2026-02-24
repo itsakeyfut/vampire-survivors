@@ -1,0 +1,23 @@
+// Player configuration — all base stats and collider radii.
+// Loaded at startup and hot-reloaded when this file is saved during play.
+PlayerConfig(
+    // Base player stats
+    base_hp: 100.0,
+    base_speed: 200.0,
+    base_damage_mult: 1.0,
+    base_cooldown_reduction: 0.0,
+    base_projectile_speed: 1.0,
+    base_duration_mult: 1.0,
+    base_area_mult: 1.0,
+    base_luck: 1.0,
+    base_hp_regen: 0.0,
+    pickup_radius: 80.0,
+    invincibility_time: 0.5,
+    // Collider radii (pixels)
+    collider_radius: 12.0,
+    collider_projectile_small: 5.0,
+    collider_projectile_large: 10.0,
+    collider_xp_gem: 6.0,
+    collider_gold_coin: 6.0,
+    collider_treasure: 20.0,
+)
