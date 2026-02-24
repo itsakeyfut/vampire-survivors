@@ -91,6 +91,11 @@ pub const TREASURE_SPAWN_INTERVAL: f32 = 180.0;
 pub const ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
 /// Maximum number of simultaneous enemies before spawning is throttled.
 pub const ENEMY_MAX_COUNT: usize = 500;
+/// Hard ceiling for the difficulty multiplier (≈ 90 minutes of play).
+///
+/// Prevents the spawn interval from shrinking to sub-frame values in
+/// extreme runtimes beyond the intended 30-minute game length.
+pub const DIFFICULTY_MAX: f32 = 10.0;
 
 // ---------------------------------------------------------------------------
 // XP / levelling

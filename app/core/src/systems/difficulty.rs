@@ -22,7 +22,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    constants::ENEMY_SPAWN_BASE_INTERVAL,
+    constants::{DIFFICULTY_MAX, ENEMY_SPAWN_BASE_INTERVAL},
     resources::{EnemySpawner, GameData},
 };
 
@@ -32,10 +32,11 @@ use crate::{
 
 /// Compute the difficulty multiplier from run elapsed time.
 ///
-/// Grows by `0.1` per minute elapsed, starting at `1.0`.
+/// Grows by `0.1` per minute elapsed, starting at `1.0`, and is capped at
+/// [`DIFFICULTY_MAX`] to prevent sub-frame spawn intervals at extreme runtimes.
 pub fn difficulty_from_elapsed(elapsed_secs: f32) -> f32 {
     let minutes = (elapsed_secs / 60.0).floor();
-    1.0 + minutes * 0.1
+    (1.0 + minutes * 0.1).min(DIFFICULTY_MAX)
 }
 
 /// Compute the effective spawn interval given the current difficulty.
@@ -75,6 +76,11 @@ mod tests {
     use super::*;
     use crate::resources::GameData;
 
+    // Tolerance for floating-point comparisons in this module.
+    // Wider than f32::EPSILON (~1.19e-7) to be robust against normal
+    // binary-float rounding (0.1 is not exactly representable in f32).
+    const EPS: f32 = 1e-6;
+
     // -----------------------------------------------------------------------
     // Pure-function unit tests
     // -----------------------------------------------------------------------
@@ -82,7 +88,7 @@ mod tests {
     #[test]
     fn difficulty_starts_at_one() {
         assert!(
-            (difficulty_from_elapsed(0.0) - 1.0).abs() < f32::EPSILON,
+            (difficulty_from_elapsed(0.0) - 1.0).abs() < EPS,
             "difficulty at t=0 should be 1.0"
         );
     }
@@ -92,11 +98,11 @@ mod tests {
         let one_min = difficulty_from_elapsed(60.0);
         let two_min = difficulty_from_elapsed(120.0);
         assert!(
-            (one_min - 1.1).abs() < f32::EPSILON,
+            (one_min - 1.1).abs() < EPS,
             "expected 1.1 at 1 min, got {one_min}"
         );
         assert!(
-            (two_min - 1.2).abs() < f32::EPSILON,
+            (two_min - 1.2).abs() < EPS,
             "expected 1.2 at 2 min, got {two_min}"
         );
     }
@@ -106,7 +112,7 @@ mod tests {
         let at_zero = difficulty_from_elapsed(0.0);
         let at_59 = difficulty_from_elapsed(59.9);
         assert!(
-            (at_zero - at_59).abs() < f32::EPSILON,
+            (at_zero - at_59).abs() < EPS,
             "difficulty should not increase before a full minute elapses"
         );
     }
@@ -115,8 +121,18 @@ mod tests {
     fn difficulty_at_thirty_minutes_is_four() {
         let at_30min = difficulty_from_elapsed(30.0 * 60.0);
         assert!(
-            (at_30min - 4.0).abs() < f32::EPSILON,
+            (at_30min - 4.0).abs() < EPS,
             "expected 4.0 at 30 min, got {at_30min}"
+        );
+    }
+
+    #[test]
+    fn difficulty_is_capped_at_difficulty_max() {
+        // At 900 min the uncapped formula would give 91.0; the cap must apply.
+        let way_later = difficulty_from_elapsed(900.0 * 60.0);
+        assert!(
+            way_later <= DIFFICULTY_MAX + EPS,
+            "difficulty should not exceed DIFFICULTY_MAX ({DIFFICULTY_MAX}), got {way_later}"
         );
     }
 
@@ -129,7 +145,7 @@ mod tests {
             "interval at difficulty 2 ({harder}) should be less than at 1 ({base})"
         );
         assert!(
-            (base - ENEMY_SPAWN_BASE_INTERVAL).abs() < f32::EPSILON,
+            (base - ENEMY_SPAWN_BASE_INTERVAL).abs() < EPS,
             "interval at difficulty 1.0 should equal the base constant"
         );
     }
@@ -139,7 +155,7 @@ mod tests {
         let clamped = effective_spawn_interval(0.5);
         let base = effective_spawn_interval(1.0);
         assert!(
-            (clamped - base).abs() < f32::EPSILON,
+            (clamped - base).abs() < EPS,
             "difficulty below 1.0 should be clamped to 1.0"
         );
     }
@@ -169,7 +185,7 @@ mod tests {
         let diff = app.world().resource::<EnemySpawner>().difficulty_multiplier;
         let expected = difficulty_from_elapsed(120.0);
         assert!(
-            (diff - expected).abs() < f32::EPSILON,
+            (diff - expected).abs() < EPS,
             "expected {expected} at 2 min, got {diff}"
         );
     }
@@ -184,12 +200,13 @@ mod tests {
             .run_system_once(update_difficulty)
             .expect("update_difficulty should run");
 
-        let spawner = app.world().resource::<EnemySpawner>();
-        let expected_interval = effective_spawn_interval(spawner.difficulty_multiplier);
+        // At 60 s → difficulty = 1.1 → interval = BASE / 1.1.
+        // Computed independently of the system under test.
+        let expected_interval = ENEMY_SPAWN_BASE_INTERVAL / 1.1_f32;
+        let actual = app.world().resource::<EnemySpawner>().spawn_interval;
         assert!(
-            (spawner.spawn_interval - expected_interval).abs() < f32::EPSILON,
-            "spawn_interval should be {expected_interval}, got {}",
-            spawner.spawn_interval
+            (actual - expected_interval).abs() < EPS,
+            "spawn_interval should be {expected_interval}, got {actual}"
         );
     }
 
@@ -205,7 +222,7 @@ mod tests {
 
         let diff = app.world().resource::<EnemySpawner>().difficulty_multiplier;
         assert!(
-            (diff - 1.0).abs() < f32::EPSILON,
+            (diff - 1.0).abs() < EPS,
             "difficulty at t=0 should be 1.0, got {diff}"
         );
     }
