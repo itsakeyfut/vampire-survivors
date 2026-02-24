@@ -18,6 +18,7 @@ use resources::{
 use states::AppState;
 use systems::difficulty::update_difficulty;
 use systems::enemy_ai::move_enemies;
+use systems::enemy_cull::cull_distant_enemies;
 use systems::enemy_spawn::spawn_enemies;
 
 /// Core game plugin. Registers states, inserts default resources, and wires up
@@ -61,6 +62,7 @@ impl Plugin for GameCorePlugin {
                     update_difficulty.after(update_game_timer),
                     spawn_enemies.after(update_difficulty),
                     move_enemies.after(player_movement),
+                    cull_distant_enemies,
                 )
                     .run_if(in_state(AppState::Playing)),
             );
