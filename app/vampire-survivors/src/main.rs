@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use vs_assets::GameAssetsPlugin;
 use vs_audio::GameAudioPlugin;
 use vs_core::GameCorePlugin;
+use vs_core::config::GameConfigPlugin;
 use vs_ui::GameUIPlugin;
 
 fn main() {
@@ -17,6 +18,8 @@ fn main() {
         }))
         // Load assets first (other plugins may reference them)
         .add_plugins(GameAssetsPlugin)
+        // Config: loads RON files, hot-reload, Loading → Title transition
+        .add_plugins(GameConfigPlugin)
         // Core game logic (ECS, systems)
         .add_plugins(GameCorePlugin)
         // UI and camera (depends on GameCorePlugin for AppState + Player)

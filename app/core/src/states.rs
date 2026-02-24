@@ -4,6 +4,9 @@ use bevy::prelude::*;
 ///
 /// Transitions:
 /// ```text
+/// Loading ─────────────────────────→ Title
+///   (waits for all RON configs)
+///
 /// Title ──────────────────────────→ MetaShop
 ///   │                                  │
 ///   ↓                                  ↓
@@ -21,8 +24,14 @@ use bevy::prelude::*;
 /// ```
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AppState {
-    /// Title screen (default entry point).
+    /// Initial loading state — waits for all RON config assets to be ready,
+    /// then automatically transitions to [`AppState::Title`].
+    ///
+    /// To test `Playing`-state systems during development, temporarily change
+    /// `#[default]` to `Playing` in this enum.
     #[default]
+    Loading,
+    /// Title screen.
     Title,
     /// Character selection screen.
     CharacterSelect,

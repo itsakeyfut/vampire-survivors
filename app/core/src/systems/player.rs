@@ -2,6 +2,8 @@ use bevy::{prelude::*, state::state_scoped::DespawnOnExit};
 
 use crate::{
     components::{CircleCollider, PassiveInventory, Player, PlayerStats, WeaponInventory},
+    config::PlayerParams,
+    constants::COLLIDER_PLAYER,
     states::AppState,
 };
 
@@ -15,21 +17,45 @@ use crate::{
 /// when the game leaves the `Playing` state — no explicit cleanup system is
 /// needed.
 ///
-/// The camera is positioned at the origin for now; issue #8 (task 2.3) will
-/// make it smoothly follow the player.
-pub fn spawn_player(mut commands: Commands) {
+/// Stats and collider radius are read from [`PlayerParams`] when the config
+/// is loaded; otherwise falls back to [`PlayerStats::default()`] and
+/// [`COLLIDER_PLAYER`] from constants.
+pub fn spawn_player(mut commands: Commands, player_cfg: PlayerParams) {
+    // Derive stats and collider radius from config when available.
+    let (stats, collider_radius) = if let Some(cfg) = player_cfg.get() {
+        let stats = PlayerStats {
+            max_hp: cfg.base_hp,
+            current_hp: cfg.base_hp,
+            move_speed: cfg.base_speed,
+            damage_multiplier: cfg.base_damage_mult,
+            cooldown_reduction: cfg.base_cooldown_reduction,
+            projectile_speed_mult: cfg.base_projectile_speed,
+            duration_multiplier: cfg.base_duration_mult,
+            area_multiplier: cfg.base_area_mult,
+            extra_projectiles: 0,
+            luck: cfg.base_luck,
+            hp_regen: cfg.base_hp_regen,
+            pickup_radius: cfg.pickup_radius,
+        };
+        (stats, cfg.collider_radius)
+    } else {
+        (PlayerStats::default(), COLLIDER_PLAYER)
+    };
+
     // Player entity: cyan circle sprite + all required ECS components.
     commands.spawn((
         DespawnOnExit(AppState::Playing),
         Player,
-        PlayerStats::default(),
+        stats,
         Sprite {
             color: Color::srgb(0.2, 0.8, 1.0),
-            custom_size: Some(Vec2::splat(24.0)),
+            custom_size: Some(Vec2::splat(collider_radius * 2.0)),
             ..default()
         },
         Transform::from_xyz(0.0, 0.0, 10.0),
-        CircleCollider { radius: 12.0 },
+        CircleCollider {
+            radius: collider_radius,
+        },
         WeaponInventory::default(),
         PassiveInventory::default(),
     ));

@@ -1,0 +1,21 @@
+// Game rules configuration — limits, timing, XP, camera, and world settings.
+GameConfig(
+    // Window / viewport
+    window_width: 1280,
+    window_height: 720,
+    // Inventory caps
+    max_weapons: 6,
+    max_passives: 6,
+    max_weapon_level: 8,
+    max_passive_level: 5,
+    // Game rules
+    boss_spawn_time: 1800.0,        // 30 minutes in seconds
+    treasure_spawn_interval: 180.0, // 3 minutes in seconds
+    // XP / levelling
+    xp_level_base: 20,
+    xp_level_multiplier: 1.2,
+    // Camera
+    camera_lerp_speed: 10.0,
+    // Spatial partitioning
+    spatial_grid_cell_size: 64.0,
+)

@@ -22,6 +22,7 @@
 use bevy::prelude::*;
 
 use crate::{
+    config::EnemyParams,
     constants::{DIFFICULTY_MAX, ENEMY_SPAWN_BASE_INTERVAL},
     resources::{EnemySpawner, GameData},
 };
@@ -54,15 +55,31 @@ pub fn effective_spawn_interval(difficulty: f32) -> f32 {
 
 /// Updates [`EnemySpawner`] difficulty state from the run's elapsed time.
 ///
-/// Runs every frame in [`AppState::Playing`], after [`crate::game::update_game_timer`]
+/// Runs every frame in [`AppState::Playing`], after [`crate::systems::game_timer::update_game_timer`]
 /// so it always sees the current frame's elapsed time.
 ///
+/// `spawn_base_interval` and `difficulty_max` are read from [`EnemyParams`]
+/// when config is loaded; otherwise the constants from `constants.rs` are used.
+///
 /// Updates:
-/// - `difficulty_multiplier` — grows by 0.1 per minute
-/// - `spawn_interval`        — derived as `BASE / difficulty_multiplier`
-pub fn update_difficulty(game_data: Res<GameData>, mut spawner: ResMut<EnemySpawner>) {
-    spawner.difficulty_multiplier = difficulty_from_elapsed(game_data.elapsed_time);
-    spawner.spawn_interval = effective_spawn_interval(spawner.difficulty_multiplier);
+/// - `difficulty_multiplier` — grows by 0.1 per minute, capped at `difficulty_max`
+/// - `spawn_interval`        — derived as `base_interval / difficulty_multiplier`
+pub fn update_difficulty(
+    game_data: Res<GameData>,
+    mut spawner: ResMut<EnemySpawner>,
+    enemy_cfg: EnemyParams,
+) {
+    let base_interval = enemy_cfg
+        .get()
+        .map(|c| c.spawn_base_interval)
+        .unwrap_or(ENEMY_SPAWN_BASE_INTERVAL);
+    let diff_max = enemy_cfg
+        .get()
+        .map(|c| c.difficulty_max)
+        .unwrap_or(DIFFICULTY_MAX);
+
+    spawner.difficulty_multiplier = difficulty_from_elapsed(game_data.elapsed_time).min(diff_max);
+    spawner.spawn_interval = base_interval / spawner.difficulty_multiplier.max(1.0);
 }
 
 // ---------------------------------------------------------------------------

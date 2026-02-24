@@ -11,6 +11,7 @@ use bevy::prelude::*;
 
 use crate::{
     components::{Enemy, Player},
+    config::EnemyParams,
     constants::ENEMY_CULL_DISTANCE,
 };
 
@@ -18,8 +19,10 @@ use crate::{
 // System
 // ---------------------------------------------------------------------------
 
-/// Despawns enemies that are more than [`ENEMY_CULL_DISTANCE`] pixels from
-/// the player.
+/// Despawns enemies beyond the cull distance from the player.
+///
+/// The cull distance is read from [`EnemyParams`] when config is loaded;
+/// otherwise falls back to [`ENEMY_CULL_DISTANCE`] from constants.
 ///
 /// - No XP gem is dropped — the enemy simply disappears.
 /// - If there is no player entity, the system is a no-op.
@@ -28,12 +31,17 @@ pub fn cull_distant_enemies(
     mut commands: Commands,
     player_q: Query<&Transform, With<Player>>,
     enemy_q: Query<(Entity, &Transform), With<Enemy>>,
+    enemy_cfg: EnemyParams,
 ) {
     let Ok(player_tf) = player_q.single() else {
         return;
     };
     let player_pos = player_tf.translation.truncate();
-    let cull_dist_sq = ENEMY_CULL_DISTANCE * ENEMY_CULL_DISTANCE;
+    let cull_distance = enemy_cfg
+        .get()
+        .map(|c| c.cull_distance)
+        .unwrap_or(ENEMY_CULL_DISTANCE);
+    let cull_dist_sq = cull_distance * cull_distance;
 
     for (entity, tf) in enemy_q.iter() {
         let enemy_pos = tf.translation.truncate();
