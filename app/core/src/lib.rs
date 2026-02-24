@@ -58,7 +58,7 @@ impl Plugin for GameCorePlugin {
                     player_movement,
                     update_game_timer,
                     spawn_enemies,
-                    move_enemies,
+                    move_enemies.after(player_movement),
                 )
                     .run_if(in_state(AppState::Playing)),
             );
