@@ -34,10 +34,11 @@ use crate::{
 /// Compute the difficulty multiplier from run elapsed time.
 ///
 /// Grows by `0.1` per minute elapsed, starting at `1.0`, and is capped at
-/// [`DIFFICULTY_MAX`] to prevent sub-frame spawn intervals at extreme runtimes.
-pub fn difficulty_from_elapsed(elapsed_secs: f32) -> f32 {
+/// `max` to prevent sub-frame spawn intervals at extreme runtimes.
+/// Pass [`DIFFICULTY_MAX`] as the cap when no RON config is loaded.
+pub fn difficulty_from_elapsed(elapsed_secs: f32, max: f32) -> f32 {
     let minutes = (elapsed_secs / 60.0).floor();
-    (1.0 + minutes * 0.1).min(DIFFICULTY_MAX)
+    (1.0 + minutes * 0.1).min(max)
 }
 
 /// Compute the effective spawn interval given the current difficulty.
@@ -78,7 +79,7 @@ pub fn update_difficulty(
         .map(|c| c.difficulty_max)
         .unwrap_or(DIFFICULTY_MAX);
 
-    spawner.difficulty_multiplier = difficulty_from_elapsed(game_data.elapsed_time).min(diff_max);
+    spawner.difficulty_multiplier = difficulty_from_elapsed(game_data.elapsed_time, diff_max);
     spawner.spawn_interval = base_interval / spawner.difficulty_multiplier.max(1.0);
 }
 
@@ -105,15 +106,15 @@ mod tests {
     #[test]
     fn difficulty_starts_at_one() {
         assert!(
-            (difficulty_from_elapsed(0.0) - 1.0).abs() < EPS,
+            (difficulty_from_elapsed(0.0, DIFFICULTY_MAX) - 1.0).abs() < EPS,
             "difficulty at t=0 should be 1.0"
         );
     }
 
     #[test]
     fn difficulty_increases_by_point_one_per_minute() {
-        let one_min = difficulty_from_elapsed(60.0);
-        let two_min = difficulty_from_elapsed(120.0);
+        let one_min = difficulty_from_elapsed(60.0, DIFFICULTY_MAX);
+        let two_min = difficulty_from_elapsed(120.0, DIFFICULTY_MAX);
         assert!(
             (one_min - 1.1).abs() < EPS,
             "expected 1.1 at 1 min, got {one_min}"
@@ -126,8 +127,8 @@ mod tests {
 
     #[test]
     fn difficulty_does_not_increase_within_a_minute() {
-        let at_zero = difficulty_from_elapsed(0.0);
-        let at_59 = difficulty_from_elapsed(59.9);
+        let at_zero = difficulty_from_elapsed(0.0, DIFFICULTY_MAX);
+        let at_59 = difficulty_from_elapsed(59.9, DIFFICULTY_MAX);
         assert!(
             (at_zero - at_59).abs() < EPS,
             "difficulty should not increase before a full minute elapses"
@@ -136,7 +137,7 @@ mod tests {
 
     #[test]
     fn difficulty_at_thirty_minutes_is_four() {
-        let at_30min = difficulty_from_elapsed(30.0 * 60.0);
+        let at_30min = difficulty_from_elapsed(30.0 * 60.0, DIFFICULTY_MAX);
         assert!(
             (at_30min - 4.0).abs() < EPS,
             "expected 4.0 at 30 min, got {at_30min}"
@@ -146,7 +147,7 @@ mod tests {
     #[test]
     fn difficulty_is_capped_at_difficulty_max() {
         // At 900 min the uncapped formula would give 91.0; the cap must apply.
-        let way_later = difficulty_from_elapsed(900.0 * 60.0);
+        let way_later = difficulty_from_elapsed(900.0 * 60.0, DIFFICULTY_MAX);
         assert!(
             way_later <= DIFFICULTY_MAX + EPS,
             "difficulty should not exceed DIFFICULTY_MAX ({DIFFICULTY_MAX}), got {way_later}"
@@ -200,7 +201,7 @@ mod tests {
             .expect("update_difficulty should run");
 
         let diff = app.world().resource::<EnemySpawner>().difficulty_multiplier;
-        let expected = difficulty_from_elapsed(120.0);
+        let expected = difficulty_from_elapsed(120.0, DIFFICULTY_MAX);
         assert!(
             (diff - expected).abs() < EPS,
             "expected {expected} at 2 min, got {diff}"
