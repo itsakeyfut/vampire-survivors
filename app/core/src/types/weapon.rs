@@ -48,6 +48,18 @@ pub struct WeaponState {
     pub evolved: bool,
 }
 
+impl WeaponState {
+    /// Creates a new weapon at level 1 with no active cooldown.
+    pub fn new(weapon_type: WeaponType) -> Self {
+        Self {
+            weapon_type,
+            level: 1,
+            cooldown_timer: 0.0,
+            evolved: false,
+        }
+    }
+}
+
 /// All passive item types. Each has 5 upgrade levels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PassiveItemType {
@@ -124,5 +136,36 @@ mod tests {
         let p = PassiveItemType::HollowHeart;
         let _copy = p;
         let _original = p;
+    }
+
+    #[test]
+    fn weapon_state_new_starts_at_level_one() {
+        let state = WeaponState::new(WeaponType::Whip);
+        assert_eq!(state.weapon_type, WeaponType::Whip);
+        assert_eq!(state.level, 1);
+        assert_eq!(state.cooldown_timer, 0.0);
+        assert!(!state.evolved);
+    }
+
+    /// All 8 base weapons must be constructable and start at level 1.
+    #[test]
+    fn weapon_state_new_all_eight_base_weapons() {
+        let base_weapons = [
+            WeaponType::Whip,
+            WeaponType::MagicWand,
+            WeaponType::Knife,
+            WeaponType::Garlic,
+            WeaponType::Bible,
+            WeaponType::ThunderRing,
+            WeaponType::Cross,
+            WeaponType::FireWand,
+        ];
+        assert_eq!(base_weapons.len(), 8, "exactly 8 base weapons required");
+        for weapon_type in base_weapons {
+            let state = WeaponState::new(weapon_type);
+            assert_eq!(state.level, 1);
+            assert_eq!(state.cooldown_timer, 0.0);
+            assert!(!state.evolved);
+        }
     }
 }
