@@ -4,6 +4,7 @@ pub mod game;
 pub mod player;
 pub mod resources;
 pub mod states;
+pub mod systems;
 pub mod types;
 
 use bevy::prelude::*;
@@ -15,6 +16,7 @@ use resources::{
     TreasureSpawner,
 };
 use states::AppState;
+use systems::enemy_spawn::spawn_enemies;
 
 /// Core game plugin. Registers states, inserts default resources, and wires up
 /// all gameplay systems.
@@ -51,7 +53,8 @@ impl Plugin for GameCorePlugin {
             // ---------------------------------------------------------------
             .add_systems(
                 Update,
-                (player_movement, update_game_timer).run_if(in_state(AppState::Playing)),
+                (player_movement, update_game_timer, spawn_enemies)
+                    .run_if(in_state(AppState::Playing)),
             );
     }
 }
