@@ -91,6 +91,12 @@ pub const TREASURE_SPAWN_INTERVAL: f32 = 180.0;
 pub const ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
 /// Maximum number of simultaneous enemies before spawning is throttled.
 pub const ENEMY_MAX_COUNT: usize = 500;
+/// Distance from the player (pixels) beyond which enemies are silently despawned.
+///
+/// Enemies culled this way do **not** drop XP gems — they simply disappear.
+/// This prevents unbounded memory growth when the player moves far from
+/// a cluster of enemies.
+pub const ENEMY_CULL_DISTANCE: f32 = 2000.0;
 /// Hard ceiling for the difficulty multiplier (≈ 90 minutes of play).
 ///
 /// Prevents the spawn interval from shrinking to sub-frame values in
