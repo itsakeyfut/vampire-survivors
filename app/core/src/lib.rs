@@ -62,7 +62,9 @@ impl Plugin for GameCorePlugin {
                     update_difficulty.after(update_game_timer),
                     spawn_enemies.after(update_difficulty),
                     move_enemies.after(player_movement),
-                    cull_distant_enemies,
+                    cull_distant_enemies
+                        .after(move_enemies)
+                        .after(spawn_enemies),
                 )
                     .run_if(in_state(AppState::Playing)),
             );
