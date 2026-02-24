@@ -103,25 +103,20 @@ Playing状態開始時にプレイヤーをスポーンし、WASDキーで移動
 - [ ] 移動速度が `PlayerStats.move_speed` に基づいている
 - [ ] プレイヤーのプレースホルダースプライト（単色の円）が表示される
 
+**実装ファイル**: `app/core/src/player.rs`（`GameCorePlugin` の `OnEnter(Playing)` で登録）
+
 **実装ガイド**:
 ```rust
+// app/core/src/player.rs
+use bevy::{prelude::*, state::state_scoped::DespawnOnExit};
+use crate::states::AppState;
+
 pub fn spawn_player(mut commands: Commands) {
     commands.spawn((
+        // Playing 終了時に自動削除（DespawnOnExit を使用。StateScoped は Bevy 0.17 では使えない）
+        DespawnOnExit(AppState::Playing),
         Player,
-        PlayerStats {
-            max_hp: 100.0,
-            current_hp: 100.0,
-            move_speed: 200.0,
-            damage_multiplier: 1.0,
-            cooldown_reduction: 0.0,
-            projectile_speed_mult: 1.0,
-            duration_multiplier: 1.0,
-            pickup_radius: 80.0,
-            area_multiplier: 1.0,
-            extra_projectiles: 0,
-            luck: 1.0,
-            hp_regen: 0.0,
-        },
+        PlayerStats::default(),
         Sprite {
             color: Color::srgb(0.2, 0.8, 1.0),
             custom_size: Some(Vec2::splat(24.0)),
@@ -129,8 +124,8 @@ pub fn spawn_player(mut commands: Commands) {
         },
         Transform::from_xyz(0.0, 0.0, 10.0),
         CircleCollider { radius: 12.0 },
-        WeaponInventory { weapons: vec![] },
-        PassiveInventory { items: vec![] },
+        WeaponInventory::default(),
+        PassiveInventory::default(),
     ));
 }
 ```
@@ -144,12 +139,42 @@ pub fn spawn_player(mut commands: Commands) {
 **ラベル**: task, phase-2
 
 **説明**:
-2Dカメラをプレイヤーにスムーズに追従させる。
+2Dカメラをプレイヤーにスムーズに追従させる。カメラ関連のコードは **vs-ui クレート** に配置する。
+
+**実装ファイル**: `app/ui/src/camera.rs`（`GameUIPlugin` で登録）
 
 **受け入れ基準**:
-- [ ] Playing状態でカメラがプレイヤーを追従する
-- [ ] 追従がスムーズ（線形補間）
+- [ ] `app/ui/src/camera.rs` に `setup_camera`・`camera_follow_player` が実装されている
+- [ ] `setup_camera` は `Startup` で実行され、`Camera2d` を常駐スポーンする
+- [ ] `camera_follow_player` は `Playing` 状態でのみ実行され、指数補間でスムーズに追従する
 - [ ] プレイヤーが移動してもカメラが常についてくる
+
+**実装ガイド**:
+```rust
+// app/ui/src/camera.rs
+use bevy::prelude::*;
+use vs_core::components::Player;
+use vs_core::constants::CAMERA_LERP_SPEED;
+
+pub fn setup_camera(mut commands: Commands) {
+    commands.spawn((Camera2d, Transform::from_xyz(0.0, 0.0, 999.9)));
+}
+
+pub fn camera_follow_player(
+    time: Res<Time>,
+    player_q: Query<&Transform, With<Player>>,
+    mut camera_q: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
+) {
+    // Bevy 0.17: get_single_mut() → single_mut()
+    let Ok(player_tf) = player_q.single() else { return; };
+    let Ok(mut camera_tf) = camera_q.single_mut() else { return; };
+    let target = player_tf.translation.truncate();
+    let current = camera_tf.translation.truncate();
+    let lerped = current.lerp(target, CAMERA_LERP_SPEED * time.delta_secs());
+    camera_tf.translation.x = lerped.x;
+    camera_tf.translation.y = lerped.y;
+}
+```
 
 ---
 
@@ -176,6 +201,8 @@ pub fn spawn_player(mut commands: Commands) {
 
 **説明**:
 タイトル画面に「スタート」ボタンだけを配置し、クリックでPlaying状態に遷移する。
+
+**実装ファイル**: `app/ui/src/title.rs`（`GameUIPlugin` の `OnEnter(Title)` で登録）
 
 **受け入れ基準**:
 - [ ] Title状態でタイトルテキストとスタートボタンが表示される

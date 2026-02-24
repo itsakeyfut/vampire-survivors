@@ -75,6 +75,8 @@ pub fn get_character_stats(char_type: CharacterType) -> CharacterBaseStats {
 **説明**:
 設計書通りのキャラクター選択画面を実装する。カード一覧・詳細パネル・選択ボタン。
 
+**実装ファイル**: `app/ui/src/character_select.rs`（**vs-ui** クレート）
+
 **受け入れ基準**:
 - [ ] 全キャラクターがカード形式で表示される
 - [ ] 解放済みキャラクターは通常表示・選択可能

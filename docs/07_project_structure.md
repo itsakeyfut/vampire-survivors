@@ -23,35 +23,38 @@ vampire-survivors/                    # プロジェクトルート
 │   │       ├── constants.rs          # ゲーム定数
 │   │       ├── types.rs              # WeaponType, EnemyType 等の型定義
 │   │       ├── spatial_grid.rs       # 空間グリッドパーティショニング
-│   │       ├── systems/
-│   │       │   ├── mod.rs
-│   │       │   ├── player.rs         # プレイヤー移動
-│   │       │   ├── enemy.rs          # 敵スポーン・移動AI
-│   │       │   ├── boss.rs           # ボスAI・フェーズ管理
-│   │       │   ├── weapons.rs        # 武器システム統括
-│   │       │   ├── projectile.rs     # 投射体の移動・寿命管理
-│   │       │   ├── collision.rs      # 衝突判定システム
-│   │       │   ├── xp.rs             # XPジェム・吸収処理
-│   │       │   ├── level_up.rs       # レベルアップ・選択肢生成
-│   │       │   ├── passive.rs        # パッシブ効果の計算・適用
-│   │       │   ├── evolution.rs      # 武器進化ロジック
-│   │       │   ├── treasure.rs       # 宝箱スポーン・開封
-│   │       │   ├── meta.rs           # メタ進行データ管理
-│   │       │   ├── damage.rs         # ダメージ適用システム
-│   │       │   ├── camera.rs         # カメラ追従
-│   │       │   ├── map.rs            # 背景マップ管理
-│   │       │   ├── gold.rs           # ゴールドドロップ・獲得
-│   │       │   └── effects.rs        # ビジュアルエフェクト
-│   │       └── ui/
+│   │       └── systems/
 │   │           ├── mod.rs
-│   │           ├── hud.rs            # ゲームプレイHUD
-│   │           ├── title.rs          # タイトル画面
-│   │           ├── character_select.rs  # キャラクター選択画面
-│   │           ├── level_up.rs       # レベルアップ選択UI
-│   │           ├── pause.rs          # ポーズ画面
-│   │           ├── game_over.rs      # ゲームオーバー画面
-│   │           ├── victory.rs        # 勝利画面
-│   │           └── meta_shop.rs      # ゴールドショップUI
+│   │           ├── player.rs         # プレイヤースポーン・移動
+│   │           ├── enemy.rs          # 敵スポーン・移動AI
+│   │           ├── boss.rs           # ボスAI・フェーズ管理
+│   │           ├── weapons.rs        # 武器システム統括
+│   │           ├── projectile.rs     # 投射体の移動・寿命管理
+│   │           ├── collision.rs      # 衝突判定システム
+│   │           ├── xp.rs             # XPジェム・吸収処理
+│   │           ├── level_up.rs       # レベルアップ・選択肢生成
+│   │           ├── passive.rs        # パッシブ効果の計算・適用
+│   │           ├── evolution.rs      # 武器進化ロジック
+│   │           ├── treasure.rs       # 宝箱スポーン・開封
+│   │           ├── meta.rs           # メタ進行データ管理
+│   │           ├── damage.rs         # ダメージ適用システム
+│   │           ├── map.rs            # 背景マップ管理
+│   │           ├── gold.rs           # ゴールドドロップ・獲得
+│   │           └── effects.rs        # ビジュアルエフェクト
+│   │
+│   ├── ui/                           # vs-ui クレート
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs                # GameUIPlugin のエクスポート
+│   │       ├── camera.rs             # カメラセットアップ・プレイヤー追従
+│   │       ├── hud.rs                # ゲームプレイHUD
+│   │       ├── title.rs              # タイトル画面
+│   │       ├── character_select.rs   # キャラクター選択画面
+│   │       ├── level_up.rs           # レベルアップ選択UI
+│   │       ├── pause.rs              # ポーズ画面
+│   │       ├── game_over.rs          # ゲームオーバー画面
+│   │       ├── victory.rs            # 勝利画面
+│   │       └── meta_shop.rs          # ゴールドショップUI
 │   │
 │   ├── audio/                        # vs-audio クレート
 │   │   ├── Cargo.toml
@@ -132,20 +135,19 @@ vampire-survivors/                    # プロジェクトルート
 │   └── meta.json                     # メタ進行データ（ゴールド・アンロック等）
 │
 ├── docs/
-│   └── vampire-survivors/
-│       ├── 01_specification.md
-│       ├── 02_architecture.md
-│       ├── 03_gameplay_systems.md
-│       ├── 04_ui_ux.md
-│       ├── 05_audio.md
-│       ├── 06_implementation_plan.md
-│       ├── 07_project_structure.md   ← このファイル
-│       ├── 08_crate_architecture.md
-│       ├── 09_quick_reference.md
-│       └── roadmap/
-│           ├── README.md
-│           ├── phase-01.md
-│           └── ...（phase-17まで）
+│   ├── 01_specification.md
+│   ├── 02_architecture.md
+│   ├── 03_gameplay_systems.md
+│   ├── 04_ui_ux.md
+│   ├── 05_audio.md
+│   ├── 06_implementation_plan.md
+│   ├── 07_project_structure.md   ← このファイル
+│   ├── 08_crate_architecture.md
+│   ├── 09_quick_reference.md
+│   └── roadmap/
+│       ├── README.md
+│       ├── phase-01.md
+│       └── ...（phase-17まで）
 │
 └── .github/
     └── ISSUE_TEMPLATE/
@@ -218,22 +220,29 @@ pub enum BossPhase { ... }
 
 ```rust
 use bevy::prelude::*;
-use vs_core::GameCorePlugin;
-use vs_audio::GameAudioPlugin;
 use vs_assets::GameAssetsPlugin;
+use vs_audio::GameAudioPlugin;
+use vs_core::GameCorePlugin;
+use vs_ui::GameUIPlugin;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Vampire Survivors Clone".into(),
-                resolution: (1280.0, 720.0).into(),
+                resolution: (1280, 720).into(),
+                resizable: false,
                 ..default()
             }),
             ..default()
         }))
+        // Load assets first (other plugins may reference them)
         .add_plugins(GameAssetsPlugin)
+        // Core game logic (ECS, systems)
         .add_plugins(GameCorePlugin)
+        // UI and camera (depends on GameCorePlugin for AppState + Player)
+        .add_plugins(GameUIPlugin)
+        // Audio (receives core events for BGM/SFX switching)
         .add_plugins(GameAudioPlugin)
         .run();
 }
@@ -246,12 +255,14 @@ fn main() {
 ```
 vampire-survivors (main binary)
     │
-    ├─→ vs-core        # コアゲームロジック・ECS・UI
-    ├─→ vs-audio ────→ vs-core  # BGM/SFX（coreのイベント・状態を参照）
-    └─→ vs-assets               # アセットロード（独立）
+    ├─→ vs-core                        # コアゲームロジック・ECS
+    ├─→ vs-ui    ────→ vs-core         # UI・カメラ（coreのコンポーネント・状態を参照）
+    ├─→ vs-audio ────→ vs-core         # BGM/SFX（coreのイベント・状態を参照）
+    └─→ vs-assets                      # アセットロード（独立）
 ```
 
 - `vs-core` は他のゲームクレートに依存しない（最も基本的なクレート）
+- `vs-ui` は `vs-core` の `Player` コンポーネント・`AppState` を参照してカメラ追従・UI切り替えを行う
 - `vs-audio` は `vs-core` のイベント・状態を参照してBGM切り替えを行う
 - `vs-assets` はアセットロードのみで他クレートに依存しない
 - メインバイナリが全プラグインを統合して `App::run()` する

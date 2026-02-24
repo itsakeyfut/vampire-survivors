@@ -45,6 +45,7 @@ Cargoワークスペース・開発環境・ドキュメントを整備し、ビ
 resolver = "2"
 members = [
     "app/core",
+    "app/ui",
     "app/audio",
     "app/assets",
     "app/vampire-survivors",
