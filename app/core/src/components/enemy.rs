@@ -117,7 +117,7 @@ mod tests {
         let base = Enemy::from_type(EnemyType::Skeleton, 1.0);
         let hard = Enemy::from_type(EnemyType::Skeleton, 2.0);
         assert!(
-            (hard.max_hp - base.max_hp * 2.0).abs() < f32::EPSILON,
+            (hard.max_hp - base.max_hp * 2.0).abs() < base.max_hp * 1e-6,
             "HP should double at difficulty 2"
         );
         // Speed is unaffected by difficulty

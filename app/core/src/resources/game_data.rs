@@ -49,6 +49,7 @@ mod tests {
         assert_eq!(gd.current_xp, 0);
         assert_eq!(gd.xp_to_next_level, crate::constants::XP_LEVEL_BASE);
         assert_eq!(gd.kill_count, 0);
+        assert_eq!(gd.gold_earned, 0);
         assert!(!gd.boss_spawned);
     }
 }
