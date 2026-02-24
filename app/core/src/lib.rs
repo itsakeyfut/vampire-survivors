@@ -16,6 +16,7 @@ use resources::{
     TreasureSpawner,
 };
 use states::AppState;
+use systems::enemy_ai::move_enemies;
 use systems::enemy_spawn::spawn_enemies;
 
 /// Core game plugin. Registers states, inserts default resources, and wires up
@@ -53,7 +54,12 @@ impl Plugin for GameCorePlugin {
             // ---------------------------------------------------------------
             .add_systems(
                 Update,
-                (player_movement, update_game_timer, spawn_enemies)
+                (
+                    player_movement,
+                    update_game_timer,
+                    spawn_enemies,
+                    move_enemies.after(player_movement),
+                )
                     .run_if(in_state(AppState::Playing)),
             );
     }
