@@ -1,5 +1,6 @@
 pub mod components;
 pub mod constants;
+pub mod game;
 pub mod player;
 pub mod resources;
 pub mod states;
@@ -7,6 +8,7 @@ pub mod types;
 
 use bevy::prelude::*;
 
+use game::update_game_timer;
 use player::{player_movement, spawn_player};
 use resources::{
     EnemySpawner, GameData, LevelUpChoices, MetaProgress, SelectedCharacter, SpatialGrid,
@@ -47,6 +49,9 @@ impl Plugin for GameCorePlugin {
             // ---------------------------------------------------------------
             // Playing state — per-frame gameplay systems
             // ---------------------------------------------------------------
-            .add_systems(Update, player_movement.run_if(in_state(AppState::Playing)));
+            .add_systems(
+                Update,
+                (player_movement, update_game_timer).run_if(in_state(AppState::Playing)),
+            );
     }
 }
