@@ -45,6 +45,23 @@ pub const COLLIDER_DRAGON: f32 = 20.0;
 pub const COLLIDER_BOSS_DEATH: f32 = 30.0;
 
 // ---------------------------------------------------------------------------
+// Enemy base stats
+//
+// HP values are multiplied by the runtime `difficulty_multiplier` before use.
+// Speed, damage, XP, and gold chance remain constant regardless of difficulty.
+// ---------------------------------------------------------------------------
+
+/// (base_hp, speed px/s, contact_damage, xp_value, gold_drop_chance 0–1)
+pub const ENEMY_STATS_BAT: (f32, f32, f32, u32, f32) = (10.0, 150.0, 5.0, 3, 0.05);
+pub const ENEMY_STATS_SKELETON: (f32, f32, f32, u32, f32) = (30.0, 80.0, 8.0, 5, 0.08);
+pub const ENEMY_STATS_ZOMBIE: (f32, f32, f32, u32, f32) = (80.0, 40.0, 12.0, 8, 0.10);
+pub const ENEMY_STATS_GHOST: (f32, f32, f32, u32, f32) = (40.0, 70.0, 10.0, 6, 0.08);
+pub const ENEMY_STATS_DEMON: (f32, f32, f32, u32, f32) = (100.0, 120.0, 15.0, 10, 0.12);
+pub const ENEMY_STATS_MEDUSA: (f32, f32, f32, u32, f32) = (60.0, 60.0, 12.0, 8, 0.10);
+pub const ENEMY_STATS_DRAGON: (f32, f32, f32, u32, f32) = (200.0, 80.0, 20.0, 15, 0.15);
+pub const ENEMY_STATS_BOSS_DEATH: (f32, f32, f32, u32, f32) = (5000.0, 30.0, 50.0, 500, 1.0);
+
+// ---------------------------------------------------------------------------
 // Weapon limits
 // ---------------------------------------------------------------------------
 
