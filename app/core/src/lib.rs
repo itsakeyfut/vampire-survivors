@@ -1,6 +1,7 @@
 pub mod components;
 pub mod config;
 pub mod constants;
+pub mod events;
 pub mod resources;
 pub mod states;
 pub mod systems;
@@ -8,6 +9,7 @@ pub mod types;
 
 use bevy::prelude::*;
 
+use events::WeaponFiredEvent;
 use resources::{
     EnemySpawner, GameData, LevelUpChoices, MetaProgress, SelectedCharacter, SpatialGrid,
     TreasureSpawner,
@@ -19,6 +21,7 @@ use systems::enemy_cull::cull_distant_enemies;
 use systems::enemy_spawn::spawn_enemies;
 use systems::game_timer::update_game_timer;
 use systems::player::{player_movement, spawn_player};
+use systems::weapon_cooldown::tick_weapon_cooldowns;
 
 /// Core game plugin. Registers states, inserts default resources, and wires up
 /// all gameplay systems.
@@ -45,6 +48,10 @@ impl Plugin for GameCorePlugin {
             // ---------------------------------------------------------------
             .insert_resource(MetaProgress::load())
             // ---------------------------------------------------------------
+            // Events
+            // ---------------------------------------------------------------
+            .add_message::<WeaponFiredEvent>()
+            // ---------------------------------------------------------------
             // Playing state — player lifecycle
             // ---------------------------------------------------------------
             // StateScoped entities (camera + player) are despawned automatically
@@ -57,6 +64,7 @@ impl Plugin for GameCorePlugin {
                 Update,
                 (
                     player_movement,
+                    tick_weapon_cooldowns.after(player_movement),
                     update_game_timer,
                     update_difficulty.after(update_game_timer),
                     spawn_enemies.after(update_difficulty),
