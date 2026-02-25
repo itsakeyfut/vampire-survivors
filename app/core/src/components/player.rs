@@ -2,6 +2,21 @@ use bevy::prelude::*;
 
 use crate::types::{PassiveState, WeaponState};
 
+// ---------------------------------------------------------------------------
+// Fallback constants (used when RON config is not yet loaded)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_PLAYER_BASE_HP: f32 = 100.0;
+const DEFAULT_PLAYER_BASE_SPEED: f32 = 200.0;
+const DEFAULT_PLAYER_BASE_DAMAGE_MULT: f32 = 1.0;
+const DEFAULT_PLAYER_BASE_COOLDOWN_REDUCTION: f32 = 0.0;
+const DEFAULT_PLAYER_BASE_PROJECTILE_SPEED: f32 = 1.0;
+const DEFAULT_PLAYER_BASE_DURATION_MULT: f32 = 1.0;
+const DEFAULT_PLAYER_BASE_AREA_MULT: f32 = 1.0;
+const DEFAULT_PLAYER_BASE_LUCK: f32 = 1.0;
+const DEFAULT_PLAYER_BASE_HP_REGEN: f32 = 0.0;
+const DEFAULT_PLAYER_PICKUP_RADIUS: f32 = 80.0;
+
 /// Marker component identifying the player entity.
 #[derive(Component, Debug)]
 pub struct Player;
@@ -35,20 +50,19 @@ pub struct PlayerStats {
 
 impl Default for PlayerStats {
     fn default() -> Self {
-        use crate::constants::*;
         Self {
-            max_hp: PLAYER_BASE_HP,
-            current_hp: PLAYER_BASE_HP,
-            move_speed: PLAYER_BASE_SPEED,
-            damage_multiplier: PLAYER_BASE_DAMAGE_MULT,
-            cooldown_reduction: PLAYER_BASE_COOLDOWN_REDUCTION,
-            projectile_speed_mult: PLAYER_BASE_PROJECTILE_SPEED,
-            duration_multiplier: PLAYER_BASE_DURATION_MULT,
-            pickup_radius: PLAYER_PICKUP_RADIUS,
-            area_multiplier: PLAYER_BASE_AREA_MULT,
+            max_hp: DEFAULT_PLAYER_BASE_HP,
+            current_hp: DEFAULT_PLAYER_BASE_HP,
+            move_speed: DEFAULT_PLAYER_BASE_SPEED,
+            damage_multiplier: DEFAULT_PLAYER_BASE_DAMAGE_MULT,
+            cooldown_reduction: DEFAULT_PLAYER_BASE_COOLDOWN_REDUCTION,
+            projectile_speed_mult: DEFAULT_PLAYER_BASE_PROJECTILE_SPEED,
+            duration_multiplier: DEFAULT_PLAYER_BASE_DURATION_MULT,
+            pickup_radius: DEFAULT_PLAYER_PICKUP_RADIUS,
+            area_multiplier: DEFAULT_PLAYER_BASE_AREA_MULT,
             extra_projectiles: 0,
-            luck: PLAYER_BASE_LUCK,
-            hp_regen: PLAYER_BASE_HP_REGEN,
+            luck: DEFAULT_PLAYER_BASE_LUCK,
+            hp_regen: DEFAULT_PLAYER_BASE_HP_REGEN,
         }
     }
 }
@@ -83,9 +97,9 @@ mod tests {
     #[test]
     fn player_stats_default_values() {
         let stats = PlayerStats::default();
-        assert_eq!(stats.max_hp, crate::constants::PLAYER_BASE_HP);
-        assert_eq!(stats.current_hp, crate::constants::PLAYER_BASE_HP);
-        assert_eq!(stats.move_speed, crate::constants::PLAYER_BASE_SPEED);
+        assert_eq!(stats.max_hp, DEFAULT_PLAYER_BASE_HP);
+        assert_eq!(stats.current_hp, DEFAULT_PLAYER_BASE_HP);
+        assert_eq!(stats.move_speed, DEFAULT_PLAYER_BASE_SPEED);
         assert_eq!(stats.damage_multiplier, 1.0);
         assert_eq!(stats.extra_projectiles, 0);
     }

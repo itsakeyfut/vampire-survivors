@@ -3,7 +3,7 @@
 //!
 //! [`cull_distant_enemies`] runs every frame while in [`AppState::Playing`].
 //! Any [`Enemy`] entity whose distance from the player exceeds
-//! [`ENEMY_CULL_DISTANCE`] is despawned immediately **without** dropping an
+//! [`DEFAULT_ENEMY_CULL_DISTANCE`] is despawned immediately **without** dropping an
 //! XP gem. This keeps memory bounded when the player moves large distances
 //! and leaves enemy clusters behind.
 
@@ -12,8 +12,14 @@ use bevy::prelude::*;
 use crate::{
     components::{Enemy, Player},
     config::EnemyParams,
-    constants::ENEMY_CULL_DISTANCE,
 };
+
+// ---------------------------------------------------------------------------
+// Fallback constants (used when RON config is not yet loaded)
+// ---------------------------------------------------------------------------
+
+/// Distance from the player (pixels) beyond which enemies are despawned.
+const DEFAULT_ENEMY_CULL_DISTANCE: f32 = 2000.0;
 
 // ---------------------------------------------------------------------------
 // System
@@ -22,7 +28,7 @@ use crate::{
 /// Despawns enemies beyond the cull distance from the player.
 ///
 /// The cull distance is read from [`EnemyParams`] when config is loaded;
-/// otherwise falls back to [`ENEMY_CULL_DISTANCE`] from constants.
+/// otherwise falls back to [`DEFAULT_ENEMY_CULL_DISTANCE`].
 ///
 /// - No XP gem is dropped — the enemy simply disappears.
 /// - If there is no player entity, the system is a no-op.
@@ -40,7 +46,7 @@ pub fn cull_distant_enemies(
     let cull_distance = enemy_cfg
         .get()
         .map(|c| c.cull_distance)
-        .unwrap_or(ENEMY_CULL_DISTANCE);
+        .unwrap_or(DEFAULT_ENEMY_CULL_DISTANCE);
     let cull_dist_sq = cull_distance * cull_distance;
 
     for (entity, tf) in enemy_q.iter() {
@@ -60,8 +66,8 @@ mod tests {
     use bevy::ecs::system::RunSystemOnce as _;
 
     use super::*;
+    use crate::components::Enemy;
     use crate::types::EnemyType;
-    use crate::{components::Enemy, constants::ENEMY_CULL_DISTANCE};
 
     fn build_app() -> App {
         let mut app = App::new();
@@ -96,7 +102,7 @@ mod tests {
     fn enemy_beyond_threshold_is_despawned() {
         let mut app = build_app();
         spawn_player_at(&mut app, Vec2::ZERO);
-        let enemy = spawn_enemy_at(&mut app, Vec2::new(ENEMY_CULL_DISTANCE + 1.0, 0.0));
+        let enemy = spawn_enemy_at(&mut app, Vec2::new(DEFAULT_ENEMY_CULL_DISTANCE + 1.0, 0.0));
 
         run_cull(&mut app);
 
@@ -111,7 +117,7 @@ mod tests {
     fn enemy_at_threshold_is_kept() {
         let mut app = build_app();
         spawn_player_at(&mut app, Vec2::ZERO);
-        let enemy = spawn_enemy_at(&mut app, Vec2::new(ENEMY_CULL_DISTANCE, 0.0));
+        let enemy = spawn_enemy_at(&mut app, Vec2::new(DEFAULT_ENEMY_CULL_DISTANCE, 0.0));
 
         run_cull(&mut app);
 
@@ -142,7 +148,10 @@ mod tests {
         let mut app = build_app();
         spawn_player_at(&mut app, Vec2::ZERO);
         let near = spawn_enemy_at(&mut app, Vec2::new(500.0, 0.0));
-        let far = spawn_enemy_at(&mut app, Vec2::new(ENEMY_CULL_DISTANCE + 100.0, 0.0));
+        let far = spawn_enemy_at(
+            &mut app,
+            Vec2::new(DEFAULT_ENEMY_CULL_DISTANCE + 100.0, 0.0),
+        );
 
         run_cull(&mut app);
 
@@ -176,9 +185,9 @@ mod tests {
         let mut app = build_app();
         spawn_player_at(&mut app, Vec2::ZERO);
 
-        let far1 = spawn_enemy_at(&mut app, Vec2::new(ENEMY_CULL_DISTANCE + 1.0, 0.0));
-        let far2 = spawn_enemy_at(&mut app, Vec2::new(0.0, ENEMY_CULL_DISTANCE + 1.0));
-        let far3 = spawn_enemy_at(&mut app, Vec2::new(-ENEMY_CULL_DISTANCE - 1.0, 0.0));
+        let far1 = spawn_enemy_at(&mut app, Vec2::new(DEFAULT_ENEMY_CULL_DISTANCE + 1.0, 0.0));
+        let far2 = spawn_enemy_at(&mut app, Vec2::new(0.0, DEFAULT_ENEMY_CULL_DISTANCE + 1.0));
+        let far3 = spawn_enemy_at(&mut app, Vec2::new(-DEFAULT_ENEMY_CULL_DISTANCE - 1.0, 0.0));
 
         run_cull(&mut app);
 

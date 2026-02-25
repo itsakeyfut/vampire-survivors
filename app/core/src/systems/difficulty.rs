@@ -8,7 +8,7 @@
 //!
 //! ```text
 //! difficulty_multiplier = 1.0 + floor(elapsed_secs / 60) × 0.1
-//! spawn_interval        = ENEMY_SPAWN_BASE_INTERVAL / difficulty_multiplier
+//! spawn_interval        = DEFAULT_ENEMY_SPAWN_BASE_INTERVAL / difficulty_multiplier
 //! ```
 //!
 //! Examples:
@@ -23,9 +23,17 @@ use bevy::prelude::*;
 
 use crate::{
     config::EnemyParams,
-    constants::{DIFFICULTY_MAX, ENEMY_SPAWN_BASE_INTERVAL},
     resources::{EnemySpawner, GameData},
 };
+
+// ---------------------------------------------------------------------------
+// Fallback constants (used when RON config is not yet loaded)
+// ---------------------------------------------------------------------------
+
+/// Base enemy spawn interval in seconds.
+const DEFAULT_ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
+/// Hard cap for the difficulty multiplier.
+const DEFAULT_DIFFICULTY_MAX: f32 = 10.0;
 
 // ---------------------------------------------------------------------------
 // Public helpers (pure — easy to unit-test)
@@ -35,7 +43,7 @@ use crate::{
 ///
 /// Grows by `0.1` per minute elapsed, starting at `1.0`, and is capped at
 /// `max` to prevent sub-frame spawn intervals at extreme runtimes.
-/// Pass [`DIFFICULTY_MAX`] as the cap when no RON config is loaded.
+/// Pass [`DEFAULT_DIFFICULTY_MAX`] as the cap when no RON config is loaded.
 pub fn difficulty_from_elapsed(elapsed_secs: f32, max: f32) -> f32 {
     let minutes = (elapsed_secs / 60.0).floor();
     (1.0 + minutes * 0.1).min(max)
@@ -47,7 +55,7 @@ pub fn difficulty_from_elapsed(elapsed_secs: f32, max: f32) -> f32 {
 /// Difficulty values below `1.0` are clamped to `1.0` so the interval
 /// never exceeds the base value.
 pub fn effective_spawn_interval(difficulty: f32) -> f32 {
-    ENEMY_SPAWN_BASE_INTERVAL / difficulty.max(1.0)
+    DEFAULT_ENEMY_SPAWN_BASE_INTERVAL / difficulty.max(1.0)
 }
 
 // ---------------------------------------------------------------------------
@@ -60,7 +68,7 @@ pub fn effective_spawn_interval(difficulty: f32) -> f32 {
 /// so it always sees the current frame's elapsed time.
 ///
 /// `spawn_base_interval` and `difficulty_max` are read from [`EnemyParams`]
-/// when config is loaded; otherwise the constants from `constants.rs` are used.
+/// when config is loaded; otherwise the `DEFAULT_*` fallback constants are used.
 ///
 /// Updates:
 /// - `difficulty_multiplier` — grows by 0.1 per minute, capped at `difficulty_max`
@@ -73,11 +81,11 @@ pub fn update_difficulty(
     let base_interval = enemy_cfg
         .get()
         .map(|c| c.spawn_base_interval)
-        .unwrap_or(ENEMY_SPAWN_BASE_INTERVAL);
+        .unwrap_or(DEFAULT_ENEMY_SPAWN_BASE_INTERVAL);
     let diff_max = enemy_cfg
         .get()
         .map(|c| c.difficulty_max)
-        .unwrap_or(DIFFICULTY_MAX);
+        .unwrap_or(DEFAULT_DIFFICULTY_MAX);
 
     spawner.difficulty_multiplier = difficulty_from_elapsed(game_data.elapsed_time, diff_max);
     spawner.spawn_interval = base_interval / spawner.difficulty_multiplier.max(1.0);
@@ -106,15 +114,15 @@ mod tests {
     #[test]
     fn difficulty_starts_at_one() {
         assert!(
-            (difficulty_from_elapsed(0.0, DIFFICULTY_MAX) - 1.0).abs() < EPS,
+            (difficulty_from_elapsed(0.0, DEFAULT_DIFFICULTY_MAX) - 1.0).abs() < EPS,
             "difficulty at t=0 should be 1.0"
         );
     }
 
     #[test]
     fn difficulty_increases_by_point_one_per_minute() {
-        let one_min = difficulty_from_elapsed(60.0, DIFFICULTY_MAX);
-        let two_min = difficulty_from_elapsed(120.0, DIFFICULTY_MAX);
+        let one_min = difficulty_from_elapsed(60.0, DEFAULT_DIFFICULTY_MAX);
+        let two_min = difficulty_from_elapsed(120.0, DEFAULT_DIFFICULTY_MAX);
         assert!(
             (one_min - 1.1).abs() < EPS,
             "expected 1.1 at 1 min, got {one_min}"
@@ -127,8 +135,8 @@ mod tests {
 
     #[test]
     fn difficulty_does_not_increase_within_a_minute() {
-        let at_zero = difficulty_from_elapsed(0.0, DIFFICULTY_MAX);
-        let at_59 = difficulty_from_elapsed(59.9, DIFFICULTY_MAX);
+        let at_zero = difficulty_from_elapsed(0.0, DEFAULT_DIFFICULTY_MAX);
+        let at_59 = difficulty_from_elapsed(59.9, DEFAULT_DIFFICULTY_MAX);
         assert!(
             (at_zero - at_59).abs() < EPS,
             "difficulty should not increase before a full minute elapses"
@@ -137,7 +145,7 @@ mod tests {
 
     #[test]
     fn difficulty_at_thirty_minutes_is_four() {
-        let at_30min = difficulty_from_elapsed(30.0 * 60.0, DIFFICULTY_MAX);
+        let at_30min = difficulty_from_elapsed(30.0 * 60.0, DEFAULT_DIFFICULTY_MAX);
         assert!(
             (at_30min - 4.0).abs() < EPS,
             "expected 4.0 at 30 min, got {at_30min}"
@@ -147,10 +155,10 @@ mod tests {
     #[test]
     fn difficulty_is_capped_at_difficulty_max() {
         // At 900 min the uncapped formula would give 91.0; the cap must apply.
-        let way_later = difficulty_from_elapsed(900.0 * 60.0, DIFFICULTY_MAX);
+        let way_later = difficulty_from_elapsed(900.0 * 60.0, DEFAULT_DIFFICULTY_MAX);
         assert!(
-            way_later <= DIFFICULTY_MAX + EPS,
-            "difficulty should not exceed DIFFICULTY_MAX ({DIFFICULTY_MAX}), got {way_later}"
+            way_later <= DEFAULT_DIFFICULTY_MAX + EPS,
+            "difficulty should not exceed DEFAULT_DIFFICULTY_MAX ({DEFAULT_DIFFICULTY_MAX}), got {way_later}"
         );
     }
 
@@ -163,7 +171,7 @@ mod tests {
             "interval at difficulty 2 ({harder}) should be less than at 1 ({base})"
         );
         assert!(
-            (base - ENEMY_SPAWN_BASE_INTERVAL).abs() < EPS,
+            (base - DEFAULT_ENEMY_SPAWN_BASE_INTERVAL).abs() < EPS,
             "interval at difficulty 1.0 should equal the base constant"
         );
     }
@@ -201,7 +209,7 @@ mod tests {
             .expect("update_difficulty should run");
 
         let diff = app.world().resource::<EnemySpawner>().difficulty_multiplier;
-        let expected = difficulty_from_elapsed(120.0, DIFFICULTY_MAX);
+        let expected = difficulty_from_elapsed(120.0, DEFAULT_DIFFICULTY_MAX);
         assert!(
             (diff - expected).abs() < EPS,
             "expected {expected} at 2 min, got {diff}"
@@ -220,7 +228,7 @@ mod tests {
 
         // At 60 s → difficulty = 1.1 → interval = BASE / 1.1.
         // Computed independently of the system under test.
-        let expected_interval = ENEMY_SPAWN_BASE_INTERVAL / 1.1_f32;
+        let expected_interval = DEFAULT_ENEMY_SPAWN_BASE_INTERVAL / 1.1_f32;
         let actual = app.world().resource::<EnemySpawner>().spawn_interval;
         assert!(
             (actual - expected_interval).abs() < EPS,

@@ -2,7 +2,12 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use crate::constants::SPATIAL_GRID_CELL_SIZE;
+// ---------------------------------------------------------------------------
+// Fallback constants (used when RON config is not yet loaded)
+// ---------------------------------------------------------------------------
+
+/// Grid cell size for spatial partitioning (pixels).
+const DEFAULT_SPATIAL_GRID_CELL_SIZE: f32 = 64.0;
 
 /// Grid-based spatial partitioning used to accelerate collision detection.
 ///
@@ -71,7 +76,7 @@ impl SpatialGrid {
 
 impl Default for SpatialGrid {
     fn default() -> Self {
-        Self::new(SPATIAL_GRID_CELL_SIZE)
+        Self::new(DEFAULT_SPATIAL_GRID_CELL_SIZE)
     }
 }
 

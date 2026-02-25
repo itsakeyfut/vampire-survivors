@@ -33,6 +33,9 @@ pub struct GameConfig {
     pub camera_lerp_speed: f32,
     // Spatial partitioning
     pub spatial_grid_cell_size: f32,
+    // Projectile defaults
+    pub base_projectile_speed: f32,
+    pub base_projectile_lifetime: f32,
 }
 
 /// Resource holding the handle to the loaded game configuration.
@@ -114,6 +117,8 @@ GameConfig(
     xp_level_multiplier: 1.2,
     camera_lerp_speed: 10.0,
     spatial_grid_cell_size: 64.0,
+    base_projectile_speed: 300.0,
+    base_projectile_lifetime: 5.0,
 )
 "#;
         let config: GameConfig = ron::de::from_str(ron_data).unwrap();
@@ -127,5 +132,7 @@ GameConfig(
         assert_eq!(config.treasure_spawn_interval, 180.0);
         assert_eq!(config.xp_level_base, 20);
         assert_eq!(config.spatial_grid_cell_size, 64.0);
+        assert_eq!(config.base_projectile_speed, 300.0);
+        assert_eq!(config.base_projectile_lifetime, 5.0);
     }
 }

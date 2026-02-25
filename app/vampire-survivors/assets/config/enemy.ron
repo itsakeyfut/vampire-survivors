@@ -72,4 +72,5 @@ EnemyConfig(
     max_count: 500,
     cull_distance: 2000.0,
     difficulty_max: 10.0,
+    spawn_margin: 60.0,
 )
