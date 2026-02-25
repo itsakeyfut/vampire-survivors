@@ -64,27 +64,28 @@ impl WeaponState {
     /// Values match the design document level tables. Passing these through
     /// [`Self::effective_cooldown`] applies the player's cooldown reduction.
     pub fn base_cooldown(&self) -> f32 {
+        let level = self.level.clamp(1, 8);
         match self.weapon_type {
-            WeaponType::Whip => match self.level {
+            WeaponType::Whip => match level {
                 1..=3 => 1.00,
                 4..=5 => 0.80,
                 6..=7 => 0.70,
                 _ => 0.60, // level 8
             },
-            WeaponType::MagicWand => match self.level {
+            WeaponType::MagicWand => match level {
                 1..=3 => 0.50,
                 4..=5 => 0.40,
                 6..=7 => 0.35,
                 _ => 0.30, // level 8
             },
-            WeaponType::Knife => match self.level {
+            WeaponType::Knife => match level {
                 1 => 0.30,
                 2..=3 => 0.25,
                 4..=5 => 0.20,
                 6..=7 => 0.18,
                 _ => 0.15, // level 8
             },
-            WeaponType::Garlic => match self.level {
+            WeaponType::Garlic => match level {
                 1..=3 => 0.50,
                 4 => 0.45,
                 5..=6 => 0.40,
@@ -94,14 +95,14 @@ impl WeaponState {
             // Bible orbits continuously; this cooldown gates spawning a new
             // orbit body when the weapon is first activated or levelled up.
             WeaponType::Bible => 1.00,
-            WeaponType::ThunderRing => match self.level {
+            WeaponType::ThunderRing => match level {
                 1 => 2.00,
                 2..=3 => 1.70,
                 4..=5 => 1.50,
                 6..=7 => 1.30,
                 _ => 1.00, // level 8
             },
-            WeaponType::Cross => match self.level {
+            WeaponType::Cross => match level {
                 1 => 1.50,
                 2..=3 => 1.30,
                 4 => 1.20,
@@ -110,7 +111,7 @@ impl WeaponState {
                 7 => 0.90,
                 _ => 0.80, // level 8
             },
-            WeaponType::FireWand => match self.level {
+            WeaponType::FireWand => match level {
                 1 => 3.00,
                 2 => 2.70,
                 3 => 2.50,
@@ -248,5 +249,20 @@ mod tests {
             assert_eq!(state.cooldown_timer, 0.0);
             assert!(!state.evolved);
         }
+    }
+
+    /// `level = 0` (invalid) is clamped to 1, returning the same cooldown as
+    /// level 1 instead of silently acting like max level.
+    #[test]
+    fn base_cooldown_clamps_level_zero_to_level_one() {
+        let mut state = WeaponState::new(WeaponType::Whip);
+        let level_one_cd = state.base_cooldown(); // level = 1
+
+        state.level = 0; // force invalid level
+        assert_eq!(
+            state.base_cooldown(),
+            level_one_cd,
+            "level 0 should be clamped to level 1"
+        );
     }
 }

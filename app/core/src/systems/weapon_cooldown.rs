@@ -46,15 +46,15 @@ pub fn tick_weapon_cooldowns(
         for weapon in inventory.weapons.iter_mut() {
             weapon.cooldown_timer -= delta;
 
-            if weapon.cooldown_timer <= 0.0 {
+            let reset = weapon.effective_cooldown(stats.cooldown_reduction);
+            while weapon.cooldown_timer <= 0.0 {
                 fired_events.write(WeaponFiredEvent {
                     player: player_entity,
                     weapon_type: weapon.weapon_type,
                     level: weapon.level,
                 });
-
-                // Additive reset: preserves any overshoot into the next cycle.
-                weapon.cooldown_timer += weapon.effective_cooldown(stats.cooldown_reduction);
+                // Additive reset: preserves overshoot and catches up missed ticks.
+                weapon.cooldown_timer += reset;
             }
         }
     }
@@ -293,5 +293,45 @@ mod tests {
         let events = fired_events(&app);
         assert_eq!(events.len(), 1, "only the whip should have fired");
         assert_eq!(events[0].weapon_type, WeaponType::Whip);
+    }
+
+    /// When a frame's delta exceeds one cooldown interval the weapon fires
+    /// multiple times in the same frame (while-loop catch-up).
+    ///
+    /// MagicWand base cooldown at level 1 = 0.5 s.
+    /// Timer starts at 0.0; delta = 1.2 s:
+    ///   0.0 – 1.2 = –1.2  →  fire #1, –1.2 + 0.5 = –0.7
+    ///                       →  fire #2, –0.7 + 0.5 = –0.2
+    ///                       →  fire #3, –0.2 + 0.5 =  0.3  (> 0, stop)
+    #[test]
+    fn multi_fire_on_long_frame() {
+        let mut app = build_app();
+
+        let mut weapon = crate::types::WeaponState::new(WeaponType::MagicWand);
+        weapon.cooldown_timer = 0.0;
+
+        app.world_mut().spawn((
+            Player,
+            PlayerStats::default(),
+            WeaponInventory {
+                weapons: vec![weapon],
+            },
+        ));
+
+        advance_and_run(&mut app, 1.2);
+
+        let events = fired_events(&app);
+        assert_eq!(
+            events.len(),
+            3,
+            "expected 3 firings for delta=1.2s with cooldown=0.5s, got {}",
+            events.len()
+        );
+        assert!(
+            events
+                .iter()
+                .all(|e| e.weapon_type == WeaponType::MagicWand),
+            "all events should be MagicWand"
+        );
     }
 }
