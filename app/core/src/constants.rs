@@ -62,6 +62,15 @@ pub const ENEMY_STATS_DRAGON: (f32, f32, f32, u32, f32) = (200.0, 80.0, 20.0, 15
 pub const ENEMY_STATS_BOSS_DEATH: (f32, f32, f32, u32, f32) = (5000.0, 30.0, 50.0, 500, 1.0);
 
 // ---------------------------------------------------------------------------
+// Projectile defaults
+// ---------------------------------------------------------------------------
+
+/// Default projectile travel speed in pixels/second (before `projectile_speed_mult`).
+pub const BASE_PROJECTILE_SPEED: f32 = 300.0;
+/// Default projectile lifetime in seconds.
+pub const BASE_PROJECTILE_LIFETIME: f32 = 5.0;
+
+// ---------------------------------------------------------------------------
 // Weapon limits
 // ---------------------------------------------------------------------------
 
