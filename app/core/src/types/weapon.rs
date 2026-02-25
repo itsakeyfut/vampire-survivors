@@ -58,6 +58,87 @@ impl WeaponState {
             evolved: false,
         }
     }
+
+    /// Base cooldown in seconds for this weapon at its current level.
+    ///
+    /// Values match the design document level tables. Passing these through
+    /// [`Self::effective_cooldown`] applies the player's cooldown reduction.
+    pub fn base_cooldown(&self) -> f32 {
+        match self.weapon_type {
+            WeaponType::Whip => match self.level {
+                1..=3 => 1.00,
+                4..=5 => 0.80,
+                6..=7 => 0.70,
+                _ => 0.60, // level 8
+            },
+            WeaponType::MagicWand => match self.level {
+                1..=3 => 0.50,
+                4..=5 => 0.40,
+                6..=7 => 0.35,
+                _ => 0.30, // level 8
+            },
+            WeaponType::Knife => match self.level {
+                1 => 0.30,
+                2..=3 => 0.25,
+                4..=5 => 0.20,
+                6..=7 => 0.18,
+                _ => 0.15, // level 8
+            },
+            WeaponType::Garlic => match self.level {
+                1..=3 => 0.50,
+                4 => 0.45,
+                5..=6 => 0.40,
+                7 => 0.35,
+                _ => 0.30, // level 8
+            },
+            // Bible orbits continuously; this cooldown gates spawning a new
+            // orbit body when the weapon is first activated or levelled up.
+            WeaponType::Bible => 1.00,
+            WeaponType::ThunderRing => match self.level {
+                1 => 2.00,
+                2..=3 => 1.70,
+                4..=5 => 1.50,
+                6..=7 => 1.30,
+                _ => 1.00, // level 8
+            },
+            WeaponType::Cross => match self.level {
+                1 => 1.50,
+                2..=3 => 1.30,
+                4 => 1.20,
+                5 => 1.10,
+                6 => 1.00,
+                7 => 0.90,
+                _ => 0.80, // level 8
+            },
+            WeaponType::FireWand => match self.level {
+                1 => 3.00,
+                2 => 2.70,
+                3 => 2.50,
+                4 => 2.30,
+                5 => 2.10,
+                6 => 2.00,
+                7 => 1.80,
+                _ => 1.50, // level 8
+            },
+            // Evolved weapons — use tighter cooldowns befitting their power.
+            WeaponType::BloodyTear => 0.50,
+            WeaponType::HolyWand => 0.25,
+            WeaponType::ThousandEdge => 0.12,
+            WeaponType::SoulEater => 0.50,
+            WeaponType::UnholyVespers => 0.80,
+            WeaponType::LightningRing => 0.70,
+        }
+    }
+
+    /// Effective cooldown after applying the player's cooldown reduction.
+    ///
+    /// `cooldown_reduction` is the fraction removed (e.g. `0.3` = 30% shorter).
+    /// It is clamped to `[0.0, 0.9]` so the effective cooldown is always at
+    /// least 10 % of the base value, preventing degenerate sub-frame intervals.
+    pub fn effective_cooldown(&self, cooldown_reduction: f32) -> f32 {
+        let factor = (1.0 - cooldown_reduction.clamp(0.0, 0.9)).max(0.1);
+        self.base_cooldown() * factor
+    }
 }
 
 /// All passive item types. Each has 5 upgrade levels.
