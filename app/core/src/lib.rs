@@ -21,6 +21,7 @@ use systems::enemy_cull::cull_distant_enemies;
 use systems::enemy_spawn::spawn_enemies;
 use systems::game_timer::update_game_timer;
 use systems::player::{player_movement, spawn_player};
+use systems::projectile::{despawn_expired_projectiles, move_projectiles};
 use systems::weapon_cooldown::tick_weapon_cooldowns;
 
 /// Core game plugin. Registers states, inserts default resources, and wires up
@@ -65,6 +66,8 @@ impl Plugin for GameCorePlugin {
                 (
                     player_movement,
                     tick_weapon_cooldowns.after(player_movement),
+                    move_projectiles,
+                    despawn_expired_projectiles,
                     update_game_timer,
                     update_difficulty.after(update_game_timer),
                     spawn_enemies.after(update_difficulty),
