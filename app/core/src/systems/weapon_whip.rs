@@ -23,6 +23,7 @@ use bevy::{prelude::*, state::state_scoped::DespawnOnExit};
 use crate::{
     components::{Enemy, Player, PlayerStats, PlayerWhipSide},
     events::{DamageEnemyEvent, WeaponFiredEvent},
+    resources::SpatialGrid,
     states::AppState,
     types::{WeaponType, WhipSide},
 };
@@ -70,15 +71,20 @@ fn whip_damage_for_level(level: u8) -> f32 {
 /// Activates the Whip when a [`WeaponFiredEvent`] arrives for
 /// [`WeaponType::Whip`] or [`WeaponType::BloodyTear`].
 ///
-/// - Checks every enemy against the fan-shaped hitbox.
+/// - Uses [`SpatialGrid`] to find candidate enemies within `range` before
+///   performing the exact fan-shaped hitbox check.
 /// - Emits one [`DamageEnemyEvent`] per hit enemy.
 /// - Spawns a [`WhipSwingEffect`] sprite as visual feedback.
 /// - Flips [`PlayerWhipSide`] so the next swing is on the opposite side.
+///
+/// Must run after [`super::spatial::update_spatial_grid`] so the grid
+/// reflects the current frame's enemy positions.
 pub fn fire_whip(
     mut fired_events: MessageReader<WeaponFiredEvent>,
     mut damage_events: MessageWriter<DamageEnemyEvent>,
     mut player_q: Query<(&Transform, &PlayerStats, &mut PlayerWhipSide), With<Player>>,
-    enemy_q: Query<(Entity, &Transform), With<Enemy>>,
+    enemy_q: Query<&Transform, With<Enemy>>,
+    spatial_grid: Res<SpatialGrid>,
     mut commands: Commands,
 ) {
     for event in fired_events.read() {
@@ -99,8 +105,11 @@ pub fn fire_whip(
             -1.0_f32
         };
 
-        // Emit a damage event for each enemy inside the fan.
-        for (enemy_entity, enemy_tf) in enemy_q.iter() {
+        // Use SpatialGrid to narrow candidates, then apply exact fan check.
+        for enemy_entity in spatial_grid.get_nearby(player_pos, range) {
+            let Ok(enemy_tf) = enemy_q.get(enemy_entity) else {
+                continue;
+            };
             let rel = enemy_tf.translation.truncate() - player_pos;
             if rel.x * direction > 0.0 && rel.length() < range && rel.y.abs() < range * 0.6 {
                 damage_events.write(DamageEnemyEvent {
@@ -160,6 +169,7 @@ mod tests {
     use crate::{
         components::WeaponInventory,
         events::WeaponFiredEvent,
+        resources::SpatialGrid,
         types::{WeaponState, WeaponType, WhipSide},
     };
 
@@ -172,6 +182,7 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         app.add_message::<WeaponFiredEvent>();
         app.add_message::<DamageEnemyEvent>();
+        app.insert_resource(SpatialGrid::default());
         app
     }
 
@@ -209,12 +220,20 @@ mod tests {
     }
 
     /// Fires WeaponFiredEvent via tick_weapon_cooldowns, then runs fire_whip.
+    ///
+    /// Populates the [`SpatialGrid`] between the two steps so that
+    /// `fire_whip` can use `get_nearby` for enemy candidate selection.
     fn tick_and_fire(app: &mut App) {
-        use crate::systems::weapon_cooldown::tick_weapon_cooldowns;
+        use crate::systems::{
+            spatial::update_spatial_grid, weapon_cooldown::tick_weapon_cooldowns,
+        };
         advance(app, 1.0 / 60.0);
         app.world_mut()
             .run_system_once(tick_weapon_cooldowns)
             .expect("tick_weapon_cooldowns should run");
+        app.world_mut()
+            .run_system_once(update_spatial_grid)
+            .expect("update_spatial_grid should run");
         app.world_mut()
             .run_system_once(fire_whip)
             .expect("fire_whip should run");

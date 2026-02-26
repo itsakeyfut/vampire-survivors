@@ -22,6 +22,7 @@ use systems::enemy_spawn::spawn_enemies;
 use systems::game_timer::update_game_timer;
 use systems::player::{player_movement, spawn_player};
 use systems::projectile::{despawn_expired_projectiles, move_projectiles};
+use systems::spatial::update_spatial_grid;
 use systems::weapon_cooldown::tick_weapon_cooldowns;
 use systems::weapon_whip::{despawn_whip_effects, fire_whip};
 
@@ -68,7 +69,10 @@ impl Plugin for GameCorePlugin {
                 (
                     player_movement,
                     tick_weapon_cooldowns.after(player_movement),
-                    fire_whip.after(tick_weapon_cooldowns),
+                    update_spatial_grid.after(player_movement),
+                    fire_whip
+                        .after(tick_weapon_cooldowns)
+                        .after(update_spatial_grid),
                     apply_damage.after(fire_whip),
                     despawn_whip_effects,
                     move_projectiles,
