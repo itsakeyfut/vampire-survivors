@@ -1,0 +1,23 @@
+// UI style configuration for Vampire Survivors.
+// Edit while the game is running — changes are applied instantly (hot-reload).
+UiStyleConfig(
+    // Color palette
+    bg_color:      (r: 0.05, g: 0.05, b: 0.08),
+    title_color:   (r: 0.85, g: 0.15, b: 0.15),
+    text_color:    (r: 0.95, g: 0.90, b: 0.85),
+
+    // Button colors
+    button_normal:  (r: 0.30, g: 0.05, b: 0.05),
+    button_hover:   (r: 0.60, g: 0.10, b: 0.10),
+    button_pressed: (r: 0.20, g: 0.02, b: 0.02),
+
+    // Font sizes (px)
+    font_size_huge:   72.0,
+    font_size_large:  48.0,
+    font_size_medium: 32.0,
+    font_size_small:  24.0,
+
+    // Button dimensions (px)
+    button_large_width:  280.0,
+    button_large_height:  80.0,
+)

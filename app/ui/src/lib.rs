@@ -6,14 +6,16 @@
 //!
 //! - [`camera`]: orthographic camera setup and player-follow system
 //! - [`components`]: reusable UI components (`MenuButton`, `ButtonAction`)
+//! - [`config`]: UI style asset loading, [`UiStyleParams`], and hot-reload
 //! - [`screens`]: per-state screen implementations
-//! - [`styles`]: color, font-size, and layout constants
+//! - [`styles`]: `DEFAULT_*` color, font-size, and layout fallback constants
 
 use bevy::prelude::*;
 use vs_core::states::AppState;
 
 pub mod camera;
 pub mod components;
+pub mod config;
 pub mod screens;
 pub mod styles;
 
@@ -26,6 +28,8 @@ pub struct GameUIPlugin;
 impl Plugin for GameUIPlugin {
     fn build(&self, app: &mut App) {
         app
+            // UI style config: asset loading + hot-reload system.
+            .add_plugins(config::UiConfigPlugin)
             // Camera is permanent — needed for title / menu rendering too.
             .add_systems(Startup, camera::setup_camera)
             // Title screen

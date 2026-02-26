@@ -53,7 +53,8 @@ pub fn camera_follow_player(
 
     let target = player_tf.translation.truncate();
     let current = camera_tf.translation.truncate();
-    let lerped = current.lerp(target, lerp_speed * time.delta_secs());
+    let t = (lerp_speed * time.delta_secs()).clamp(0.0, 1.0);
+    let lerped = current.lerp(target, t);
 
     camera_tf.translation.x = lerped.x;
     camera_tf.translation.y = lerped.y;

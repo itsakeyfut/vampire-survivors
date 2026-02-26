@@ -74,7 +74,6 @@ Default state is `Title`. To test `Playing`-state systems during development, te
 ## vs-core Module Layout
 
 - `states.rs` — `AppState` enum
-- `constants.rs` — all numeric constants; `PlayerStats::default()` reads from here
 - `lib.rs` — `GameCorePlugin`: registers state, all resources, and wires systems
 - `types/` — domain enums without Bevy deps; re-exported via `types/mod.rs`
   - `weapon.rs` — `WeaponType`, `WeaponState`, `PassiveItemType`, `PassiveState`, `WhipSide`
@@ -122,14 +121,28 @@ Use `DespawnOnExit(AppState::Playing)` (from `bevy::state::state_scoped`) on ent
   ```
 - Integration tests use `MinimalPlugins + bevy::state::app::StatesPlugin`, not `DefaultPlugins`.
 
-## Key Design Constants
+## Fallback Constants Convention
 
-| Constant | Value | Notes |
+All tunable parameters live in RON config files (`assets/config/*.ron`).
+Systems access them via `Config/Handle/Params` (e.g. `GameParams`, `EnemyParams`).
+When the config has not yet loaded, every file defines its own **`DEFAULT_*` fallback constants** at the top:
+
+```rust
+// At the top of each implementation file — NOT in a shared constants.rs
+const DEFAULT_PLAYER_BASE_SPEED: f32 = 200.0;
+```
+
+- `constants.rs` has been **deleted**. Do not recreate it.
+- `DEFAULT_*` constants are private (`const`, not `pub`) unless a sibling module's test needs them (`pub(crate) const`).
+
+## Key Design Values
+
+| Parameter | Default value | RON key |
 |---|---|---|
-| `PLAYER_BASE_SPEED` | 200.0 px/s | Base movement speed |
-| `PLAYER_BASE_HP` | 100.0 | |
-| `PLAYER_PICKUP_RADIUS` | 80.0 px | XP gem magnet range |
-| `SPATIAL_GRID_CELL_SIZE` | 64.0 px | Collision grid cell size |
-| `BOSS_SPAWN_TIME` | 1800 s | 30 minutes |
-| `XP_LEVEL_BASE` | 20 | XP for first level-up |
-| `MAX_WEAPONS` / `MAX_PASSIVES` | 6 / 6 | Inventory caps |
+| Player base speed | 200.0 px/s | `player.ron → base_speed` |
+| Player base HP | 100.0 | `player.ron → base_hp` |
+| Player pickup radius | 80.0 px | `player.ron → pickup_radius` |
+| Spatial grid cell size | 64.0 px | `game.ron → spatial_grid_cell_size` |
+| Boss spawn time | 1800 s | `game.ron → boss_spawn_time` |
+| XP level base | 20 | `game.ron → xp_level_base` |
+| Max weapons / passives | 6 / 6 | `game.ron → max_weapons / max_passives` |
