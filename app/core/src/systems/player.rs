@@ -1,9 +1,12 @@
 use bevy::{prelude::*, state::state_scoped::DespawnOnExit};
 
 use crate::{
-    components::{CircleCollider, PassiveInventory, Player, PlayerStats, WeaponInventory},
+    components::{
+        CircleCollider, PassiveInventory, Player, PlayerStats, PlayerWhipSide, WeaponInventory,
+    },
     config::PlayerParams,
     states::AppState,
+    types::WhipSide,
 };
 
 // ---------------------------------------------------------------------------
@@ -64,6 +67,8 @@ pub fn spawn_player(mut commands: Commands, player_cfg: PlayerParams) {
         },
         WeaponInventory::default(),
         PassiveInventory::default(),
+        // Whip starts on the right side; flips each swing.
+        PlayerWhipSide(WhipSide::Right),
     ));
 }
 

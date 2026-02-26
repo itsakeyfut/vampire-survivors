@@ -25,3 +25,22 @@ pub struct WeaponFiredEvent {
     /// The weapon's current upgrade level at the time of firing.
     pub level: u8,
 }
+
+// ---------------------------------------------------------------------------
+// Damage events
+// ---------------------------------------------------------------------------
+
+/// Fired when a weapon hits an enemy and should deal damage.
+///
+/// The [`apply_damage`](crate::systems::damage::apply_damage) system reads
+/// this event each frame and applies the specified amount to the target
+/// enemy's [`Enemy::current_hp`](crate::components::Enemy).
+#[derive(Message, Debug, Clone)]
+pub struct DamageEnemyEvent {
+    /// The enemy entity to damage.
+    pub entity: Entity,
+    /// Raw damage amount (before resistances — none implemented yet).
+    pub damage: f32,
+    /// Which weapon type dealt this damage (for future effect routing).
+    pub weapon_type: WeaponType,
+}
