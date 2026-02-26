@@ -134,9 +134,10 @@ mod tests {
     /// the two sources of truth stay in sync.
     #[test]
     fn player_stats_default_matches_movement_constants() {
+        use crate::components::player::{DEFAULT_PLAYER_BASE_HP, DEFAULT_PLAYER_BASE_SPEED};
         let stats = PlayerStats::default();
-        assert_eq!(stats.move_speed, 200.0); // matches DEFAULT_PLAYER_BASE_SPEED in components/player.rs
-        assert_eq!(stats.max_hp, 100.0); // matches DEFAULT_PLAYER_BASE_HP in components/player.rs
+        assert_eq!(stats.move_speed, DEFAULT_PLAYER_BASE_SPEED);
+        assert_eq!(stats.max_hp, DEFAULT_PLAYER_BASE_HP);
     }
 
     // -----------------------------------------------------------------------

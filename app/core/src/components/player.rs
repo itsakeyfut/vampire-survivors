@@ -6,8 +6,8 @@ use crate::types::{PassiveState, WeaponState};
 // Fallback constants (used when RON config is not yet loaded)
 // ---------------------------------------------------------------------------
 
-const DEFAULT_PLAYER_BASE_HP: f32 = 100.0;
-const DEFAULT_PLAYER_BASE_SPEED: f32 = 200.0;
+pub(crate) const DEFAULT_PLAYER_BASE_HP: f32 = 100.0;
+pub(crate) const DEFAULT_PLAYER_BASE_SPEED: f32 = 200.0;
 const DEFAULT_PLAYER_BASE_DAMAGE_MULT: f32 = 1.0;
 const DEFAULT_PLAYER_BASE_COOLDOWN_REDUCTION: f32 = 0.0;
 const DEFAULT_PLAYER_BASE_PROJECTILE_SPEED: f32 = 1.0;

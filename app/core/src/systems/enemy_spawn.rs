@@ -90,7 +90,8 @@ pub fn spawn_enemies(
     let spawn_margin = enemy_cfg
         .get()
         .map(|c| c.spawn_margin)
-        .unwrap_or(DEFAULT_SPAWN_MARGIN);
+        .unwrap_or(DEFAULT_SPAWN_MARGIN)
+        .max(0.0);
     let half_w = win_w / 2.0 + spawn_margin;
     let half_h = win_h / 2.0 + spawn_margin;
 

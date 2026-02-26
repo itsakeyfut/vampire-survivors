@@ -130,10 +130,13 @@ pub struct TitleButtonLabel;
 
 /// Updates live title-screen entities when `config/ui/styles.ron` changes.
 ///
-/// Reacts to [`AssetEvent::Modified`] and writes updated colors to all
-/// marker-component entities on the title screen.  Button hover/press colors
-/// are handled frame-by-frame by
+/// Reacts to both [`AssetEvent::Added`] (first load) and
+/// [`AssetEvent::Modified`] (hot-reload) so entities spawned before the
+/// config finishes loading also receive the configured values.
+/// Updates colors, font sizes, and button dimensions.
+/// Button hover/press colors are handled frame-by-frame by
 /// [`crate::components::handle_button_interaction`].
+#[allow(clippy::too_many_arguments)]
 pub fn hot_reload_ui_style(
     mut events: MessageReader<AssetEvent<UiStyleConfig>>,
     config_assets: Res<Assets<UiStyleConfig>>,
@@ -142,36 +145,54 @@ pub fn hot_reload_ui_style(
     mut heading_q: Query<&mut TextColor, With<TitleHeadingText>>,
     mut btn_q: Query<&mut BackgroundColor, (With<TitleStartButton>, Without<TitleScreenBg>)>,
     mut btn_label_q: Query<&mut TextColor, (With<TitleButtonLabel>, Without<TitleHeadingText>)>,
+    mut heading_font_q: Query<&mut TextFont, With<TitleHeadingText>>,
+    mut btn_label_font_q: Query<&mut TextFont, (With<TitleButtonLabel>, Without<TitleHeadingText>)>,
+    mut btn_node_q: Query<&mut Node, (With<TitleStartButton>, Without<TitleScreenBg>)>,
 ) {
     let Some(config_handle) = config_handle else {
         return;
     };
+
+    let mut needs_apply = false;
     for event in events.read() {
         match event {
             AssetEvent::Added { .. } => {
                 info!("✅ UI style config loaded");
+                needs_apply = true;
             }
             AssetEvent::Modified { .. } => {
-                if let Some(cfg) = config_assets.get(&config_handle.0) {
-                    if let Ok(mut bg) = bg_q.single_mut() {
-                        *bg = BackgroundColor(Color::from(&cfg.bg_color));
-                    }
-                    if let Ok(mut tc) = heading_q.single_mut() {
-                        *tc = TextColor(Color::from(&cfg.title_color));
-                    }
-                    if let Ok(mut bg) = btn_q.single_mut() {
-                        *bg = BackgroundColor(Color::from(&cfg.button_normal));
-                    }
-                    if let Ok(mut tc) = btn_label_q.single_mut() {
-                        *tc = TextColor(Color::from(&cfg.text_color));
-                    }
-                    info!("🔥 UI style config hot-reloaded");
-                }
+                info!("🔥 UI style config hot-reloaded");
+                needs_apply = true;
             }
             AssetEvent::Removed { .. } => {
                 warn!("⚠️ UI style config removed");
             }
             _ => {}
+        }
+    }
+
+    if needs_apply && let Some(cfg) = config_assets.get(&config_handle.0) {
+        if let Ok(mut bg) = bg_q.single_mut() {
+            *bg = BackgroundColor(Color::from(&cfg.bg_color));
+        }
+        if let Ok(mut tc) = heading_q.single_mut() {
+            *tc = TextColor(Color::from(&cfg.title_color));
+        }
+        if let Ok(mut font) = heading_font_q.single_mut() {
+            font.font_size = cfg.font_size_huge;
+        }
+        if let Ok(mut bg) = btn_q.single_mut() {
+            *bg = BackgroundColor(Color::from(&cfg.button_normal));
+        }
+        if let Ok(mut node) = btn_node_q.single_mut() {
+            node.width = Val::Px(cfg.button_large_width);
+            node.height = Val::Px(cfg.button_large_height);
+        }
+        if let Ok(mut tc) = btn_label_q.single_mut() {
+            *tc = TextColor(Color::from(&cfg.text_color));
+        }
+        if let Ok(mut font) = btn_label_font_q.single_mut() {
+            font.font_size = cfg.font_size_large;
         }
     }
 }
