@@ -11,22 +11,32 @@ use rand::RngExt;
 
 use crate::{
     components::{CircleCollider, Enemy, EnemyAI},
-    config::EnemyParams,
-    constants::{COLLIDER_BAT, COLLIDER_SKELETON, ENEMY_MAX_COUNT, WINDOW_HEIGHT, WINDOW_WIDTH},
+    config::{EnemyParams, GameParams},
     resources::EnemySpawner,
     states::AppState,
     types::{AIType, EnemyType},
 };
 
 // ---------------------------------------------------------------------------
-// Constants
+// Fallback constants (used when RON config is not yet loaded)
 // ---------------------------------------------------------------------------
 
-/// Extra pixels beyond the half-viewport at which enemies appear.
-///
-/// Keeps enemies just outside the visible area so they "walk on-screen"
-/// rather than popping into view.
-const SPAWN_MARGIN: f32 = 60.0;
+/// Maximum simultaneous enemies before spawning is throttled.
+const DEFAULT_ENEMY_MAX_COUNT: usize = 500;
+/// Collider radius for Bat enemies (pixels).
+const DEFAULT_COLLIDER_BAT: f32 = 8.0;
+/// Collider radius for Skeleton enemies (pixels).
+const DEFAULT_COLLIDER_SKELETON: f32 = 12.0;
+/// Window width used to compute off-screen spawn bounds (pixels).
+const DEFAULT_WINDOW_WIDTH: u32 = 1280;
+/// Window height used to compute off-screen spawn bounds (pixels).
+const DEFAULT_WINDOW_HEIGHT: u32 = 720;
+/// Extra pixels beyond the half-viewport edge at which enemies appear.
+const DEFAULT_SPAWN_MARGIN: f32 = 60.0;
+/// Base enemy spawn interval in seconds (mirrors EnemyConfig default).
+/// Only used in tests to set `spawn_timer` past the threshold.
+#[cfg(test)]
+const DEFAULT_ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
 
 // ---------------------------------------------------------------------------
 // System
@@ -51,6 +61,7 @@ pub fn spawn_enemies(
     camera_q: Query<&Transform, With<Camera2d>>,
     enemy_q: Query<(), With<Enemy>>,
     enemy_cfg: EnemyParams,
+    game_cfg: GameParams,
 ) {
     if !spawner.active {
         return;
@@ -60,7 +71,7 @@ pub fn spawn_enemies(
     let max_count = enemy_cfg
         .get()
         .map(|c| c.max_count)
-        .unwrap_or(ENEMY_MAX_COUNT);
+        .unwrap_or(DEFAULT_ENEMY_MAX_COUNT);
     if enemy_q.iter().count() >= max_count {
         return;
     }
@@ -71,12 +82,24 @@ pub fn spawn_enemies(
     }
     spawner.spawn_timer = 0.0;
 
+    // Compute half-viewport dimensions with spawn margin from config.
+    let (win_w, win_h) = game_cfg
+        .get()
+        .map(|c| (c.window_width as f32, c.window_height as f32))
+        .unwrap_or((DEFAULT_WINDOW_WIDTH as f32, DEFAULT_WINDOW_HEIGHT as f32));
+    let spawn_margin = enemy_cfg
+        .get()
+        .map(|c| c.spawn_margin)
+        .unwrap_or(DEFAULT_SPAWN_MARGIN);
+    let half_w = win_w / 2.0 + spawn_margin;
+    let half_h = win_h / 2.0 + spawn_margin;
+
     // Derive the camera-centred spawn position.
     let cam_pos = camera_q
         .single()
         .map(|t| t.translation.truncate())
         .unwrap_or(Vec2::ZERO);
-    let spawn_pos = random_off_screen_position(cam_pos);
+    let spawn_pos = random_off_screen_position(cam_pos, half_w, half_h);
 
     // 50 / 50 between Bat and Skeleton.
     let mut rng = rand::rng();
@@ -107,10 +130,11 @@ pub fn spawn_enemies(
 
 /// Choose a uniformly random position just outside one of the four viewport
 /// edges, centred on `cam_pos`.
-fn random_off_screen_position(cam_pos: Vec2) -> Vec2 {
+///
+/// `half_w` and `half_h` are the half-extents of the spawn boundary (already
+/// incorporating the window size and spawn margin).
+fn random_off_screen_position(cam_pos: Vec2, half_w: f32, half_h: f32) -> Vec2 {
     let mut rng = rand::rng();
-    let half_w = WINDOW_WIDTH as f32 / 2.0 + SPAWN_MARGIN;
-    let half_h = WINDOW_HEIGHT as f32 / 2.0 + SPAWN_MARGIN;
 
     match rng.random_range(0..4u8) {
         // Top edge
@@ -146,11 +170,11 @@ fn enemy_color(enemy_type: EnemyType) -> Color {
     }
 }
 
-/// Fallback collider radius from constants when config is not loaded.
+/// Fallback collider radius when config is not loaded.
 fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
     match enemy_type {
-        EnemyType::Bat => COLLIDER_BAT,
-        EnemyType::Skeleton => COLLIDER_SKELETON,
+        EnemyType::Bat => DEFAULT_COLLIDER_BAT,
+        EnemyType::Skeleton => DEFAULT_COLLIDER_SKELETON,
         _ => 10.0,
     }
 }
@@ -198,7 +222,6 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::constants::ENEMY_SPAWN_BASE_INTERVAL;
 
     // -----------------------------------------------------------------------
     // Integration tests (ECS App)
@@ -223,7 +246,7 @@ mod tests {
         // No camera → cam_pos defaults to Vec2::ZERO (graceful fallback).
         // Advance time past the base spawn interval.
         app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
-            ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
 
         app.world_mut()
             .resource_mut::<Time>()
@@ -248,7 +271,7 @@ mod tests {
 
         app.world_mut().resource_mut::<EnemySpawner>().active = false;
         app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
-            ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
 
         app.world_mut()
             .resource_mut::<Time>()
@@ -300,7 +323,7 @@ mod tests {
         let mut app = build_playing_app();
 
         app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
-            ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
 
         app.world_mut()
             .resource_mut::<Time>()

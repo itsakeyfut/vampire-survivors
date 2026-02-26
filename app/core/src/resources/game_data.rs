@@ -1,5 +1,12 @@
 use bevy::prelude::*;
 
+// ---------------------------------------------------------------------------
+// Fallback constants (used when RON config is not yet loaded)
+// ---------------------------------------------------------------------------
+
+/// XP required for the first level-up.
+const DEFAULT_XP_LEVEL_BASE: u32 = 20;
+
 /// Global game-session data. Reset at the start of each run.
 #[derive(Resource, Debug)]
 pub struct GameData {
@@ -25,7 +32,7 @@ impl Default for GameData {
             elapsed_time: 0.0,
             current_level: 1,
             current_xp: 0,
-            xp_to_next_level: crate::constants::XP_LEVEL_BASE,
+            xp_to_next_level: DEFAULT_XP_LEVEL_BASE,
             kill_count: 0,
             gold_earned: 0,
             boss_spawned: false,
@@ -47,7 +54,7 @@ mod tests {
         assert_eq!(gd.elapsed_time, 0.0);
         assert_eq!(gd.current_level, 1);
         assert_eq!(gd.current_xp, 0);
-        assert_eq!(gd.xp_to_next_level, crate::constants::XP_LEVEL_BASE);
+        assert_eq!(gd.xp_to_next_level, DEFAULT_XP_LEVEL_BASE);
         assert_eq!(gd.kill_count, 0);
         assert_eq!(gd.gold_earned, 0);
         assert!(!gd.boss_spawned);

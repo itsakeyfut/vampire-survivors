@@ -18,4 +18,7 @@ GameConfig(
     camera_lerp_speed: 10.0,
     // Spatial partitioning
     spatial_grid_cell_size: 64.0,
+    // Projectile defaults
+    base_projectile_speed: 300.0,
+    base_projectile_lifetime: 5.0,
 )

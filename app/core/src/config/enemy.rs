@@ -45,6 +45,8 @@ pub struct EnemyConfig {
     pub max_count: usize,
     pub cull_distance: f32,
     pub difficulty_max: f32,
+    /// Extra pixels beyond the half-viewport edge at which enemies appear.
+    pub spawn_margin: f32,
 }
 
 impl EnemyConfig {
@@ -142,6 +144,7 @@ EnemyConfig(
     max_count: 500,
     cull_distance: 2000.0,
     difficulty_max: 10.0,
+    spawn_margin: 60.0,
 )
 "#;
         let config: EnemyConfig = ron::de::from_str(ron_data).unwrap();
@@ -155,6 +158,7 @@ EnemyConfig(
         assert_eq!(config.max_count, 500);
         assert_eq!(config.cull_distance, 2000.0);
         assert_eq!(config.difficulty_max, 10.0);
+        assert_eq!(config.spawn_margin, 60.0);
     }
 
     #[test]
@@ -173,6 +177,7 @@ EnemyConfig(
     max_count: 500,
     cull_distance: 2000.0,
     difficulty_max: 10.0,
+    spawn_margin: 60.0,
 )
 "#;
         let config: EnemyConfig = ron::de::from_str(ron_data).unwrap();

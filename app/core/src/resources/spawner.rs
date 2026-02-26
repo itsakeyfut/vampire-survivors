@@ -1,5 +1,12 @@
 use bevy::prelude::*;
 
+// ---------------------------------------------------------------------------
+// Fallback constants (used when RON config is not yet loaded)
+// ---------------------------------------------------------------------------
+
+/// Base enemy spawn interval in seconds.
+const DEFAULT_ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
+
 /// Controls enemy spawn timing and difficulty scaling.
 #[derive(Resource, Debug)]
 pub struct EnemySpawner {
@@ -17,7 +24,7 @@ impl Default for EnemySpawner {
     fn default() -> Self {
         Self {
             spawn_timer: 0.0,
-            spawn_interval: crate::constants::ENEMY_SPAWN_BASE_INTERVAL,
+            spawn_interval: DEFAULT_ENEMY_SPAWN_BASE_INTERVAL,
             difficulty_multiplier: 1.0,
             active: true,
         }
@@ -49,10 +56,7 @@ mod tests {
     fn enemy_spawner_default_values() {
         let s = EnemySpawner::default();
         assert_eq!(s.spawn_timer, 0.0);
-        assert_eq!(
-            s.spawn_interval,
-            crate::constants::ENEMY_SPAWN_BASE_INTERVAL
-        );
+        assert_eq!(s.spawn_interval, DEFAULT_ENEMY_SPAWN_BASE_INTERVAL);
         assert_eq!(s.difficulty_multiplier, 1.0);
         assert!(s.active, "spawner should be active by default");
     }

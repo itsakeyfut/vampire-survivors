@@ -3,9 +3,15 @@ use bevy::{prelude::*, state::state_scoped::DespawnOnExit};
 use crate::{
     components::{CircleCollider, PassiveInventory, Player, PlayerStats, WeaponInventory},
     config::PlayerParams,
-    constants::COLLIDER_PLAYER,
     states::AppState,
 };
+
+// ---------------------------------------------------------------------------
+// Fallback constants (used when RON config is not yet loaded)
+// ---------------------------------------------------------------------------
+
+/// Player collider radius in pixels.
+const DEFAULT_COLLIDER_PLAYER: f32 = 12.0;
 
 // ---------------------------------------------------------------------------
 // Spawn
@@ -19,7 +25,7 @@ use crate::{
 ///
 /// Stats and collider radius are read from [`PlayerParams`] when the config
 /// is loaded; otherwise falls back to [`PlayerStats::default()`] and
-/// [`COLLIDER_PLAYER`] from constants.
+/// [`DEFAULT_COLLIDER_PLAYER`].
 pub fn spawn_player(mut commands: Commands, player_cfg: PlayerParams) {
     // Derive stats and collider radius from config when available.
     let (stats, collider_radius) = if let Some(cfg) = player_cfg.get() {
@@ -39,7 +45,7 @@ pub fn spawn_player(mut commands: Commands, player_cfg: PlayerParams) {
         };
         (stats, cfg.collider_radius)
     } else {
-        (PlayerStats::default(), COLLIDER_PLAYER)
+        (PlayerStats::default(), DEFAULT_COLLIDER_PLAYER)
     };
 
     // Player entity: cyan circle sprite + all required ECS components.
@@ -109,7 +115,6 @@ mod tests {
     use bevy::ecs::system::RunSystemOnce as _;
 
     use super::*;
-    use crate::constants::{PLAYER_BASE_HP, PLAYER_BASE_SPEED};
 
     // -----------------------------------------------------------------------
     // Unit tests (pure logic, no ECS App)
@@ -125,13 +130,13 @@ mod tests {
         assert!((len - 1.0).abs() < 1e-6, "expected unit length, got {len}");
     }
 
-    /// [`PlayerStats::default`] must match the movement-related constants so
+    /// [`PlayerStats::default`] must match the `DEFAULT_*` fallback values so
     /// the two sources of truth stay in sync.
     #[test]
     fn player_stats_default_matches_movement_constants() {
         let stats = PlayerStats::default();
-        assert_eq!(stats.move_speed, PLAYER_BASE_SPEED);
-        assert_eq!(stats.max_hp, PLAYER_BASE_HP);
+        assert_eq!(stats.move_speed, 200.0); // matches DEFAULT_PLAYER_BASE_SPEED in components/player.rs
+        assert_eq!(stats.max_hp, 100.0); // matches DEFAULT_PLAYER_BASE_HP in components/player.rs
     }
 
     // -----------------------------------------------------------------------
