@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::types::{PassiveState, WeaponState};
+use crate::types::{PassiveState, WeaponState, WhipSide};
 
 // ---------------------------------------------------------------------------
 // Fallback constants (used when RON config is not yet loaded)
@@ -20,6 +20,14 @@ const DEFAULT_PLAYER_PICKUP_RADIUS: f32 = 80.0;
 /// Marker component identifying the player entity.
 #[derive(Component, Debug)]
 pub struct Player;
+
+/// Tracks which side the Whip last struck.
+///
+/// Attached to the player entity and flipped by
+/// [`crate::systems::weapon_whip::fire_whip`] after each activation so that
+/// consecutive swings alternate left and right.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PlayerWhipSide(pub WhipSide);
 
 /// All mutable player statistics. Passive items modify these values.
 #[derive(Component, Debug, Clone)]
