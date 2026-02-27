@@ -8,13 +8,13 @@ pub mod types;
 
 use bevy::prelude::*;
 
-use events::{DamageEnemyEvent, WeaponFiredEvent};
+use events::{DamageEnemyEvent, EnemyDiedEvent, PlayerDamagedEvent, WeaponFiredEvent};
 use resources::{
     EnemySpawner, GameData, LevelUpChoices, MetaProgress, SelectedCharacter, SpatialGrid,
     TreasureSpawner,
 };
 use states::AppState;
-use systems::damage::apply_damage;
+use systems::damage::apply_damage_to_enemies;
 use systems::difficulty::update_difficulty;
 use systems::enemy_ai::move_enemies;
 use systems::enemy_cull::cull_distant_enemies;
@@ -56,6 +56,8 @@ impl Plugin for GameCorePlugin {
             // ---------------------------------------------------------------
             .add_message::<WeaponFiredEvent>()
             .add_message::<DamageEnemyEvent>()
+            .add_message::<EnemyDiedEvent>()
+            .add_message::<PlayerDamagedEvent>()
             // ---------------------------------------------------------------
             // Playing state — player lifecycle
             // ---------------------------------------------------------------
@@ -75,7 +77,9 @@ impl Plugin for GameCorePlugin {
                     fire_whip
                         .after(tick_weapon_cooldowns)
                         .after(update_spatial_grid),
-                    apply_damage.after(fire_whip).after(fire_magic_wand),
+                    apply_damage_to_enemies
+                        .after(fire_whip)
+                        .after(fire_magic_wand),
                     despawn_whip_effects,
                     move_projectiles,
                     despawn_expired_projectiles,
