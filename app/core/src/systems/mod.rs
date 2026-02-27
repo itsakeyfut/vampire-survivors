@@ -11,6 +11,7 @@ pub mod enemy_cull;
 pub mod enemy_spawn;
 pub mod game_timer;
 pub mod player;
+pub mod player_collision;
 pub mod projectile;
 pub mod projectile_collision;
 pub mod spatial;
