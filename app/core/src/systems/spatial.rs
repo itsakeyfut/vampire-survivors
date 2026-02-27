@@ -105,12 +105,17 @@ mod tests {
         assert!(grid.get_nearby(Vec2::ZERO, 1000.0).is_empty());
     }
 
-    /// 300 enemies spread across the map: only the enemies within query radius
-    /// are returned, confirming O(n) grid performance at the 300-enemy target.
+    /// 300 enemies spread across the map: only enemies in nearby grid cells are
+    /// returned as candidates (may include false positives outside the exact
+    /// radius), confirming O(n) grid performance at the 300-enemy target.
+    ///
+    /// [`SpatialGrid::get_nearby`] is a cell-based filter, not a strict
+    /// circular query — callers must follow up with an exact distance check.
+    /// The assertions therefore use `< total` rather than an exact count.
     ///
     /// Enemies are arranged in a 20×15 grid at 100 px spacing, centred at the
     /// origin.  A query of radius 150 px around the origin should return only
-    /// the small cluster near the centre, not all 300 enemies.
+    /// the small cluster of cells near the centre, not all 300 enemies.
     #[test]
     fn three_hundred_enemies_nearby_query_returns_subset() {
         let mut app = build_app();
