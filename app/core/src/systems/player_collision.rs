@@ -14,6 +14,7 @@ use bevy::prelude::*;
 
 use crate::{
     components::{CircleCollider, Enemy, InvincibilityTimer, Player, PlayerStats},
+    config::PlayerParams,
     events::PlayerDamagedEvent,
     resources::SpatialGrid,
     systems::collision::check_circle_collision,
@@ -24,7 +25,9 @@ use crate::{
 // ---------------------------------------------------------------------------
 
 /// Invincibility window granted after taking contact damage (seconds).
-pub(crate) const DEFAULT_INVINCIBILITY_DURATION: f32 = 0.5;
+///
+/// Used when the RON player config has not yet loaded.
+const DEFAULT_INVINCIBILITY_DURATION: f32 = 0.5;
 
 /// Conservative upper bound on any enemy's collider radius (pixels).
 ///
@@ -51,11 +54,17 @@ pub fn enemy_player_collision(
     player_q: Query<(Entity, &Transform, &CircleCollider), VulnerablePlayer>,
     enemy_q: Query<(&Transform, &CircleCollider, &Enemy)>,
     spatial_grid: Res<SpatialGrid>,
+    player_cfg: PlayerParams,
     mut damage_events: MessageWriter<PlayerDamagedEvent>,
 ) {
     let Ok((player_entity, player_tf, player_collider)) = player_q.single() else {
         return; // player absent or currently invincible
     };
+
+    let invincibility_duration = player_cfg
+        .get()
+        .map(|c| c.invincibility_time)
+        .unwrap_or(DEFAULT_INVINCIBILITY_DURATION);
 
     let player_pos = player_tf.translation.truncate();
     let query_radius = player_collider.radius + MAX_ENEMY_COLLIDER_RADIUS;
@@ -83,7 +92,7 @@ pub fn enemy_player_collision(
             damage: enemy.damage,
         });
         commands.entity(player_entity).insert(InvincibilityTimer {
-            remaining: DEFAULT_INVINCIBILITY_DURATION,
+            remaining: invincibility_duration,
         });
         return; // only one hit per frame
     }
