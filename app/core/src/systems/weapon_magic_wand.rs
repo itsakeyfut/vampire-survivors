@@ -88,9 +88,12 @@ pub fn fire_magic_wand(
 
         // Full scan: targeting is global (nearest on entire map) so a range-
         // bounded SpatialGrid query would not help here.
+        // Enemies exactly on the player are excluded so direction is always
+        // non-zero; if all enemies are at the same position the event is skipped.
         let nearest = enemy_q
             .iter()
             .map(|tf| tf.translation.truncate())
+            .filter(|pos| pos.distance_squared(player_pos) > f32::EPSILON)
             .min_by(|a, b| {
                 let da = a.distance_squared(player_pos);
                 let db = b.distance_squared(player_pos);
@@ -98,13 +101,10 @@ pub fn fire_magic_wand(
             });
 
         let Some(target_pos) = nearest else {
-            continue; // no enemies on screen
+            continue; // no targetable enemies
         };
 
         let dir = (target_pos - player_pos).normalize_or_zero();
-        if dir == Vec2::ZERO {
-            continue; // enemy exactly on player position — cannot aim
-        }
 
         let level = event.level.clamp(1, 8) as f32;
         let damage = (base_damage + dmg_per_level * (level - 1.0)) * stats.damage_multiplier;
@@ -362,5 +362,45 @@ mod tests {
 
         let projs = projectiles(&mut app);
         assert_eq!(projs.len(), 1, "HolyWand should fire a projectile");
+    }
+
+    /// Enemy exactly on the player is skipped; a farther enemy is targeted instead.
+    #[test]
+    fn overlapping_enemy_skipped_fires_at_farther_target() {
+        let mut app = build_app();
+        spawn_player(&mut app); // player at (0, 0)
+        spawn_enemy(&mut app, Vec2::ZERO); // exactly on player — must be skipped
+        spawn_enemy(&mut app, Vec2::new(150.0, 0.0)); // valid target
+
+        tick_and_fire(&mut app);
+
+        let projs = projectiles(&mut app);
+        assert_eq!(
+            projs.len(),
+            1,
+            "should fire at the non-overlapping enemy despite the overlapping one"
+        );
+        let vel = projs[0].1;
+        assert!(
+            vel.x > 0.0,
+            "projectile should aim right toward the valid enemy, vel = {vel:?}"
+        );
+    }
+
+    /// Only enemy is exactly on the player → no projectile spawned.
+    #[test]
+    fn only_overlapping_enemy_produces_no_shot() {
+        let mut app = build_app();
+        spawn_player(&mut app);
+        spawn_enemy(&mut app, Vec2::ZERO); // only enemy, exactly on player
+
+        tick_and_fire(&mut app);
+
+        let projs = projectiles(&mut app);
+        assert_eq!(
+            projs.len(),
+            0,
+            "no shot should fire when the only enemy is on the player"
+        );
     }
 }
