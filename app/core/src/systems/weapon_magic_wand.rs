@@ -21,6 +21,7 @@ use bevy::prelude::*;
 
 use crate::{
     components::{Enemy, Player, PlayerStats},
+    config::WeaponParams,
     events::WeaponFiredEvent,
     systems::projectile::spawn_projectile,
     types::WeaponType,
@@ -42,15 +43,6 @@ const DEFAULT_MAGIC_WAND_LIFETIME: f32 = 5.0;
 const DEFAULT_MAGIC_WAND_COLLIDER_RADIUS: f32 = 8.0;
 
 // ---------------------------------------------------------------------------
-// Helper
-// ---------------------------------------------------------------------------
-
-fn magic_wand_damage_for_level(level: u8) -> f32 {
-    DEFAULT_MAGIC_WAND_BASE_DAMAGE
-        + DEFAULT_MAGIC_WAND_DAMAGE_PER_LEVEL * (level.clamp(1, 8) as f32 - 1.0)
-}
-
-// ---------------------------------------------------------------------------
 // Systems
 // ---------------------------------------------------------------------------
 
@@ -64,7 +56,25 @@ pub fn fire_magic_wand(
     mut commands: Commands,
     player_q: Query<(&Transform, &PlayerStats), With<Player>>,
     enemy_q: Query<&Transform, With<Enemy>>,
+    weapon_cfg: WeaponParams,
 ) {
+    let cfg = weapon_cfg.get();
+    let speed = cfg
+        .map(|c| c.magic_wand_speed)
+        .unwrap_or(DEFAULT_MAGIC_WAND_SPEED);
+    let base_damage = cfg
+        .map(|c| c.magic_wand_base_damage)
+        .unwrap_or(DEFAULT_MAGIC_WAND_BASE_DAMAGE);
+    let dmg_per_level = cfg
+        .map(|c| c.magic_wand_damage_per_level)
+        .unwrap_or(DEFAULT_MAGIC_WAND_DAMAGE_PER_LEVEL);
+    let lifetime = cfg
+        .map(|c| c.magic_wand_lifetime)
+        .unwrap_or(DEFAULT_MAGIC_WAND_LIFETIME);
+    let collider_r = cfg
+        .map(|c| c.magic_wand_collider_radius)
+        .unwrap_or(DEFAULT_MAGIC_WAND_COLLIDER_RADIUS);
+
     for event in fired_events.read() {
         if event.weapon_type != WeaponType::MagicWand && event.weapon_type != WeaponType::HolyWand {
             continue;
@@ -96,15 +106,16 @@ pub fn fire_magic_wand(
             continue; // enemy exactly on player position — cannot aim
         }
 
-        let damage = magic_wand_damage_for_level(event.level) * stats.damage_multiplier;
+        let level = event.level.clamp(1, 8) as f32;
+        let damage = (base_damage + dmg_per_level * (level - 1.0)) * stats.damage_multiplier;
         spawn_projectile(
             &mut commands,
             player_pos,
-            dir * DEFAULT_MAGIC_WAND_SPEED,
+            dir * speed,
             damage,
-            DEFAULT_MAGIC_WAND_LIFETIME,
+            lifetime,
             0, // piercing = 0 (single hit)
-            DEFAULT_MAGIC_WAND_COLLIDER_RADIUS,
+            collider_r,
             event.weapon_type,
         );
     }
@@ -130,6 +141,12 @@ mod tests {
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
+
+    /// Test helper: compute Magic Wand damage using DEFAULT_* fallback values.
+    fn magic_wand_damage_for_level(level: u8) -> f32 {
+        DEFAULT_MAGIC_WAND_BASE_DAMAGE
+            + DEFAULT_MAGIC_WAND_DAMAGE_PER_LEVEL * (level.clamp(1, 8) as f32 - 1.0)
+    }
 
     fn build_app() -> App {
         let mut app = App::new();

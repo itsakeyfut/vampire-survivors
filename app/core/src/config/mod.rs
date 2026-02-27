@@ -13,14 +13,17 @@
 //! | [`player`] | `PlayerConfig` + `PlayerParams` SystemParam bundle |
 //! | [`enemy`]  | `EnemyConfig`, `EnemyStatsEntry` + `EnemyParams` SystemParam bundle |
 //! | [`game`]   | `GameConfig` + `GameParams` SystemParam bundle |
+//! | [`weapon`] | `WeaponConfig` + `WeaponParams` SystemParam bundle |
 
 pub mod enemy;
 pub mod game;
 pub mod player;
+pub mod weapon;
 
 pub use enemy::*;
 pub use game::*;
 pub use player::*;
+pub use weapon::*;
 
 use bevy::asset::io::Reader;
 use bevy::asset::{AssetLoader, LoadContext};
@@ -75,6 +78,7 @@ macro_rules! ron_asset_loader {
 ron_asset_loader!(PlayerConfigLoader, PlayerConfig);
 ron_asset_loader!(EnemyConfigLoader, EnemyConfig);
 ron_asset_loader!(GameConfigLoader, GameConfig);
+ron_asset_loader!(WeaponConfigLoader, WeaponConfig);
 
 // ---------------------------------------------------------------------------
 // AllConfigs — private SystemParam for wait_for_configs
@@ -90,6 +94,8 @@ struct AllConfigs<'w> {
     enemy_assets: Res<'w, Assets<EnemyConfig>>,
     game_handle: Res<'w, GameConfigHandle>,
     game_assets: Res<'w, Assets<GameConfig>>,
+    weapon_handle: Res<'w, WeaponConfigHandle>,
+    weapon_assets: Res<'w, Assets<WeaponConfig>>,
 }
 
 // ---------------------------------------------------------------------------
@@ -116,17 +122,21 @@ impl Plugin for GameConfigPlugin {
             .init_asset::<EnemyConfig>()
             .register_asset_loader(EnemyConfigLoader)
             .init_asset::<GameConfig>()
-            .register_asset_loader(GameConfigLoader);
+            .register_asset_loader(GameConfigLoader)
+            .init_asset::<WeaponConfig>()
+            .register_asset_loader(WeaponConfigLoader);
 
         // Load all config files and insert handles as resources.
         let asset_server = app.world_mut().resource::<AssetServer>();
         let player_handle: Handle<PlayerConfig> = asset_server.load("config/player.ron");
         let enemy_handle: Handle<EnemyConfig> = asset_server.load("config/enemy.ron");
         let game_handle: Handle<GameConfig> = asset_server.load("config/game.ron");
+        let weapon_handle: Handle<WeaponConfig> = asset_server.load("config/weapons.ron");
 
         app.insert_resource(PlayerConfigHandle(player_handle))
             .insert_resource(EnemyConfigHandle(enemy_handle))
-            .insert_resource(GameConfigHandle(game_handle));
+            .insert_resource(GameConfigHandle(game_handle))
+            .insert_resource(WeaponConfigHandle(weapon_handle));
 
         // Hot-reload systems run in all states so live-editing always works.
         app.add_systems(
@@ -141,7 +151,7 @@ impl Plugin for GameConfigPlugin {
         // Transition Loading → Title once all required configs are ready.
         app.add_systems(Update, wait_for_configs.run_if(in_state(AppState::Loading)));
 
-        info!("✅ GameConfigPlugin initialized (player, enemy, game configs loading)");
+        info!("✅ GameConfigPlugin initialized (player, enemy, game, weapon configs loading)");
     }
 }
 
@@ -157,8 +167,12 @@ fn wait_for_configs(configs: AllConfigs, mut next_state: ResMut<NextState<AppSta
         .is_some()
         && configs.enemy_assets.get(&configs.enemy_handle.0).is_some()
         && configs.game_assets.get(&configs.game_handle.0).is_some()
+        && configs
+            .weapon_assets
+            .get(&configs.weapon_handle.0)
+            .is_some()
     {
-        info!("✅ All configs loaded (player, enemy, game), transitioning to Title");
+        info!("✅ All configs loaded (player, enemy, game, weapon), transitioning to Title");
         next_state.set(AppState::Title);
     }
 }
