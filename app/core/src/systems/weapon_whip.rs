@@ -22,6 +22,7 @@ use bevy::{prelude::*, state::state_scoped::DespawnOnExit};
 
 use crate::{
     components::{Enemy, Player, PlayerStats, PlayerWhipSide},
+    config::WeaponParams,
     events::{DamageEnemyEvent, WeaponFiredEvent},
     resources::SpatialGrid,
     states::AppState,
@@ -40,6 +41,8 @@ const DEFAULT_WHIP_BASE_DAMAGE: f32 = 20.0;
 const DEFAULT_WHIP_DAMAGE_PER_LEVEL: f32 = 10.0;
 /// How long the swing visual stays on screen (seconds).
 const DEFAULT_WHIP_EFFECT_DURATION: f32 = 0.15;
+/// Vertical spread factor: enemy passes when `rel.y.abs() < range * factor`.
+const DEFAULT_WHIP_SPREAD_FACTOR: f32 = 0.6;
 
 // ---------------------------------------------------------------------------
 // Whip swing effect component
@@ -53,15 +56,6 @@ const DEFAULT_WHIP_EFFECT_DURATION: f32 = 0.15;
 pub struct WhipSwingEffect {
     /// Seconds remaining before this entity is despawned.
     pub remaining: f32,
-}
-
-// ---------------------------------------------------------------------------
-// Helper
-// ---------------------------------------------------------------------------
-
-/// Computes raw Whip damage for a given level (before player multiplier).
-fn whip_damage_for_level(level: u8) -> f32 {
-    DEFAULT_WHIP_BASE_DAMAGE + DEFAULT_WHIP_DAMAGE_PER_LEVEL * (level.clamp(1, 8) as f32 - 1.0)
 }
 
 // ---------------------------------------------------------------------------
@@ -85,8 +79,24 @@ pub fn fire_whip(
     mut player_q: Query<(&Transform, &PlayerStats, &mut PlayerWhipSide), With<Player>>,
     enemy_q: Query<&Transform, With<Enemy>>,
     spatial_grid: Res<SpatialGrid>,
+    weapon_cfg: WeaponParams,
     mut commands: Commands,
 ) {
+    let cfg = weapon_cfg.get();
+    let range_base = cfg.map(|c| c.whip_range).unwrap_or(DEFAULT_WHIP_RANGE);
+    let base_damage = cfg
+        .map(|c| c.whip_base_damage)
+        .unwrap_or(DEFAULT_WHIP_BASE_DAMAGE);
+    let dmg_per_level = cfg
+        .map(|c| c.whip_damage_per_level)
+        .unwrap_or(DEFAULT_WHIP_DAMAGE_PER_LEVEL);
+    let effect_dur = cfg
+        .map(|c| c.whip_effect_duration)
+        .unwrap_or(DEFAULT_WHIP_EFFECT_DURATION);
+    let spread = cfg
+        .map(|c| c.whip_spread_factor)
+        .unwrap_or(DEFAULT_WHIP_SPREAD_FACTOR);
+
     for event in fired_events.read() {
         if event.weapon_type != WeaponType::Whip && event.weapon_type != WeaponType::BloodyTear {
             continue;
@@ -97,8 +107,9 @@ pub fn fire_whip(
         };
 
         let player_pos = player_tf.translation.truncate();
-        let range = DEFAULT_WHIP_RANGE * stats.area_multiplier;
-        let damage = whip_damage_for_level(event.level) * stats.damage_multiplier;
+        let range = range_base * stats.area_multiplier;
+        let level = event.level.clamp(1, 8) as f32;
+        let damage = (base_damage + dmg_per_level * (level - 1.0)) * stats.damage_multiplier;
         let direction = if whip_side.0 == WhipSide::Right {
             1.0_f32
         } else {
@@ -111,7 +122,7 @@ pub fn fire_whip(
                 continue;
             };
             let rel = enemy_tf.translation.truncate() - player_pos;
-            if rel.x * direction > 0.0 && rel.length() < range && rel.y.abs() < range * 0.6 {
+            if rel.x * direction > 0.0 && rel.length() < range && rel.y.abs() < range * spread {
                 damage_events.write(DamageEnemyEvent {
                     entity: enemy_entity,
                     damage,
@@ -124,7 +135,7 @@ pub fn fire_whip(
         let effect_x = player_pos.x + direction * range * 0.5;
         commands.spawn((
             WhipSwingEffect {
-                remaining: DEFAULT_WHIP_EFFECT_DURATION,
+                remaining: effect_dur,
             },
             Sprite {
                 color: Color::srgba(0.9, 0.2, 0.3, 0.6),
@@ -176,6 +187,11 @@ mod tests {
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
+
+    /// Test helper: compute Whip damage using DEFAULT_* fallback values.
+    fn whip_damage_for_level(level: u8) -> f32 {
+        DEFAULT_WHIP_BASE_DAMAGE + DEFAULT_WHIP_DAMAGE_PER_LEVEL * (level.clamp(1, 8) as f32 - 1.0)
+    }
 
     fn build_app() -> App {
         let mut app = App::new();

@@ -1,0 +1,16 @@
+// Weapon tunable parameters — edit while the game is running for live balance tweaking.
+WeaponConfig(
+    // ----- Whip / BloodyTear -----
+    whip_range: 160.0,
+    whip_base_damage: 20.0,
+    whip_damage_per_level: 10.0,
+    whip_effect_duration: 0.15,
+    whip_spread_factor: 0.6,
+
+    // ----- Magic Wand / HolyWand -----
+    magic_wand_speed: 600.0,
+    magic_wand_base_damage: 20.0,
+    magic_wand_damage_per_level: 10.0,
+    magic_wand_lifetime: 5.0,
+    magic_wand_collider_radius: 8.0,
+)
