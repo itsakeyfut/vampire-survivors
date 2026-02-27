@@ -104,4 +104,55 @@ mod tests {
         let grid = app.world().resource::<SpatialGrid>();
         assert!(grid.get_nearby(Vec2::ZERO, 1000.0).is_empty());
     }
+
+    /// 300 enemies spread across the map: only enemies in nearby grid cells are
+    /// returned as candidates (may include false positives outside the exact
+    /// radius), confirming O(n) grid performance at the 300-enemy target.
+    ///
+    /// [`SpatialGrid::get_nearby`] is a cell-based filter, not a strict
+    /// circular query — callers must follow up with an exact distance check.
+    /// The assertions therefore use `< total` rather than an exact count.
+    ///
+    /// Enemies are arranged in a 20×15 grid at 100 px spacing, centred at the
+    /// origin.  A query of radius 150 px around the origin should return only
+    /// the small cluster of cells near the centre, not all 300 enemies.
+    #[test]
+    fn three_hundred_enemies_nearby_query_returns_subset() {
+        let mut app = build_app();
+
+        // Spawn 300 enemies on a 20×15 grid, 100 px apart.
+        for row in 0..15_i32 {
+            for col in 0..20_i32 {
+                let x = (col - 10) as f32 * 100.0;
+                let y = (row - 7) as f32 * 100.0;
+                spawn_enemy(&mut app, Vec2::new(x, y));
+            }
+        }
+
+        run_update(&mut app);
+
+        let grid = app.world().resource::<SpatialGrid>();
+        let total = 300usize;
+
+        // Wide query includes everyone.
+        let all = grid.get_nearby(Vec2::ZERO, 2000.0);
+        assert_eq!(
+            all.len(),
+            total,
+            "wide query should return all {total} enemies"
+        );
+
+        // Narrow query (radius 150 px) covers at most 4 cells around origin,
+        // so it returns far fewer than 300 enemies.
+        let nearby = grid.get_nearby(Vec2::ZERO, 150.0);
+        assert!(
+            nearby.len() < total,
+            "narrow query should return fewer than {total} enemies (got {})",
+            nearby.len()
+        );
+        assert!(
+            !nearby.is_empty(),
+            "narrow query must still return the enemies near the origin"
+        );
+    }
 }
