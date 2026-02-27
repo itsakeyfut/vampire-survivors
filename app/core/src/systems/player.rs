@@ -5,8 +5,9 @@ use crate::{
         CircleCollider, PassiveInventory, Player, PlayerStats, PlayerWhipSide, WeaponInventory,
     },
     config::PlayerParams,
+    resources::SelectedCharacter,
     states::AppState,
-    types::WhipSide,
+    types::{CharacterType, WeaponState, WeaponType, WhipSide},
 };
 
 // ---------------------------------------------------------------------------
@@ -20,6 +21,16 @@ const DEFAULT_COLLIDER_PLAYER: f32 = 12.0;
 // Spawn
 // ---------------------------------------------------------------------------
 
+/// Returns the starting weapon type for a given character.
+fn starting_weapon_for(character: CharacterType) -> WeaponType {
+    match character {
+        CharacterType::DefaultCharacter => WeaponType::Whip,
+        CharacterType::Magician => WeaponType::MagicWand,
+        CharacterType::Thief => WeaponType::Knife,
+        CharacterType::Knight => WeaponType::Whip,
+    }
+}
+
 /// Spawns the player entity and a 2D camera when entering [`AppState::Playing`].
 ///
 /// Both entities carry [`DespawnOnExit`] so they are automatically despawned
@@ -28,8 +39,13 @@ const DEFAULT_COLLIDER_PLAYER: f32 = 12.0;
 ///
 /// Stats and collider radius are read from [`PlayerParams`] when the config
 /// is loaded; otherwise falls back to [`PlayerStats::default()`] and
-/// [`DEFAULT_COLLIDER_PLAYER`].
-pub fn spawn_player(mut commands: Commands, player_cfg: PlayerParams) {
+/// [`DEFAULT_COLLIDER_PLAYER`]. The starting weapon is determined by
+/// [`SelectedCharacter`].
+pub fn spawn_player(
+    mut commands: Commands,
+    player_cfg: PlayerParams,
+    selected_character: Res<SelectedCharacter>,
+) {
     // Derive stats and collider radius from config when available.
     let (stats, collider_radius) = if let Some(cfg) = player_cfg.get() {
         let stats = PlayerStats {
@@ -65,7 +81,9 @@ pub fn spawn_player(mut commands: Commands, player_cfg: PlayerParams) {
         CircleCollider {
             radius: collider_radius,
         },
-        WeaponInventory::default(),
+        WeaponInventory {
+            weapons: vec![WeaponState::new(starting_weapon_for(selected_character.0))],
+        },
         PassiveInventory::default(),
         // Whip starts on the right side; flips each swing.
         PlayerWhipSide(WhipSide::Right),
@@ -153,6 +171,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
         app.init_state::<AppState>();
+        app.insert_resource(SelectedCharacter::default());
         app
     }
 
@@ -256,6 +275,47 @@ mod tests {
             .translation
             .x;
         assert!(x > 0.0, "player should have moved right, got x = {x}");
+    }
+
+    /// Default character spawns with exactly one Whip in the weapon inventory.
+    #[test]
+    fn default_character_starts_with_whip() {
+        let mut app = build_playing_app();
+        app.add_systems(Update, spawn_player);
+        app.update();
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).expect("player entity should exist");
+
+        let inv = app
+            .world()
+            .get::<WeaponInventory>(entity)
+            .expect("WeaponInventory missing");
+        assert_eq!(
+            inv.weapons.len(),
+            1,
+            "should have exactly one starting weapon"
+        );
+        assert_eq!(
+            inv.weapons[0].weapon_type,
+            WeaponType::Whip,
+            "DefaultCharacter should start with Whip"
+        );
+    }
+
+    /// `starting_weapon_for` returns the correct weapon for each character.
+    #[test]
+    fn starting_weapon_for_all_characters() {
+        assert_eq!(
+            starting_weapon_for(CharacterType::DefaultCharacter),
+            WeaponType::Whip
+        );
+        assert_eq!(
+            starting_weapon_for(CharacterType::Magician),
+            WeaponType::MagicWand
+        );
+        assert_eq!(starting_weapon_for(CharacterType::Thief), WeaponType::Knife);
+        assert_eq!(starting_weapon_for(CharacterType::Knight), WeaponType::Whip);
     }
 
     /// No movement should occur when no keys are pressed.
