@@ -29,10 +29,16 @@ use bevy::prelude::Vec2;
 /// # Arguments
 ///
 /// * `pos1` — centre of the first circle in world space (pixels)
-/// * `r1`   — radius of the first circle (pixels)
+/// * `r1`   — radius of the first circle (pixels); **must be non-negative**
 /// * `pos2` — centre of the second circle in world space (pixels)
-/// * `r2`   — radius of the second circle (pixels)
+/// * `r2`   — radius of the second circle (pixels); **must be non-negative**
+///
+/// # Panics (debug builds only)
+///
+/// Panics via [`debug_assert!`] if either radius is negative.
 pub fn check_circle_collision(pos1: Vec2, r1: f32, pos2: Vec2, r2: f32) -> bool {
+    debug_assert!(r1 >= 0.0, "r1 must be non-negative, got {r1}");
+    debug_assert!(r2 >= 0.0, "r2 must be non-negative, got {r2}");
     let combined_radius = r1 + r2;
     pos1.distance_squared(pos2) < combined_radius * combined_radius
 }
