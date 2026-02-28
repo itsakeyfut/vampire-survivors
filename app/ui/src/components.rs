@@ -123,6 +123,44 @@ mod tests {
     }
 
     #[test]
+    fn apply_action_start_game_sets_playing_state() {
+        use bevy::state::app::StatesPlugin;
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin));
+        app.init_state::<AppState>();
+
+        {
+            let mut next_state = app.world_mut().resource_mut::<NextState<AppState>>();
+            apply_action(ButtonAction::StartGame, &mut next_state);
+        }
+        app.update();
+
+        assert_eq!(*app.world().resource::<State<AppState>>(), AppState::Playing);
+    }
+
+    #[test]
+    fn apply_action_go_to_title_sets_title_state() {
+        use bevy::state::app::StatesPlugin;
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin));
+        app.init_state::<AppState>();
+
+        // Transition away from Loading (default) first so Title is reachable.
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Playing);
+        app.update();
+
+        {
+            let mut next_state = app.world_mut().resource_mut::<NextState<AppState>>();
+            apply_action(ButtonAction::GoToTitle, &mut next_state);
+        }
+        app.update();
+
+        assert_eq!(*app.world().resource::<State<AppState>>(), AppState::Title);
+    }
+
+    #[test]
     fn menu_button_is_clone() {
         let original = MenuButton {
             action: ButtonAction::StartGame,
