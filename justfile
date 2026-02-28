@@ -94,6 +94,11 @@ integration-test crate="" test="":
 test-seq:
     cargo test --workspace -- --test-threads=1
 
+# Run criterion benchmarks for vs-core (spatial grid performance)
+# HTML reports are written to target/criterion/
+bench:
+    cargo bench -p vs-core
+
 # === Clean ===
 
 # Clean build artifacts
