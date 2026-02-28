@@ -75,8 +75,8 @@ pub fn spawn_xp_gems(mut commands: Commands, mut died_events: MessageReader<Enem
                 custom_size: Some(Vec2::splat(GEM_RADIUS * 2.0)),
                 ..default()
             },
-            // z = 2.0 — above ground (z = 0) but below enemies (z ≈ 1).
-            Transform::from_xyz(event.position.x, event.position.y, 2.0),
+            // z = 0.5 — above ground (z = 0) but below enemies (z ≈ 1).
+            Transform::from_xyz(event.position.x, event.position.y, 0.5),
         ));
     }
 }
