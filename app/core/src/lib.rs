@@ -23,6 +23,7 @@ use systems::enemy_cull::cull_distant_enemies;
 use systems::enemy_spawn::spawn_enemies;
 use systems::game_over::check_player_death;
 use systems::game_timer::update_game_timer;
+use systems::gem_drop::spawn_xp_gems;
 use systems::player::{player_movement, spawn_player};
 use systems::player_collision::{
     apply_damage_to_player, enemy_player_collision, tick_invincibility,
@@ -92,6 +93,7 @@ impl Plugin for GameCorePlugin {
                         .after(fire_whip)
                         .after(fire_magic_wand)
                         .after(projectile_enemy_collision),
+                    spawn_xp_gems.after(apply_damage_to_enemies),
                     despawn_whip_effects,
                     move_projectiles,
                     despawn_expired_projectiles,
