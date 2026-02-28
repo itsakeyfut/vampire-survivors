@@ -34,6 +34,11 @@ impl Plugin for GameUIPlugin {
             .add_systems(Startup, camera::setup_camera)
             // Title screen
             .add_systems(OnEnter(AppState::Title), screens::title::setup_title_screen)
+            // Game-over screen
+            .add_systems(
+                OnEnter(AppState::GameOver),
+                screens::game_over::setup_game_over_screen,
+            )
             // Smooth player-follow only runs during active gameplay.
             .add_systems(
                 Update,

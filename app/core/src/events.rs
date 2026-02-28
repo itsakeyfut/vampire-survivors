@@ -70,3 +70,15 @@ pub struct PlayerDamagedEvent {
     /// Raw damage amount to subtract from current HP.
     pub damage: f32,
 }
+
+// ---------------------------------------------------------------------------
+// Game state events
+// ---------------------------------------------------------------------------
+
+/// Fired when the player's HP reaches zero.
+///
+/// The [`check_player_death`](crate::systems::game_over::check_player_death)
+/// system emits this event and immediately transitions to
+/// [`AppState::GameOver`](crate::states::AppState::GameOver).
+#[derive(Message, Debug, Clone)]
+pub struct GameOverEvent;

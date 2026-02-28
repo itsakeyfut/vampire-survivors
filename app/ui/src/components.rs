@@ -37,8 +37,8 @@ pub struct MenuButton {
 pub enum ButtonAction {
     /// Transition from Title to Playing — starts a new run.
     StartGame,
-    // Additional actions (GoToTitle, ResumeGame, etc.) will be added in
-    // Phase 11 as further screens are implemented.
+    /// Return to the Title screen from any state.
+    GoToTitle,
 }
 
 // ---------------------------------------------------------------------------
@@ -93,6 +93,9 @@ fn apply_action(action: ButtonAction, next_state: &mut NextState<AppState>) {
         ButtonAction::StartGame => {
             next_state.set(AppState::Playing);
         }
+        ButtonAction::GoToTitle => {
+            next_state.set(AppState::Title);
+        }
     }
 }
 
@@ -117,6 +120,44 @@ mod tests {
             action: ButtonAction::StartGame,
         };
         assert_eq!(btn.action, ButtonAction::StartGame);
+    }
+
+    #[test]
+    fn apply_action_start_game_sets_playing_state() {
+        use bevy::state::app::StatesPlugin;
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin));
+        app.init_state::<AppState>();
+
+        {
+            let mut next_state = app.world_mut().resource_mut::<NextState<AppState>>();
+            apply_action(ButtonAction::StartGame, &mut next_state);
+        }
+        app.update();
+
+        assert_eq!(*app.world().resource::<State<AppState>>(), AppState::Playing);
+    }
+
+    #[test]
+    fn apply_action_go_to_title_sets_title_state() {
+        use bevy::state::app::StatesPlugin;
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin));
+        app.init_state::<AppState>();
+
+        // Transition away from Loading (default) first so Title is reachable.
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Playing);
+        app.update();
+
+        {
+            let mut next_state = app.world_mut().resource_mut::<NextState<AppState>>();
+            apply_action(ButtonAction::GoToTitle, &mut next_state);
+        }
+        app.update();
+
+        assert_eq!(*app.world().resource::<State<AppState>>(), AppState::Title);
     }
 
     #[test]

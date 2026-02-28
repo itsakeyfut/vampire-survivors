@@ -8,7 +8,9 @@ pub mod types;
 
 use bevy::prelude::*;
 
-use events::{DamageEnemyEvent, EnemyDiedEvent, PlayerDamagedEvent, WeaponFiredEvent};
+use events::{
+    DamageEnemyEvent, EnemyDiedEvent, GameOverEvent, PlayerDamagedEvent, WeaponFiredEvent,
+};
 use resources::{
     EnemySpawner, GameData, LevelUpChoices, MetaProgress, SelectedCharacter, SpatialGrid,
     TreasureSpawner,
@@ -19,6 +21,7 @@ use systems::difficulty::update_difficulty;
 use systems::enemy_ai::move_enemies;
 use systems::enemy_cull::cull_distant_enemies;
 use systems::enemy_spawn::spawn_enemies;
+use systems::game_over::check_player_death;
 use systems::game_timer::update_game_timer;
 use systems::player::{player_movement, spawn_player};
 use systems::player_collision::{
@@ -62,6 +65,7 @@ impl Plugin for GameCorePlugin {
             .add_message::<DamageEnemyEvent>()
             .add_message::<EnemyDiedEvent>()
             .add_message::<PlayerDamagedEvent>()
+            .add_message::<GameOverEvent>()
             // ---------------------------------------------------------------
             // Playing state — player lifecycle
             // ---------------------------------------------------------------
@@ -101,6 +105,7 @@ impl Plugin for GameCorePlugin {
                     cull_distant_enemies
                         .after(move_enemies)
                         .after(spawn_enemies),
+                    check_player_death.after(apply_damage_to_player),
                 )
                     .run_if(in_state(AppState::Playing)),
             );
