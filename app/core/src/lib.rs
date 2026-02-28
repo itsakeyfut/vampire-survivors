@@ -21,6 +21,9 @@ use systems::enemy_cull::cull_distant_enemies;
 use systems::enemy_spawn::spawn_enemies;
 use systems::game_timer::update_game_timer;
 use systems::player::{player_movement, spawn_player};
+use systems::player_collision::{
+    apply_damage_to_player, enemy_player_collision, tick_invincibility,
+};
 use systems::projectile::{despawn_expired_projectiles, move_projectiles};
 use systems::projectile_collision::projectile_enemy_collision;
 use systems::spatial::update_spatial_grid;
@@ -73,7 +76,7 @@ impl Plugin for GameCorePlugin {
                 (
                     player_movement,
                     tick_weapon_cooldowns.after(player_movement),
-                    update_spatial_grid.after(player_movement),
+                    update_spatial_grid.after(move_enemies),
                     fire_magic_wand.after(tick_weapon_cooldowns),
                     fire_whip
                         .after(tick_weapon_cooldowns)
@@ -91,6 +94,9 @@ impl Plugin for GameCorePlugin {
                     update_game_timer,
                     update_difficulty.after(update_game_timer),
                     spawn_enemies.after(update_difficulty),
+                    tick_invincibility.before(enemy_player_collision),
+                    enemy_player_collision.after(update_spatial_grid),
+                    apply_damage_to_player.after(enemy_player_collision),
                     move_enemies.after(player_movement),
                     cull_distant_enemies
                         .after(move_enemies)
