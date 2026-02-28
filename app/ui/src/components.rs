@@ -135,7 +135,10 @@ mod tests {
         }
         app.update();
 
-        assert_eq!(*app.world().resource::<State<AppState>>(), AppState::Playing);
+        assert_eq!(
+            *app.world().resource::<State<AppState>>(),
+            AppState::Playing
+        );
     }
 
     #[test]
