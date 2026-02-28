@@ -57,6 +57,10 @@ pub struct EnemyDiedEvent {
     pub position: Vec2,
     /// The type of enemy that died, for loot-table lookups.
     pub enemy_type: EnemyType,
+    /// XP gem value carried directly from [`Enemy::xp_value`] at the moment
+    /// of death.  Sourced from `enemy.ron` config at enemy spawn time;
+    /// consumers do not need a separate config lookup.
+    pub xp_value: u32,
 }
 
 /// Fired when the player takes damage from an enemy or hazard.

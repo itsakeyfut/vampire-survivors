@@ -3,50 +3,17 @@
 //! [`spawn_xp_gems`] listens for [`EnemyDiedEvent`] and spawns an
 //! [`ExperienceGem`] entity at the enemy's last known position.
 //!
-//! The gem value is determined by the enemy's type via [`xp_value_for`],
-//! using the same base values as [`Enemy::from_type`] in
-//! [`crate::components::enemy`].  Gems are rendered as a green circle
-//! placeholder sprite until real art is available.
+//! The gem value is taken directly from [`EnemyDiedEvent::xp_value`], which
+//! is populated by [`apply_damage_to_enemies`] from the enemy's
+//! [`Enemy::xp_value`] field (sourced from `enemy.ron` at spawn time).
+//! No separate config lookup is needed here.
 
 use bevy::{prelude::*, state::state_scoped::DespawnOnExit};
 
-use crate::{
-    components::ExperienceGem, events::EnemyDiedEvent, states::AppState, types::EnemyType,
-};
-
-// ---------------------------------------------------------------------------
-// Fallback XP values (must match DEFAULT_ENEMY_STATS_* in components/enemy.rs)
-// ---------------------------------------------------------------------------
-
-const DEFAULT_XP_BAT: u32 = 3;
-const DEFAULT_XP_SKELETON: u32 = 5;
-const DEFAULT_XP_ZOMBIE: u32 = 8;
-const DEFAULT_XP_GHOST: u32 = 6;
-const DEFAULT_XP_DEMON: u32 = 10;
-const DEFAULT_XP_MEDUSA: u32 = 8;
-const DEFAULT_XP_DRAGON: u32 = 15;
-const DEFAULT_XP_BOSS_DEATH: u32 = 500;
+use crate::{components::ExperienceGem, events::EnemyDiedEvent, states::AppState};
 
 /// Gem visual radius in pixels (placeholder; replace with real sprite later).
 const GEM_RADIUS: f32 = 6.0;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/// Returns the base XP value for the given enemy type.
-fn xp_value_for(enemy_type: EnemyType) -> u32 {
-    match enemy_type {
-        EnemyType::Bat => DEFAULT_XP_BAT,
-        EnemyType::Skeleton => DEFAULT_XP_SKELETON,
-        EnemyType::Zombie => DEFAULT_XP_ZOMBIE,
-        EnemyType::Ghost => DEFAULT_XP_GHOST,
-        EnemyType::Demon => DEFAULT_XP_DEMON,
-        EnemyType::Medusa => DEFAULT_XP_MEDUSA,
-        EnemyType::Dragon => DEFAULT_XP_DRAGON,
-        EnemyType::BossDeath => DEFAULT_XP_BOSS_DEATH,
-    }
-}
 
 // ---------------------------------------------------------------------------
 // System
@@ -55,7 +22,8 @@ fn xp_value_for(enemy_type: EnemyType) -> u32 {
 /// Spawns an [`ExperienceGem`] at the death position for every
 /// [`EnemyDiedEvent`] received this frame.
 ///
-/// - Gem value is set from [`xp_value_for`] using the event's `enemy_type`.
+/// - Gem value is taken directly from `event.xp_value`, which was set from
+///   `enemy.ron` config when the enemy spawned.
 /// - Rendered as a green circle placeholder sprite (`GEM_RADIUS` px radius).
 /// - Tagged with [`DespawnOnExit`]`(`[`AppState::Playing`]`)` so gems are
 ///   automatically cleaned up when the run ends.
@@ -65,10 +33,11 @@ fn xp_value_for(enemy_type: EnemyType) -> u32 {
 /// reads them.
 pub fn spawn_xp_gems(mut commands: Commands, mut died_events: MessageReader<EnemyDiedEvent>) {
     for event in died_events.read() {
-        let value = xp_value_for(event.enemy_type);
         commands.spawn((
             DespawnOnExit(AppState::Playing),
-            ExperienceGem { value },
+            ExperienceGem {
+                value: event.xp_value,
+            },
             // Green circle placeholder sprite; replace with real art in Phase 17.
             Sprite {
                 color: Color::srgb(0.2, 0.9, 0.2),
@@ -99,12 +68,13 @@ mod tests {
         app
     }
 
-    fn send_died(app: &mut App, enemy_type: EnemyType, position: Vec2) {
+    fn send_died(app: &mut App, enemy_type: EnemyType, position: Vec2, xp_value: u32) {
         let entity = app.world_mut().spawn_empty().id();
         app.world_mut().write_message(EnemyDiedEvent {
             entity,
             position,
             enemy_type,
+            xp_value,
         });
     }
 
@@ -129,31 +99,28 @@ mod tests {
         assert!(gems(&mut app).is_empty(), "no gems without events");
     }
 
-    /// Bat death spawns a gem with the correct XP value.
+    /// Bat death spawns a gem with the XP value carried by the event.
     #[test]
     fn bat_death_spawns_gem_with_correct_value() {
         let mut app = build_app();
-        send_died(&mut app, EnemyType::Bat, Vec2::ZERO);
+        send_died(&mut app, EnemyType::Bat, Vec2::ZERO, 3);
         run_system(&mut app);
 
         let gs = gems(&mut app);
         assert_eq!(gs.len(), 1, "exactly one gem should be spawned");
-        assert_eq!(
-            gs[0].0.value, DEFAULT_XP_BAT,
-            "bat gem must have correct XP value"
-        );
+        assert_eq!(gs[0].0.value, 3, "bat gem must have correct XP value");
     }
 
     /// Boss death spawns a gem with the high XP value.
     #[test]
     fn boss_death_spawns_gem_with_high_value() {
         let mut app = build_app();
-        send_died(&mut app, EnemyType::BossDeath, Vec2::ZERO);
+        send_died(&mut app, EnemyType::BossDeath, Vec2::ZERO, 500);
         run_system(&mut app);
 
         let gs = gems(&mut app);
         assert_eq!(gs.len(), 1);
-        assert_eq!(gs[0].0.value, DEFAULT_XP_BOSS_DEATH);
+        assert_eq!(gs[0].0.value, 500);
     }
 
     /// Gem is spawned at the enemy's death position.
@@ -161,7 +128,7 @@ mod tests {
     fn gem_spawned_at_death_position() {
         let mut app = build_app();
         let pos = Vec2::new(123.0, -456.0);
-        send_died(&mut app, EnemyType::Skeleton, pos);
+        send_died(&mut app, EnemyType::Skeleton, pos, 5);
         run_system(&mut app);
 
         let gs = gems(&mut app);
@@ -181,30 +148,30 @@ mod tests {
     #[test]
     fn multiple_deaths_spawn_multiple_gems() {
         let mut app = build_app();
-        send_died(&mut app, EnemyType::Bat, Vec2::new(0.0, 0.0));
-        send_died(&mut app, EnemyType::Skeleton, Vec2::new(100.0, 0.0));
-        send_died(&mut app, EnemyType::Zombie, Vec2::new(200.0, 0.0));
+        send_died(&mut app, EnemyType::Bat, Vec2::new(0.0, 0.0), 3);
+        send_died(&mut app, EnemyType::Skeleton, Vec2::new(100.0, 0.0), 5);
+        send_died(&mut app, EnemyType::Zombie, Vec2::new(200.0, 0.0), 8);
         run_system(&mut app);
 
         assert_eq!(gems(&mut app).len(), 3, "three deaths → three gems");
     }
 
-    /// All enemy types produce gems with positive XP values.
+    /// The gem's value equals exactly what was carried in the event.
     #[test]
-    fn all_enemy_types_produce_positive_xp() {
-        use EnemyType::*;
-        for et in [
-            Bat, Skeleton, Zombie, Ghost, Demon, Medusa, Dragon, BossDeath,
-        ] {
-            assert!(xp_value_for(et) > 0, "{et:?} must drop at least 1 XP");
-        }
+    fn gem_value_equals_event_xp_value() {
+        let mut app = build_app();
+        send_died(&mut app, EnemyType::Dragon, Vec2::ZERO, 15);
+        run_system(&mut app);
+
+        let gs = gems(&mut app);
+        assert_eq!(gs[0].0.value, 15);
     }
 
     /// Gem has a Sprite component (placeholder visual).
     #[test]
     fn gem_has_sprite_component() {
         let mut app = build_app();
-        send_died(&mut app, EnemyType::Bat, Vec2::ZERO);
+        send_died(&mut app, EnemyType::Bat, Vec2::ZERO, 3);
         run_system(&mut app);
 
         let mut q = app

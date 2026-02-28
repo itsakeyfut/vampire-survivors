@@ -37,11 +37,13 @@ pub fn apply_damage_to_enemies(
         if enemy.is_dead() {
             let position = transform.translation.truncate();
             let enemy_type = enemy.enemy_type;
+            let xp_value = enemy.xp_value;
             commands.entity(event.entity).despawn();
             died_events.write(EnemyDiedEvent {
                 entity: event.entity,
                 position,
                 enemy_type,
+                xp_value,
             });
         }
     }
@@ -146,6 +148,8 @@ mod tests {
         assert_eq!(events[0].entity, entity);
         assert_eq!(events[0].position, Vec2::new(10.0, 20.0));
         assert_eq!(events[0].enemy_type, EnemyType::Bat);
+        // xp_value should match the bat's base XP (3) from enemy config.
+        assert_eq!(events[0].xp_value, 3);
     }
 
     /// Non-lethal damage does not emit an EnemyDiedEvent.
