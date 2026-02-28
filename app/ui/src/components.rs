@@ -37,8 +37,8 @@ pub struct MenuButton {
 pub enum ButtonAction {
     /// Transition from Title to Playing — starts a new run.
     StartGame,
-    // Additional actions (GoToTitle, ResumeGame, etc.) will be added in
-    // Phase 11 as further screens are implemented.
+    /// Return to the Title screen from any state.
+    GoToTitle,
 }
 
 // ---------------------------------------------------------------------------
@@ -92,6 +92,9 @@ fn apply_action(action: ButtonAction, next_state: &mut NextState<AppState>) {
     match action {
         ButtonAction::StartGame => {
             next_state.set(AppState::Playing);
+        }
+        ButtonAction::GoToTitle => {
+            next_state.set(AppState::Title);
         }
     }
 }
