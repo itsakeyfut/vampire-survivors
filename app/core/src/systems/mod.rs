@@ -13,6 +13,7 @@ pub mod game_over;
 pub mod game_timer;
 pub mod gem_attraction;
 pub mod gem_drop;
+pub mod level_up;
 pub mod player;
 pub mod player_collision;
 pub mod projectile;

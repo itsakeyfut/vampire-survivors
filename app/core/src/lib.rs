@@ -9,7 +9,8 @@ pub mod types;
 use bevy::prelude::*;
 
 use events::{
-    DamageEnemyEvent, EnemyDiedEvent, GameOverEvent, PlayerDamagedEvent, WeaponFiredEvent,
+    DamageEnemyEvent, EnemyDiedEvent, GameOverEvent, LevelUpEvent, PlayerDamagedEvent,
+    WeaponFiredEvent,
 };
 use resources::{
     EnemySpawner, GameData, LevelUpChoices, MetaProgress, SelectedCharacter, SpatialGrid,
@@ -25,6 +26,7 @@ use systems::game_over::check_player_death;
 use systems::game_timer::update_game_timer;
 use systems::gem_attraction::{attract_gems_to_player, move_attracted_gems};
 use systems::gem_drop::spawn_xp_gems;
+use systems::level_up::check_level_up;
 use systems::player::{player_movement, spawn_player};
 use systems::player_collision::{
     apply_damage_to_player, enemy_player_collision, tick_invincibility,
@@ -68,6 +70,7 @@ impl Plugin for GameCorePlugin {
             .add_message::<EnemyDiedEvent>()
             .add_message::<PlayerDamagedEvent>()
             .add_message::<GameOverEvent>()
+            .add_message::<LevelUpEvent>()
             // ---------------------------------------------------------------
             // Playing state — player lifecycle
             // ---------------------------------------------------------------
@@ -119,6 +122,7 @@ impl Plugin for GameCorePlugin {
                     cull_distant_enemies
                         .after(move_enemies)
                         .after(spawn_enemies),
+                    check_level_up.after(move_attracted_gems),
                     check_player_death.after(apply_damage_to_player),
                 )
                     .run_if(in_state(AppState::Playing)),

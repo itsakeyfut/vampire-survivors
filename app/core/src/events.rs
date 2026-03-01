@@ -86,3 +86,15 @@ pub struct PlayerDamagedEvent {
 /// [`AppState::GameOver`](crate::states::AppState::GameOver).
 #[derive(Message, Debug, Clone)]
 pub struct GameOverEvent;
+
+/// Fired when accumulated XP reaches the next-level threshold.
+///
+/// The [`check_level_up`](crate::systems::level_up::check_level_up) system
+/// emits this event and transitions to
+/// [`AppState::LevelUp`](crate::states::AppState::LevelUp) so the player can
+/// choose an upgrade card.
+#[derive(Message, Debug, Clone)]
+pub struct LevelUpEvent {
+    /// The player's new level after the level-up.
+    pub new_level: u32,
+}
