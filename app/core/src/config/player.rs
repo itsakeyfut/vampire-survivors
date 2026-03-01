@@ -155,6 +155,8 @@ PlayerConfig(
         assert_eq!(config.base_speed, 200.0);
         assert_eq!(config.base_damage_mult, 1.0);
         assert_eq!(config.pickup_radius, 80.0);
+        assert_eq!(config.gem_attraction_speed, 200.0);
+        assert_eq!(config.gem_absorption_radius, 8.0);
         assert_eq!(config.collider_radius, 12.0);
         assert_eq!(config.collider_projectile_small, 5.0);
     }
