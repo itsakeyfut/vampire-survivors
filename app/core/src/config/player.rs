@@ -33,6 +33,9 @@ pub struct PlayerConfig {
     pub collider_xp_gem: f32,
     pub collider_gold_coin: f32,
     pub collider_treasure: f32,
+    // XP gem attraction
+    pub gem_attraction_speed: f32,
+    pub gem_absorption_radius: f32,
 }
 
 /// Resource holding the handle to the loaded player configuration.
@@ -97,6 +100,8 @@ pub fn hot_reload_player_config(
                         stats.projectile_speed_mult = cfg.base_projectile_speed;
                         stats.duration_multiplier = cfg.base_duration_mult;
                         stats.pickup_radius = cfg.pickup_radius;
+                        stats.gem_attraction_speed = cfg.gem_attraction_speed;
+                        stats.gem_absorption_radius = cfg.gem_absorption_radius;
                         stats.area_multiplier = cfg.base_area_mult;
                         stats.luck = cfg.base_luck;
                         stats.hp_regen = cfg.base_hp_regen;
@@ -141,6 +146,8 @@ PlayerConfig(
     collider_xp_gem: 6.0,
     collider_gold_coin: 6.0,
     collider_treasure: 20.0,
+    gem_attraction_speed: 200.0,
+    gem_absorption_radius: 8.0,
 )
 "#;
         let config: PlayerConfig = ron::de::from_str(ron_data).unwrap();
@@ -148,6 +155,8 @@ PlayerConfig(
         assert_eq!(config.base_speed, 200.0);
         assert_eq!(config.base_damage_mult, 1.0);
         assert_eq!(config.pickup_radius, 80.0);
+        assert_eq!(config.gem_attraction_speed, 200.0);
+        assert_eq!(config.gem_absorption_radius, 8.0);
         assert_eq!(config.collider_radius, 12.0);
         assert_eq!(config.collider_projectile_small, 5.0);
     }

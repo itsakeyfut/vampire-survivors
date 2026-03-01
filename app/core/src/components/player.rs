@@ -16,6 +16,8 @@ const DEFAULT_PLAYER_BASE_AREA_MULT: f32 = 1.0;
 const DEFAULT_PLAYER_BASE_LUCK: f32 = 1.0;
 const DEFAULT_PLAYER_BASE_HP_REGEN: f32 = 0.0;
 const DEFAULT_PLAYER_PICKUP_RADIUS: f32 = 80.0;
+const DEFAULT_GEM_ATTRACTION_SPEED: f32 = 200.0;
+const DEFAULT_GEM_ABSORPTION_RADIUS: f32 = 8.0;
 
 /// Marker component identifying the player entity.
 #[derive(Component, Debug)]
@@ -46,6 +48,10 @@ pub struct PlayerStats {
     pub duration_multiplier: f32,
     /// Radius within which XP gems are magnetically attracted.
     pub pickup_radius: f32,
+    /// Speed at which attracted XP gems move toward the player (pixels/second).
+    pub gem_attraction_speed: f32,
+    /// Distance at which an attracted gem is absorbed by the player (pixels).
+    pub gem_absorption_radius: f32,
     /// Weapon area-of-effect radius multiplier (1.0 = base area).
     pub area_multiplier: f32,
     /// Additional projectiles fired per activation (additive).
@@ -67,6 +73,8 @@ impl Default for PlayerStats {
             projectile_speed_mult: DEFAULT_PLAYER_BASE_PROJECTILE_SPEED,
             duration_multiplier: DEFAULT_PLAYER_BASE_DURATION_MULT,
             pickup_radius: DEFAULT_PLAYER_PICKUP_RADIUS,
+            gem_attraction_speed: DEFAULT_GEM_ATTRACTION_SPEED,
+            gem_absorption_radius: DEFAULT_GEM_ABSORPTION_RADIUS,
             area_multiplier: DEFAULT_PLAYER_BASE_AREA_MULT,
             extra_projectiles: 0,
             luck: DEFAULT_PLAYER_BASE_LUCK,

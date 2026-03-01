@@ -61,6 +61,8 @@ pub fn spawn_player(
             luck: cfg.base_luck,
             hp_regen: cfg.base_hp_regen,
             pickup_radius: cfg.pickup_radius,
+            gem_attraction_speed: cfg.gem_attraction_speed,
+            gem_absorption_radius: cfg.gem_absorption_radius,
         };
         (stats, cfg.collider_radius)
     } else {

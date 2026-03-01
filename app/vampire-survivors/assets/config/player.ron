@@ -20,4 +20,7 @@ PlayerConfig(
     collider_xp_gem: 6.0,
     collider_gold_coin: 6.0,
     collider_treasure: 20.0,
+    // XP gem attraction
+    gem_attraction_speed: 200.0,
+    gem_absorption_radius: 8.0,
 )
