@@ -23,6 +23,7 @@ use systems::enemy_cull::cull_distant_enemies;
 use systems::enemy_spawn::spawn_enemies;
 use systems::game_over::check_player_death;
 use systems::game_timer::update_game_timer;
+use systems::gem_attraction::{attract_gems_to_player, move_attracted_gems};
 use systems::gem_drop::spawn_xp_gems;
 use systems::player::{player_movement, spawn_player};
 use systems::player_collision::{
@@ -74,18 +75,21 @@ impl Plugin for GameCorePlugin {
             // on OnExit(Playing), so no explicit cleanup system is needed.
             .add_systems(OnEnter(AppState::Playing), spawn_player)
             // ---------------------------------------------------------------
-            // Playing state — per-frame gameplay systems
+            // Playing state — per-frame gameplay systems (part 1: movement,
+            // weapons, collision, and damage)
             // ---------------------------------------------------------------
             .add_systems(
                 Update,
                 (
                     player_movement,
+                    move_enemies.after(player_movement),
                     tick_weapon_cooldowns.after(player_movement),
                     update_spatial_grid.after(move_enemies),
                     fire_magic_wand.after(tick_weapon_cooldowns),
                     fire_whip
                         .after(tick_weapon_cooldowns)
                         .after(update_spatial_grid),
+                    move_projectiles,
                     projectile_enemy_collision
                         .after(update_spatial_grid)
                         .after(move_projectiles),
@@ -93,17 +97,25 @@ impl Plugin for GameCorePlugin {
                         .after(fire_whip)
                         .after(fire_magic_wand)
                         .after(projectile_enemy_collision),
-                    spawn_xp_gems.after(apply_damage_to_enemies),
                     despawn_whip_effects,
-                    move_projectiles,
                     despawn_expired_projectiles,
-                    update_game_timer,
-                    update_difficulty.after(update_game_timer),
-                    spawn_enemies.after(update_difficulty),
                     tick_invincibility.before(enemy_player_collision),
                     enemy_player_collision.after(update_spatial_grid),
                     apply_damage_to_player.after(enemy_player_collision),
-                    move_enemies.after(player_movement),
+                )
+                    .run_if(in_state(AppState::Playing)),
+            )
+            // Playing state — per-frame gameplay systems (part 2: XP, enemies,
+            // timers, and death)
+            .add_systems(
+                Update,
+                (
+                    spawn_xp_gems.after(apply_damage_to_enemies),
+                    attract_gems_to_player.after(player_movement),
+                    move_attracted_gems.after(attract_gems_to_player),
+                    update_game_timer,
+                    update_difficulty.after(update_game_timer),
+                    spawn_enemies.after(update_difficulty),
                     cull_distant_enemies
                         .after(move_enemies)
                         .after(spawn_enemies),
