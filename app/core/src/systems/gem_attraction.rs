@@ -16,7 +16,6 @@ use bevy::prelude::*;
 
 use crate::{
     components::{AttractedToPlayer, ExperienceGem, Player, PlayerStats},
-    config::PlayerParams,
     resources::GameData,
 };
 
@@ -34,20 +33,6 @@ type AttractedGem = (
 );
 
 // ---------------------------------------------------------------------------
-// Fallback constants
-// ---------------------------------------------------------------------------
-
-/// Movement speed applied to newly attracted gems (pixels/second).
-///
-/// Used when the RON player config has not yet loaded.
-const DEFAULT_ATTRACTION_SPEED: f32 = 200.0;
-
-/// Distance from the player centre at which a gem is considered absorbed
-/// (pixels).  Gems are despawned and their XP credited once they reach this
-/// radius.
-const ABSORPTION_RADIUS: f32 = 8.0;
-
-// ---------------------------------------------------------------------------
 // Systems
 // ---------------------------------------------------------------------------
 
@@ -62,25 +47,19 @@ pub fn attract_gems_to_player(
     mut commands: Commands,
     player_q: Query<(&Transform, &PlayerStats), With<Player>>,
     gem_q: Query<(Entity, &Transform), UnattractedGem>,
-    player_cfg: PlayerParams,
 ) {
     let Ok((player_tf, player_stats)) = player_q.single() else {
         return;
     };
 
-    let pickup_radius = player_cfg
-        .get()
-        .map(|c| c.pickup_radius)
-        .unwrap_or(player_stats.pickup_radius);
-    let pickup_radius_sq = pickup_radius * pickup_radius;
-
+    let pickup_radius_sq = player_stats.pickup_radius * player_stats.pickup_radius;
     let player_pos = player_tf.translation.truncate();
 
     for (gem_entity, gem_tf) in gem_q.iter() {
         let gem_pos = gem_tf.translation.truncate();
         if gem_pos.distance_squared(player_pos) < pickup_radius_sq {
             commands.entity(gem_entity).insert(AttractedToPlayer {
-                speed: DEFAULT_ATTRACTION_SPEED,
+                speed: player_stats.gem_attraction_speed,
             });
         }
     }
@@ -90,20 +69,21 @@ pub fn attract_gems_to_player(
 /// when it arrives.
 ///
 /// On each frame the gem is translated along the normalised direction vector
-/// toward the player by `speed × delta_secs` pixels.  If the remaining
-/// distance falls below [`ABSORPTION_RADIUS`] the gem is despawned and its
-/// [`ExperienceGem::value`] is added to [`GameData::current_xp`].
+/// toward the player by `speed × delta_secs` pixels.  When the remaining
+/// distance is within `gem_absorption_radius` (from `player.ron`) the gem is
+/// despawned and its [`ExperienceGem::value`] is added to [`GameData::current_xp`].
 pub fn move_attracted_gems(
     mut commands: Commands,
     mut game_data: ResMut<GameData>,
-    player_q: Query<&Transform, With<Player>>,
+    player_q: Query<(&Transform, &PlayerStats), With<Player>>,
     mut gem_q: Query<(Entity, &mut Transform, &ExperienceGem, &AttractedToPlayer), AttractedGem>,
     time: Res<Time>,
 ) {
-    let Ok(player_tf) = player_q.single() else {
+    let Ok((player_tf, player_stats)) = player_q.single() else {
         return;
     };
 
+    let absorption_radius = player_stats.gem_absorption_radius;
     let player_pos = player_tf.translation.truncate();
     let delta = time.delta_secs();
 
@@ -112,7 +92,7 @@ pub fn move_attracted_gems(
         let to_player = player_pos - gem_pos;
         let distance = to_player.length();
 
-        if distance < ABSORPTION_RADIUS {
+        if distance <= absorption_radius {
             // Gem has reached the player — absorb it.
             game_data.current_xp += gem.value;
             commands.entity(gem_entity).despawn();
@@ -120,7 +100,7 @@ pub fn move_attracted_gems(
             // Move toward the player, clamped so we never overshoot.
             let direction = to_player / distance; // normalised
             let step = attracted.speed * delta;
-            let move_dist = step.min(distance - ABSORPTION_RADIUS);
+            let move_dist = step.min(distance - absorption_radius);
             gem_tf.translation += (direction * move_dist).extend(0.0);
         }
     }
@@ -135,13 +115,11 @@ mod tests {
     use std::time::Duration;
 
     use bevy::ecs::system::RunSystemOnce as _;
-    use bevy::state::state_scoped::DespawnOnExit;
 
     use super::*;
     use crate::{
         components::{AttractedToPlayer, ExperienceGem, Player, PlayerStats},
         resources::GameData,
-        states::AppState,
     };
 
     fn build_app() -> App {
@@ -260,7 +238,7 @@ mod tests {
                 ExperienceGem { value: 3 },
                 Transform::from_xyz(100.0, 0.0, 0.5),
                 AttractedToPlayer {
-                    speed: DEFAULT_ATTRACTION_SPEED,
+                    speed: PlayerStats::default().gem_attraction_speed,
                 },
             ))
             .id();
@@ -292,9 +270,9 @@ mod tests {
         // Place gem very close to player (within ABSORPTION_RADIUS).
         app.world_mut().spawn((
             ExperienceGem { value: 5 },
-            Transform::from_xyz(2.0, 0.0, 0.5), // distance 2.0 < ABSORPTION_RADIUS (8.0)
+            Transform::from_xyz(2.0, 0.0, 0.5), // distance 2.0 < gem_absorption_radius (8.0)
             AttractedToPlayer {
-                speed: DEFAULT_ATTRACTION_SPEED,
+                speed: PlayerStats::default().gem_attraction_speed,
             },
         ));
 
@@ -322,7 +300,7 @@ mod tests {
                 ExperienceGem { value },
                 Transform::from_xyz(1.0, 0.0, 0.5),
                 AttractedToPlayer {
-                    speed: DEFAULT_ATTRACTION_SPEED,
+                    speed: PlayerStats::default().gem_attraction_speed,
                 },
             ));
         }
@@ -350,7 +328,7 @@ mod tests {
             ExperienceGem { value: 3 },
             Transform::from_xyz(1.0, 0.0, 0.5),
             AttractedToPlayer {
-                speed: DEFAULT_ATTRACTION_SPEED,
+                speed: PlayerStats::default().gem_attraction_speed,
             },
         ));
         app.world_mut()
