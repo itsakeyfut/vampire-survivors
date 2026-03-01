@@ -122,7 +122,9 @@ impl Plugin for GameCorePlugin {
                     cull_distant_enemies
                         .after(move_enemies)
                         .after(spawn_enemies),
-                    check_level_up.after(move_attracted_gems),
+                    check_level_up
+                        .after(move_attracted_gems)
+                        .before(check_player_death),
                     check_player_death.after(apply_damage_to_player),
                 )
                     .run_if(in_state(AppState::Playing)),
