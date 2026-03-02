@@ -37,6 +37,34 @@ impl From<&SrgbColor> for Color {
 }
 
 // ---------------------------------------------------------------------------
+// SrgbaColor — RON-deserialisable colour with alpha
+// ---------------------------------------------------------------------------
+
+/// Linear sRGB colour with alpha channel for RON serialisation.
+///
+/// Used for semi-transparent UI overlays where [`SrgbColor`] (opaque) is not
+/// sufficient.
+#[derive(Deserialize, Debug, Clone)]
+pub struct SrgbaColor {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
+}
+
+impl From<SrgbaColor> for Color {
+    fn from(c: SrgbaColor) -> Self {
+        Color::srgba(c.r, c.g, c.b, c.a)
+    }
+}
+
+impl From<&SrgbaColor> for Color {
+    fn from(c: &SrgbaColor) -> Self {
+        Color::srgba(c.r, c.g, c.b, c.a)
+    }
+}
+
+// ---------------------------------------------------------------------------
 // UiStyleConfig
 // ---------------------------------------------------------------------------
 
@@ -250,6 +278,20 @@ UiStyleConfig(
         assert!((srgba.red - 1.0).abs() < 1e-6);
         assert!((srgba.green - 0.5).abs() < 1e-6);
         assert!((srgba.blue - 0.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn srgba_color_converts_to_bevy_color_with_alpha() {
+        let c = SrgbaColor {
+            r: 0.02,
+            g: 0.02,
+            b: 0.06,
+            a: 0.92,
+        };
+        let color = Color::from(&c);
+        let srgba = color.to_srgba();
+        assert!((srgba.red - 0.02).abs() < 1e-6);
+        assert!((srgba.alpha - 0.92).abs() < 1e-6);
     }
 
     #[test]
