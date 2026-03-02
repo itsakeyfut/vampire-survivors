@@ -27,6 +27,7 @@ use systems::game_timer::update_game_timer;
 use systems::gem_attraction::{attract_gems_to_player, move_attracted_gems};
 use systems::gem_drop::spawn_xp_gems;
 use systems::level_up::check_level_up;
+use systems::level_up_choices::generate_level_up_choices;
 use systems::player::{player_movement, spawn_player};
 use systems::player_collision::{
     apply_damage_to_player, enemy_player_collision, tick_invincibility,
@@ -77,6 +78,10 @@ impl Plugin for GameCorePlugin {
             // StateScoped entities (camera + player) are despawned automatically
             // on OnExit(Playing), so no explicit cleanup system is needed.
             .add_systems(OnEnter(AppState::Playing), spawn_player)
+            // ---------------------------------------------------------------
+            // LevelUp state — generate upgrade choices when overlay opens
+            // ---------------------------------------------------------------
+            .add_systems(OnEnter(AppState::LevelUp), generate_level_up_choices)
             // ---------------------------------------------------------------
             // Playing state — per-frame gameplay systems (part 1: movement,
             // weapons, collision, and damage)

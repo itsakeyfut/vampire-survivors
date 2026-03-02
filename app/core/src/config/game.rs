@@ -29,6 +29,7 @@ pub struct GameConfig {
     // XP / levelling
     pub xp_level_base: u32,
     pub xp_level_multiplier: f32,
+    pub level_up_choice_count: usize,
     // Camera
     pub camera_lerp_speed: f32,
     // Spatial partitioning
@@ -115,6 +116,7 @@ GameConfig(
     treasure_spawn_interval: 180.0,
     xp_level_base: 20,
     xp_level_multiplier: 1.2,
+    level_up_choice_count: 3,
     camera_lerp_speed: 10.0,
     spatial_grid_cell_size: 64.0,
     base_projectile_speed: 300.0,
@@ -131,6 +133,7 @@ GameConfig(
         assert_eq!(config.boss_spawn_time, 1800.0);
         assert_eq!(config.treasure_spawn_interval, 180.0);
         assert_eq!(config.xp_level_base, 20);
+        assert_eq!(config.level_up_choice_count, 3);
         assert_eq!(config.spatial_grid_cell_size, 64.0);
         assert_eq!(config.base_projectile_speed, 300.0);
         assert_eq!(config.base_projectile_lifetime, 5.0);
