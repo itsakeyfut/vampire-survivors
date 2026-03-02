@@ -45,8 +45,7 @@ impl Plugin for GameUIPlugin {
             // already populated when the UI reads it.
             .add_systems(
                 OnEnter(AppState::LevelUp),
-                screens::level_up::setup_level_up_screen
-                    .after(generate_level_up_choices),
+                screens::level_up::setup_level_up_screen.after(generate_level_up_choices),
             )
             // Card-specific hover/press colors run in all states.
             // Must run after handle_button_interaction so card colors take

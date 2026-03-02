@@ -3,18 +3,23 @@
 //! Each logical group of UI settings lives in its own submodule so it can be
 //! tuned independently:
 //!
-//! | File                         | Config type        | Controls                         |
-//! |------------------------------|--------------------|----------------------------------|
-//! | `config/ui/styles.ron`       | [`UiStyleConfig`]  | Colors, font sizes, button sizes |
+//! | File                                  | Config type             | Controls                          |
+//! |---------------------------------------|-------------------------|-----------------------------------|
+//! | `config/ui/styles.ron`                | [`UiStyleConfig`]       | Colors, font sizes, button sizes  |
+//! | `config/ui/screen/level_up.ron`       | [`LevelUpScreenConfig`] | Level-up card colors and layout   |
 //!
 //! All files are watched by Bevy's asset server, so edits take effect while
 //! the game is running (hot-reload).
 
+pub mod level_up;
 pub mod styles;
 
+pub use level_up::{
+    LevelUpScreenConfig, LevelUpScreenConfigHandle, LevelUpScreenParams, hot_reload_level_up_screen,
+};
 pub use styles::{
-    SrgbColor, TitleButtonLabel, TitleHeadingText, TitleScreenBg, TitleStartButton, UiStyleConfig,
-    UiStyleConfigHandle, UiStyleParams, hot_reload_ui_style,
+    SrgbColor, SrgbaColor, TitleButtonLabel, TitleHeadingText, TitleScreenBg, TitleStartButton,
+    UiStyleConfig, UiStyleConfigHandle, UiStyleParams, hot_reload_ui_style,
 };
 
 use bevy::asset::io::Reader;
@@ -60,6 +65,7 @@ macro_rules! ron_asset_loader {
 
 // Loader types (defined here so the macro stays local to this module)
 ron_asset_loader!(UiStyleConfigLoader, UiStyleConfig);
+ron_asset_loader!(LevelUpScreenConfigLoader, LevelUpScreenConfig);
 
 // ---------------------------------------------------------------------------
 // Plugin
@@ -74,14 +80,20 @@ pub struct UiConfigPlugin;
 impl Plugin for UiConfigPlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<UiStyleConfig>()
-            .register_asset_loader(UiStyleConfigLoader);
+            .register_asset_loader(UiStyleConfigLoader)
+            .init_asset::<LevelUpScreenConfig>()
+            .register_asset_loader(LevelUpScreenConfigLoader);
 
         let asset_server = app.world_mut().resource::<AssetServer>();
         let style_handle: Handle<UiStyleConfig> = asset_server.load("config/ui/styles.ron");
+        let level_up_handle: Handle<LevelUpScreenConfig> =
+            asset_server.load("config/ui/screen/level_up.ron");
 
-        app.insert_resource(UiStyleConfigHandle(style_handle));
+        app.insert_resource(UiStyleConfigHandle(style_handle))
+            .insert_resource(LevelUpScreenConfigHandle(level_up_handle));
 
-        app.add_systems(Update, hot_reload_ui_style);
+        app.add_systems(Update, hot_reload_ui_style)
+            .add_systems(Update, hot_reload_level_up_screen);
 
         info!("✅ UiConfigPlugin initialized");
     }

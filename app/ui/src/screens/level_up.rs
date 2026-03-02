@@ -14,40 +14,24 @@ use vs_core::states::AppState;
 use vs_core::types::{PassiveItemType, UpgradeChoice, WeaponType};
 
 use crate::components::{ButtonAction, MenuButton};
+use crate::config::level_up::LevelUpScreenParams;
 use crate::styles::{
     DEFAULT_FONT_SIZE_LARGE, DEFAULT_FONT_SIZE_MEDIUM, DEFAULT_FONT_SIZE_SMALL, DEFAULT_TEXT_COLOR,
 };
 
 // ---------------------------------------------------------------------------
-// Local layout constants
+// Fallback constants
 // ---------------------------------------------------------------------------
 
-/// Semi-transparent overlay behind the cards.
-const OVERLAY_COLOR: Color = Color::srgba(0.02, 0.02, 0.06, 0.92);
-
-/// "LEVEL UP!" heading color — gold.
-const HEADING_COLOR: Color = Color::srgb(1.0, 0.85, 0.20);
-
-/// Card background color (resting state).
-const CARD_NORMAL: Color = Color::srgb(0.12, 0.08, 0.28);
-
-/// Card background color on hover.
-const CARD_HOVER: Color = Color::srgb(0.22, 0.14, 0.48);
-
-/// Card background color while pressed.
-const CARD_PRESSED: Color = Color::srgb(0.08, 0.05, 0.18);
-
-/// Subtitle color — dim gold that identifies the upgrade type.
-const SUBTITLE_COLOR: Color = Color::srgb(0.85, 0.70, 0.30);
-
-/// Width of each upgrade card in pixels.
-const CARD_WIDTH: f32 = 260.0;
-
-/// Height of each upgrade card in pixels.
-const CARD_HEIGHT: f32 = 320.0;
-
-/// Horizontal gap between adjacent cards in pixels.
-const CARD_GAP: f32 = 30.0;
+const DEFAULT_OVERLAY_COLOR: Color = Color::srgba(0.02, 0.02, 0.06, 0.92);
+const DEFAULT_HEADING_COLOR: Color = Color::srgb(1.0, 0.85, 0.20);
+const DEFAULT_CARD_NORMAL: Color = Color::srgb(0.12, 0.08, 0.28);
+const DEFAULT_CARD_HOVER: Color = Color::srgb(0.22, 0.14, 0.48);
+const DEFAULT_CARD_PRESSED: Color = Color::srgb(0.08, 0.05, 0.18);
+const DEFAULT_SUBTITLE_COLOR: Color = Color::srgb(0.85, 0.70, 0.30);
+const DEFAULT_CARD_WIDTH: f32 = 260.0;
+const DEFAULT_CARD_HEIGHT: f32 = 320.0;
+const DEFAULT_CARD_GAP: f32 = 30.0;
 
 // ---------------------------------------------------------------------------
 // Marker components
@@ -93,9 +77,7 @@ fn choice_name(choice: &UpgradeChoice) -> &'static str {
 
 fn choice_description(choice: &UpgradeChoice) -> &'static str {
     match choice {
-        UpgradeChoice::NewWeapon(wt) | UpgradeChoice::WeaponUpgrade(wt) => {
-            weapon_description(*wt)
-        }
+        UpgradeChoice::NewWeapon(wt) | UpgradeChoice::WeaponUpgrade(wt) => weapon_description(*wt),
         UpgradeChoice::PassiveItem(pt) | UpgradeChoice::PassiveUpgrade(pt) => {
             passive_description(*pt)
         }
@@ -182,6 +164,7 @@ pub fn setup_level_up_screen(
     mut commands: Commands,
     choices: Res<LevelUpChoices>,
     mut next_state: ResMut<NextState<AppState>>,
+    screen_cfg: LevelUpScreenParams,
 ) {
     // Guard against an empty pool (all items maxed, or player query failed).
     // Without cards there is no way to dismiss the overlay, which would
@@ -190,6 +173,43 @@ pub fn setup_level_up_screen(
         next_state.set(AppState::Playing);
         return;
     }
+
+    let (
+        overlay_color,
+        heading_color,
+        card_normal,
+        subtitle_color,
+        card_width,
+        card_height,
+        card_gap,
+    ) = if let Some(c) = screen_cfg.get() {
+        (
+            Color::from(&c.overlay_color),
+            Color::from(&c.heading_color),
+            Color::from(&c.card_normal),
+            Color::from(&c.subtitle_color),
+            c.card_width,
+            c.card_height,
+            c.card_gap,
+        )
+    } else {
+        (
+            DEFAULT_OVERLAY_COLOR,
+            DEFAULT_HEADING_COLOR,
+            DEFAULT_CARD_NORMAL,
+            DEFAULT_SUBTITLE_COLOR,
+            DEFAULT_CARD_WIDTH,
+            DEFAULT_CARD_HEIGHT,
+            DEFAULT_CARD_GAP,
+        )
+    };
+
+    // Clamp card dimensions so that invalid RON values cannot produce a
+    // zero-sized or negative-max-width layout.  card_width must be > 32 to
+    // keep the description text max_width positive.
+    let card_width = card_width.max(64.0);
+    let card_height = card_height.max(64.0);
+    let card_gap = card_gap.max(0.0);
 
     commands
         .spawn((
@@ -202,7 +222,7 @@ pub fn setup_level_up_screen(
                 row_gap: Val::Px(40.0),
                 ..default()
             },
-            BackgroundColor(OVERLAY_COLOR),
+            BackgroundColor(overlay_color),
             DespawnOnExit(AppState::LevelUp),
             LevelUpScreenBg,
         ))
@@ -214,14 +234,14 @@ pub fn setup_level_up_screen(
                     font_size: DEFAULT_FONT_SIZE_LARGE,
                     ..default()
                 },
-                TextColor(HEADING_COLOR),
+                TextColor(heading_color),
             ));
 
             // Row of upgrade cards.
             root.spawn((
                 Node {
                     flex_direction: FlexDirection::Row,
-                    column_gap: Val::Px(CARD_GAP),
+                    column_gap: Val::Px(card_gap),
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Stretch,
                     ..default()
@@ -230,20 +250,37 @@ pub fn setup_level_up_screen(
             ))
             .with_children(|row| {
                 for (i, choice) in choices.choices.iter().enumerate() {
-                    spawn_card(row, i, choice);
+                    spawn_card(
+                        row,
+                        i,
+                        choice,
+                        card_normal,
+                        subtitle_color,
+                        card_width,
+                        card_height,
+                    );
                 }
             });
         });
 }
 
 /// Spawns a single upgrade card button inside the card row.
-fn spawn_card(parent: &mut ChildSpawnerCommands, index: usize, choice: &UpgradeChoice) {
+#[allow(clippy::too_many_arguments)]
+fn spawn_card(
+    parent: &mut ChildSpawnerCommands,
+    index: usize,
+    choice: &UpgradeChoice,
+    card_normal: Color,
+    subtitle_color: Color,
+    card_width: f32,
+    card_height: f32,
+) {
     parent
         .spawn((
             Button,
             Node {
-                width: Val::Px(CARD_WIDTH),
-                height: Val::Px(CARD_HEIGHT),
+                width: Val::Px(card_width),
+                height: Val::Px(card_height),
                 flex_direction: FlexDirection::Column,
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
@@ -251,7 +288,7 @@ fn spawn_card(parent: &mut ChildSpawnerCommands, index: usize, choice: &UpgradeC
                 row_gap: Val::Px(12.0),
                 ..default()
             },
-            BackgroundColor(CARD_NORMAL),
+            BackgroundColor(card_normal),
             MenuButton {
                 action: ButtonAction::SelectUpgrade(index),
             },
@@ -265,7 +302,7 @@ fn spawn_card(parent: &mut ChildSpawnerCommands, index: usize, choice: &UpgradeC
                     font_size: DEFAULT_FONT_SIZE_SMALL,
                     ..default()
                 },
-                TextColor(SUBTITLE_COLOR),
+                TextColor(subtitle_color),
             ));
 
             // Item name.
@@ -287,7 +324,7 @@ fn spawn_card(parent: &mut ChildSpawnerCommands, index: usize, choice: &UpgradeC
                 },
                 TextColor(DEFAULT_TEXT_COLOR),
                 Node {
-                    max_width: Val::Px(CARD_WIDTH - 32.0),
+                    max_width: Val::Px(card_width - 32.0),
                     ..default()
                 },
             ));
@@ -304,12 +341,27 @@ type ChangedCard = (Changed<Interaction>, With<LevelUpCard>);
 /// available.
 pub fn handle_card_interaction(
     mut card_q: Query<(&Interaction, &mut BackgroundColor), ChangedCard>,
+    card_cfg: LevelUpScreenParams,
 ) {
+    let (normal, hover, pressed) = if let Some(c) = card_cfg.get() {
+        (
+            Color::from(&c.card_normal),
+            Color::from(&c.card_hover),
+            Color::from(&c.card_pressed),
+        )
+    } else {
+        (
+            DEFAULT_CARD_NORMAL,
+            DEFAULT_CARD_HOVER,
+            DEFAULT_CARD_PRESSED,
+        )
+    };
+
     for (interaction, mut bg) in card_q.iter_mut() {
         *bg = BackgroundColor(match interaction {
-            Interaction::Pressed => CARD_PRESSED,
-            Interaction::Hovered => CARD_HOVER,
-            Interaction::None => CARD_NORMAL,
+            Interaction::Pressed => pressed,
+            Interaction::Hovered => hover,
+            Interaction::None => normal,
         });
     }
 }
@@ -538,10 +590,7 @@ mod tests {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::LevelUp), setup_level_up_screen);
 
-        populate_choices(
-            &mut app,
-            vec![UpgradeChoice::NewWeapon(WeaponType::Whip)],
-        );
+        populate_choices(&mut app, vec![UpgradeChoice::NewWeapon(WeaponType::Whip)]);
 
         enter_level_up(&mut app);
 

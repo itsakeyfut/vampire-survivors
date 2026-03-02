@@ -1,0 +1,27 @@
+// Level-up card selection screen configuration
+// Controls the visual appearance of the upgrade card overlay shown when the player levels up.
+//
+// Hot-reload enabled: Edit this file while the game is running to see changes instantly!
+//
+// Parameters:
+// - overlay_color:  Semi-transparent background tint covering the full screen (RGBA, 0.0–1.0)
+// - heading_color:  Color of the "LEVEL UP!" heading text (RGB, 0.0–1.0)
+// - card_normal:    Upgrade card background color in the resting state (RGB, 0.0–1.0)
+// - card_hover:     Upgrade card background color when the cursor is hovering (RGB, 0.0–1.0)
+// - card_pressed:   Upgrade card background color while the mouse button is held (RGB, 0.0–1.0)
+// - subtitle_color: Color of the upgrade-type label (e.g. "New Weapon") on each card (RGB, 0.0–1.0)
+// - card_width:     Width of each upgrade card in pixels
+// - card_height:    Height of each upgrade card in pixels
+// - card_gap:       Horizontal gap between adjacent cards in pixels
+
+LevelUpScreenConfig(
+    overlay_color:  (r: 0.02, g: 0.02, b: 0.06, a: 0.92),
+    heading_color:  (r: 1.0,  g: 0.85, b: 0.20),
+    card_normal:    (r: 0.12, g: 0.08, b: 0.28),
+    card_hover:     (r: 0.22, g: 0.14, b: 0.48),
+    card_pressed:   (r: 0.08, g: 0.05, b: 0.18),
+    subtitle_color: (r: 0.85, g: 0.70, b: 0.30),
+    card_width:     260.0,
+    card_height:    320.0,
+    card_gap:        30.0,
+)
