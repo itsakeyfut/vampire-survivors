@@ -76,11 +76,14 @@ const DEFAULT_CHOICE_COUNT: usize = 3;
 // System
 // ---------------------------------------------------------------------------
 
-/// Generates [`DEFAULT_CHOICE_COUNT`] random upgrade choices and stores them in
-/// [`LevelUpChoices`].
+/// Generates random upgrade choices and stores them in [`LevelUpChoices`].
+///
+/// The number of choices is read from [`GameParams`] (`level_up_choice_count`)
+/// and falls back to [`DEFAULT_CHOICE_COUNT`] when the config asset is not yet
+/// loaded.
 ///
 /// Runs on [`OnEnter(AppState::LevelUp)`](crate::states::AppState::LevelUp).
-/// When fewer than [`DEFAULT_CHOICE_COUNT`] valid choices exist (e.g. all items are
+/// When fewer valid choices exist than the configured count (e.g. all items are
 /// maxed), all remaining options are returned.
 pub fn generate_level_up_choices(
     player_q: Query<(&WeaponInventory, &PassiveInventory), With<Player>>,
