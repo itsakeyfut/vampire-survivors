@@ -8,8 +8,15 @@
 use bevy::prelude::*;
 use vs_core::states::AppState;
 
-use crate::config::UiStyleParams;
-use crate::styles::{DEFAULT_BUTTON_HOVER, DEFAULT_BUTTON_NORMAL, DEFAULT_BUTTON_PRESSED};
+use crate::config::MenuButtonHudParams;
+
+// ---------------------------------------------------------------------------
+// Fallback constants
+// ---------------------------------------------------------------------------
+
+const DEFAULT_BUTTON_NORMAL: Color = Color::srgb(0.30, 0.05, 0.05);
+const DEFAULT_BUTTON_HOVER: Color = Color::srgb(0.60, 0.10, 0.10);
+const DEFAULT_BUTTON_PRESSED: Color = Color::srgb(0.20, 0.02, 0.02);
 
 // ---------------------------------------------------------------------------
 // Component
@@ -55,27 +62,27 @@ pub enum ButtonAction {
 ///
 /// Changes the button background color on hover / press, and triggers the
 /// appropriate [`AppState`] transition when a button is clicked.
-/// Colors are read from [`UiStyleParams`]; `DEFAULT_BUTTON_*` constants are
-/// used as fallbacks while the config is loading.
+/// Colors are read from [`MenuButtonHudParams`]; `DEFAULT_BUTTON_*` constants
+/// are used as fallbacks while the config is loading.
 pub fn handle_button_interaction(
     mut interaction_query: Query<
         (&Interaction, &MenuButton, &mut BackgroundColor),
         Changed<Interaction>,
     >,
     mut next_state: ResMut<NextState<AppState>>,
-    ui_style: UiStyleParams,
+    btn_cfg: MenuButtonHudParams,
 ) {
-    let color_normal = ui_style
+    let color_normal = btn_cfg
         .get()
-        .map(|c| Color::from(&c.button_normal))
+        .map(|c| Color::from(&c.color_normal))
         .unwrap_or(DEFAULT_BUTTON_NORMAL);
-    let color_hover = ui_style
+    let color_hover = btn_cfg
         .get()
-        .map(|c| Color::from(&c.button_hover))
+        .map(|c| Color::from(&c.color_hover))
         .unwrap_or(DEFAULT_BUTTON_HOVER);
-    let color_pressed = ui_style
+    let color_pressed = btn_cfg
         .get()
-        .map(|c| Color::from(&c.button_pressed))
+        .map(|c| Color::from(&c.color_pressed))
         .unwrap_or(DEFAULT_BUTTON_PRESSED);
 
     for (interaction, button, mut bg) in interaction_query.iter_mut() {

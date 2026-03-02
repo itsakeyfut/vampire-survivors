@@ -1,0 +1,14 @@
+// Screen heading HUD configuration
+// Controls the layout of the large heading text shown at the top of each screen.
+// Text content and color are screen-specific; only layout parameters live here.
+//
+// Hot-reload enabled: Edit this file while the game is running to see changes instantly!
+//
+// Parameters:
+// - font_size:     Font size of the heading text in points
+// - margin_bottom: Bottom margin below the heading in pixels (spacing before the next element)
+
+ScreenHeadingHudConfig(
+    font_size:     72.0,
+    margin_bottom: 80.0,
+)

@@ -17,6 +17,7 @@ use vs_core::systems::level_up_choices::generate_level_up_choices;
 pub mod camera;
 pub mod components;
 pub mod config;
+pub mod hud;
 pub mod screens;
 pub mod styles;
 
@@ -49,10 +50,10 @@ impl Plugin for GameUIPlugin {
             )
             // Card-specific hover/press colors run in all states.
             // Must run after handle_button_interaction so card colors take
-            // precedence (cards carry both MenuButton and LevelUpCard).
+            // precedence (cards carry both MenuButton and UpgradeCardHud).
             .add_systems(
                 Update,
-                screens::level_up::handle_card_interaction
+                hud::upgrade_card::handle_card_interaction
                     .after(components::handle_button_interaction),
             )
             // Smooth player-follow only runs during active gameplay.

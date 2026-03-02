@@ -1,0 +1,35 @@
+// Upgrade card HUD configuration
+// Controls the layout and appearance of the upgrade selection cards shown on the level-up screen.
+//
+// Hot-reload enabled: Edit this file while the game is running to see changes instantly!
+//
+// Parameters:
+// - card_width:        Width of each upgrade card in pixels
+// - card_height:       Height of each upgrade card in pixels
+// - card_gap:          Horizontal gap between adjacent cards in pixels
+// - padding:           Internal padding inside each card in pixels (all sides)
+// - inner_gap:         Vertical gap between elements inside a card in pixels
+// - card_normal:       Card background color in the resting state (RGB, 0.0-1.0)
+// - card_hover:        Card background color when the cursor is hovering (RGB, 0.0-1.0)
+// - card_pressed:      Card background color while the mouse button is held (RGB, 0.0-1.0)
+// - subtitle_color:    Color of the upgrade-type label (e.g. "New Weapon") (RGB, 0.0-1.0)
+// - text_color:        Primary text color for item name and description (RGB, 0.0-1.0)
+// - font_size_name:    Font size for the item name text in points
+// - font_size_subtitle:Font size for the subtitle text in points
+// - font_size_desc:    Font size for the description text in points
+
+UpgradeCardHudConfig(
+    card_width:   260.0,
+    card_height:  320.0,
+    card_gap:      30.0,
+    padding:       16.0,
+    inner_gap:     12.0,
+    card_normal:    (r: 0.12, g: 0.08, b: 0.28),
+    card_hover:     (r: 0.22, g: 0.14, b: 0.48),
+    card_pressed:   (r: 0.08, g: 0.05, b: 0.18),
+    subtitle_color: (r: 0.85, g: 0.70, b: 0.30),
+    text_color:     (r: 0.95, g: 0.90, b: 0.85),
+    font_size_name:      32.0,
+    font_size_subtitle:  24.0,
+    font_size_desc:      24.0,
+)
