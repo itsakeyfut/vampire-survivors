@@ -28,7 +28,7 @@ use systems::gem_attraction::{attract_gems_to_player, move_attracted_gems};
 use systems::gem_drop::spawn_xp_gems;
 use systems::level_up::check_level_up;
 use systems::level_up_choices::generate_level_up_choices;
-use systems::player::{player_movement, spawn_player};
+use systems::player::{despawn_game_session, player_movement, spawn_player};
 use systems::player_collision::{
     apply_damage_to_player, enemy_player_collision, tick_invincibility,
 };
@@ -73,14 +73,24 @@ impl Plugin for GameCorePlugin {
             .add_message::<GameOverEvent>()
             .add_message::<LevelUpEvent>()
             // ---------------------------------------------------------------
-            // Playing state — player lifecycle
+            // Player lifecycle
             // ---------------------------------------------------------------
-            // StateScoped entities (camera + player) are despawned automatically
-            // on OnExit(Playing), so no explicit cleanup system is needed.
+            // spawn_player skips silently when a Player entity already exists,
+            // so re-entering Playing from LevelUp / Paused is safe.
             .add_systems(OnEnter(AppState::Playing), spawn_player)
+            // Clean up all gameplay entities when the run truly ends.
+            // despawn_game_session removes every GameSessionEntity (player,
+            // enemies, gems, projectiles, whip effects, …).
+            .add_systems(OnEnter(AppState::GameOver), despawn_game_session)
+            .add_systems(OnEnter(AppState::Victory), despawn_game_session)
+            // Also on Title so a Paused → Title quit cleans up correctly.
+            .add_systems(OnEnter(AppState::Title), despawn_game_session)
             // ---------------------------------------------------------------
             // LevelUp state — generate upgrade choices when overlay opens
             // ---------------------------------------------------------------
+            // The player entity is still alive here (no DespawnOnExit on it),
+            // so generate_level_up_choices can query WeaponInventory /
+            // PassiveInventory to build a valid choice pool.
             .add_systems(OnEnter(AppState::LevelUp), generate_level_up_choices)
             // ---------------------------------------------------------------
             // Playing state — per-frame gameplay systems (part 1: movement,

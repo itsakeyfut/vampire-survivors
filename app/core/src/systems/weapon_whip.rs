@@ -18,14 +18,13 @@
 //!
 //! where `direction = +1.0` (right) or `−1.0` (left).
 
-use bevy::{prelude::*, state::state_scoped::DespawnOnExit};
+use bevy::prelude::*;
 
 use crate::{
-    components::{Enemy, Player, PlayerStats, PlayerWhipSide},
+    components::{Enemy, GameSessionEntity, Player, PlayerStats, PlayerWhipSide},
     config::WeaponParams,
     events::{DamageEnemyEvent, WeaponFiredEvent},
     resources::SpatialGrid,
-    states::AppState,
     types::{WeaponType, WhipSide},
 };
 
@@ -143,7 +142,7 @@ pub fn fire_whip(
                 ..default()
             },
             Transform::from_xyz(effect_x, player_pos.y, 4.0),
-            DespawnOnExit(AppState::Playing),
+            GameSessionEntity,
         ));
 
         // Alternate side for next activation.

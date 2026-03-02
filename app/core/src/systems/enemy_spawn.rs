@@ -6,14 +6,13 @@
 //! viewport and spawns either a [`EnemyType::Bat`] or [`EnemyType::Skeleton`]
 //! (50 / 50).
 
-use bevy::{prelude::*, state::state_scoped::DespawnOnExit};
+use bevy::prelude::*;
 use rand::RngExt;
 
 use crate::{
-    components::{CircleCollider, Enemy, EnemyAI},
+    components::{CircleCollider, Enemy, EnemyAI, GameSessionEntity},
     config::{EnemyParams, GameParams},
     resources::EnemySpawner,
-    states::AppState,
     types::{AIType, EnemyType},
 };
 
@@ -183,8 +182,8 @@ fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
 /// Spawn a single enemy entity at `position`.
 ///
 /// Derives stats via [`Enemy::from_type`], attaches a placeholder
-/// `Sprite` circle, and tags the entity with
-/// [`DespawnOnExit(AppState::Playing)`] for automatic cleanup.
+/// `Sprite` circle, and tags the entity with [`GameSessionEntity`] for
+/// end-of-run cleanup.
 fn spawn_enemy(
     commands: &mut Commands,
     enemy_type: EnemyType,
@@ -210,7 +209,7 @@ fn spawn_enemy(
             ..default()
         },
         Transform::from_translation(position.extend(5.0)),
-        DespawnOnExit(AppState::Playing),
+        GameSessionEntity,
     ));
 }
 
@@ -223,6 +222,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
+    use crate::states::AppState;
 
     // -----------------------------------------------------------------------
     // Integration tests (ECS App)
