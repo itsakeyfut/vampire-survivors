@@ -1,0 +1,23 @@
+// Large menu button HUD configuration
+// Controls all visual properties of the primary action buttons (e.g. "Start", "Title").
+//
+// Hot-reload enabled: Edit this file while the game is running to see changes instantly!
+//
+// Parameters:
+// - width:         Button width in pixels
+// - height:        Button height in pixels
+// - font_size:     Label text font size in points
+// - color_normal:  Button background color in the resting state (RGB, 0.0-1.0)
+// - color_hover:   Button background color when the cursor is hovering (RGB, 0.0-1.0)
+// - color_pressed: Button background color while the mouse button is held (RGB, 0.0-1.0)
+// - text_color:    Label text color (RGB, 0.0-1.0)
+
+MenuButtonHudConfig(
+    width:  280.0,
+    height:  80.0,
+    font_size: 48.0,
+    color_normal:  (r: 0.30, g: 0.05, b: 0.05),
+    color_hover:   (r: 0.60, g: 0.10, b: 0.10),
+    color_pressed: (r: 0.20, g: 0.02, b: 0.02),
+    text_color:    (r: 0.95, g: 0.90, b: 0.85),
+)

@@ -17,28 +17,15 @@ use super::{SrgbColor, SrgbaColor};
 /// Level-up screen style config loaded from
 /// `config/ui/screen/level_up.ron`.
 ///
-/// Controls the visual appearance of the card selection overlay: overlay
-/// tint, heading and card colors, and card layout dimensions.
+/// Controls the visual appearance of the card selection overlay.
+/// Card-specific colors and dimensions live in
+/// [`super::hud::upgrade_card::UpgradeCardHudConfig`].
 #[derive(Asset, TypePath, Deserialize, Debug, Clone)]
 pub struct LevelUpScreenConfig {
     /// Semi-transparent overlay background color (supports alpha).
     pub overlay_color: SrgbaColor,
     /// "LEVEL UP!" heading text color.
     pub heading_color: SrgbColor,
-    /// Upgrade card background color (resting state).
-    pub card_normal: SrgbColor,
-    /// Upgrade card background color on hover.
-    pub card_hover: SrgbColor,
-    /// Upgrade card background color while pressed.
-    pub card_pressed: SrgbColor,
-    /// Upgrade type subtitle text color.
-    pub subtitle_color: SrgbColor,
-    /// Width of each upgrade card in pixels.
-    pub card_width: f32,
-    /// Height of each upgrade card in pixels.
-    pub card_height: f32,
-    /// Horizontal gap between adjacent cards in pixels.
-    pub card_gap: f32,
 }
 
 /// Resource holding the handle to the loaded [`LevelUpScreenConfig`].
@@ -107,15 +94,8 @@ mod tests {
     fn level_up_screen_config_deserialization() {
         let ron_data = r#"
 LevelUpScreenConfig(
-    overlay_color:  (r: 0.02, g: 0.02, b: 0.06, a: 0.92),
-    heading_color:  (r: 1.0,  g: 0.85, b: 0.20),
-    card_normal:    (r: 0.12, g: 0.08, b: 0.28),
-    card_hover:     (r: 0.22, g: 0.14, b: 0.48),
-    card_pressed:   (r: 0.08, g: 0.05, b: 0.18),
-    subtitle_color: (r: 0.85, g: 0.70, b: 0.30),
-    card_width:     260.0,
-    card_height:    320.0,
-    card_gap:        30.0,
+    overlay_color: (r: 0.02, g: 0.02, b: 0.06, a: 0.92),
+    heading_color: (r: 1.0,  g: 0.85, b: 0.20),
 )
 "#;
         let cfg: LevelUpScreenConfig = ron::de::from_str(ron_data).expect("RON parse must succeed");
@@ -125,12 +105,5 @@ LevelUpScreenConfig(
             "alpha must be 0.92"
         );
         assert!((cfg.heading_color.r - 1.0).abs() < 1e-6);
-        assert!((cfg.card_normal.r - 0.12).abs() < 1e-6);
-        assert!((cfg.card_hover.r - 0.22).abs() < 1e-6);
-        assert!((cfg.card_pressed.r - 0.08).abs() < 1e-6);
-        assert!((cfg.subtitle_color.r - 0.85).abs() < 1e-6);
-        assert_eq!(cfg.card_width, 260.0);
-        assert_eq!(cfg.card_height, 320.0);
-        assert_eq!(cfg.card_gap, 30.0);
     }
 }

@@ -1,0 +1,129 @@
+//! Large menu button HUD configuration.
+//!
+//! Loaded from `assets/config/ui/hud/menu_button.ron`.
+//! Controls dimensions, font size, and colors for the standard large button
+//! widget used on the title and game-over screens.
+
+use bevy::ecs::system::SystemParam;
+use bevy::prelude::*;
+use serde::Deserialize;
+
+use crate::config::SrgbColor;
+
+// ---------------------------------------------------------------------------
+// Config asset
+// ---------------------------------------------------------------------------
+
+/// Large menu button HUD config loaded from `config/ui/hud/menu_button.ron`.
+///
+/// Covers all visual properties of the primary action button: dimensions,
+/// label font size, and the three interaction-state colors.
+#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+pub struct MenuButtonHudConfig {
+    /// Button width in pixels.
+    pub width: f32,
+    /// Button height in pixels.
+    pub height: f32,
+    /// Label text font size in points.
+    pub font_size: f32,
+    /// Button background color in the resting state.
+    pub color_normal: SrgbColor,
+    /// Button background color when the cursor is hovering.
+    pub color_hover: SrgbColor,
+    /// Button background color while the mouse button is held.
+    pub color_pressed: SrgbColor,
+    /// Label text color.
+    pub text_color: SrgbColor,
+}
+
+/// Resource holding the handle to the loaded [`MenuButtonHudConfig`].
+#[derive(Resource)]
+pub struct MenuButtonHudConfigHandle(pub Handle<MenuButtonHudConfig>);
+
+// ---------------------------------------------------------------------------
+// SystemParam bundle
+// ---------------------------------------------------------------------------
+
+/// SystemParam bundle for accessing [`MenuButtonHudConfig`].
+///
+/// Returns `None` while the asset is still loading or when
+/// [`crate::config::UiConfigPlugin`] is not registered (e.g. in unit tests).
+/// Call `.get()` to obtain `Option<&MenuButtonHudConfig>`.
+#[derive(SystemParam)]
+pub struct MenuButtonHudParams<'w> {
+    handle: Option<Res<'w, MenuButtonHudConfigHandle>>,
+    assets: Option<Res<'w, Assets<MenuButtonHudConfig>>>,
+}
+
+impl<'w> MenuButtonHudParams<'w> {
+    /// Returns the currently loaded config, or `None`.
+    pub fn get(&self) -> Option<&MenuButtonHudConfig> {
+        self.handle
+            .as_ref()
+            .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn menu_button_hud_config_deserialization() {
+        let ron_data = r#"
+MenuButtonHudConfig(
+    width: 280.0,
+    height: 80.0,
+    font_size: 48.0,
+    color_normal:  (r: 0.30, g: 0.05, b: 0.05),
+    color_hover:   (r: 0.60, g: 0.10, b: 0.10),
+    color_pressed: (r: 0.20, g: 0.02, b: 0.02),
+    text_color:    (r: 0.95, g: 0.90, b: 0.85),
+)
+"#;
+        let cfg: MenuButtonHudConfig = ron::de::from_str(ron_data).expect("RON parse must succeed");
+        assert_eq!(cfg.width, 280.0);
+        assert_eq!(cfg.height, 80.0);
+        assert_eq!(cfg.font_size, 48.0);
+        assert!((cfg.color_normal.r - 0.30).abs() < 1e-6);
+        assert!((cfg.color_hover.r - 0.60).abs() < 1e-6);
+        assert!((cfg.color_pressed.r - 0.20).abs() < 1e-6);
+        assert!((cfg.text_color.r - 0.95).abs() < 1e-6);
+    }
+
+    #[test]
+    fn button_dimensions_are_positive() {
+        let cfg = MenuButtonHudConfig {
+            width: 280.0,
+            height: 80.0,
+            font_size: 48.0,
+            color_normal: SrgbColor {
+                r: 0.30,
+                g: 0.05,
+                b: 0.05,
+            },
+            color_hover: SrgbColor {
+                r: 0.60,
+                g: 0.10,
+                b: 0.10,
+            },
+            color_pressed: SrgbColor {
+                r: 0.20,
+                g: 0.02,
+                b: 0.02,
+            },
+            text_color: SrgbColor {
+                r: 0.95,
+                g: 0.90,
+                b: 0.85,
+            },
+        };
+        assert!(cfg.width > 0.0);
+        assert!(cfg.height > 0.0);
+        assert!(cfg.font_size > 0.0);
+    }
+}

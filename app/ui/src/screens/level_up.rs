@@ -1,8 +1,8 @@
 //! Level-up upgrade card selection screen.
 //!
 //! Shown when the game enters [`AppState::LevelUp`].  Displays up to three
-//! upgrade cards read from [`LevelUpChoices`].  Clicking a card resumes the
-//! run by transitioning back to [`AppState::Playing`].
+//! upgrade cards read from [`LevelUpChoices`], composed from HUD widget functions.
+//! Clicking a card resumes the run by transitioning back to [`AppState::Playing`].
 //!
 //! All entities carry [`DespawnOnExit`]`(`[`AppState::LevelUp`]`)` so Bevy
 //! cleans them up automatically when the state leaves.
@@ -11,13 +11,10 @@ use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
 use vs_core::resources::LevelUpChoices;
 use vs_core::states::AppState;
-use vs_core::types::{PassiveItemType, UpgradeChoice, WeaponType};
 
-use crate::components::{ButtonAction, MenuButton};
-use crate::config::level_up::LevelUpScreenParams;
-use crate::styles::{
-    DEFAULT_FONT_SIZE_LARGE, DEFAULT_FONT_SIZE_MEDIUM, DEFAULT_FONT_SIZE_SMALL, DEFAULT_TEXT_COLOR,
-};
+use crate::config::{LevelUpScreenParams, ScreenHeadingHudParams, UpgradeCardHudParams};
+use crate::hud::screen_heading::spawn_screen_heading;
+use crate::hud::upgrade_card::spawn_upgrade_card;
 
 // ---------------------------------------------------------------------------
 // Fallback constants
@@ -25,12 +22,6 @@ use crate::styles::{
 
 const DEFAULT_OVERLAY_COLOR: Color = Color::srgba(0.02, 0.02, 0.06, 0.92);
 const DEFAULT_HEADING_COLOR: Color = Color::srgb(1.0, 0.85, 0.20);
-const DEFAULT_CARD_NORMAL: Color = Color::srgb(0.12, 0.08, 0.28);
-const DEFAULT_CARD_HOVER: Color = Color::srgb(0.22, 0.14, 0.48);
-const DEFAULT_CARD_PRESSED: Color = Color::srgb(0.08, 0.05, 0.18);
-const DEFAULT_SUBTITLE_COLOR: Color = Color::srgb(0.85, 0.70, 0.30);
-const DEFAULT_CARD_WIDTH: f32 = 260.0;
-const DEFAULT_CARD_HEIGHT: f32 = 320.0;
 const DEFAULT_CARD_GAP: f32 = 30.0;
 
 // ---------------------------------------------------------------------------
@@ -45,126 +36,22 @@ pub struct LevelUpScreenBg;
 #[derive(Component)]
 pub struct LevelUpCardRow;
 
-/// Marks an individual upgrade card button.
-///
-/// The `index` field corresponds to the card's position in
-/// [`LevelUpChoices::choices`].
-#[derive(Component)]
-pub struct LevelUpCard {
-    /// Zero-based index of this card in the choices list.
-    pub index: usize,
-}
-
-// ---------------------------------------------------------------------------
-// Display text helpers
-// ---------------------------------------------------------------------------
-
-fn choice_subtitle(choice: &UpgradeChoice) -> &'static str {
-    match choice {
-        UpgradeChoice::NewWeapon(_) => "New Weapon",
-        UpgradeChoice::WeaponUpgrade(_) => "Weapon Upgrade",
-        UpgradeChoice::PassiveItem(_) => "New Passive",
-        UpgradeChoice::PassiveUpgrade(_) => "Passive Upgrade",
-    }
-}
-
-fn choice_name(choice: &UpgradeChoice) -> &'static str {
-    match choice {
-        UpgradeChoice::NewWeapon(wt) | UpgradeChoice::WeaponUpgrade(wt) => weapon_name(*wt),
-        UpgradeChoice::PassiveItem(pt) | UpgradeChoice::PassiveUpgrade(pt) => passive_name(*pt),
-    }
-}
-
-fn choice_description(choice: &UpgradeChoice) -> &'static str {
-    match choice {
-        UpgradeChoice::NewWeapon(wt) | UpgradeChoice::WeaponUpgrade(wt) => weapon_description(*wt),
-        UpgradeChoice::PassiveItem(pt) | UpgradeChoice::PassiveUpgrade(pt) => {
-            passive_description(*pt)
-        }
-    }
-}
-
-fn weapon_name(wt: WeaponType) -> &'static str {
-    match wt {
-        WeaponType::Whip => "Whip",
-        WeaponType::MagicWand => "Magic Wand",
-        WeaponType::Knife => "Knife",
-        WeaponType::Garlic => "Garlic",
-        WeaponType::Bible => "Bible",
-        WeaponType::ThunderRing => "Thunder Ring",
-        WeaponType::Cross => "Cross",
-        WeaponType::FireWand => "Fire Wand",
-        WeaponType::BloodyTear => "Bloody Tear",
-        WeaponType::HolyWand => "Holy Wand",
-        WeaponType::ThousandEdge => "Thousand Edge",
-        WeaponType::SoulEater => "Soul Eater",
-        WeaponType::UnholyVespers => "Unholy Vespers",
-        WeaponType::LightningRing => "Lightning Ring",
-    }
-}
-
-fn weapon_description(wt: WeaponType) -> &'static str {
-    match wt {
-        WeaponType::Whip => "Fan-shaped swing, alternating sides.",
-        WeaponType::MagicWand => "Homing projectile toward nearest enemy.",
-        WeaponType::Knife => "Fast piercing shot in movement direction.",
-        WeaponType::Garlic => "Continuous damage aura around player.",
-        WeaponType::Bible => "Orbiting projectile that circles the player.",
-        WeaponType::ThunderRing => "Random lightning strikes across the screen.",
-        WeaponType::Cross => "Boomerang that flies out and returns.",
-        WeaponType::FireWand => "Fireball targeting the highest-HP enemy.",
-        WeaponType::BloodyTear => "Evolved Whip — massive area slash.",
-        WeaponType::HolyWand => "Evolved Magic Wand — rapid homing bolts.",
-        WeaponType::ThousandEdge => "Evolved Knife — endless blade flurry.",
-        WeaponType::SoulEater => "Evolved Garlic — drains life from enemies.",
-        WeaponType::UnholyVespers => "Evolved Bible — infinite orbiting blades.",
-        WeaponType::LightningRing => "Evolved Thunder Ring — storm of lightning.",
-    }
-}
-
-fn passive_name(pt: PassiveItemType) -> &'static str {
-    match pt {
-        PassiveItemType::Spinach => "Spinach",
-        PassiveItemType::Wings => "Wings",
-        PassiveItemType::HollowHeart => "Hollow Heart",
-        PassiveItemType::Clover => "Clover",
-        PassiveItemType::EmptyTome => "Empty Tome",
-        PassiveItemType::Bracer => "Bracer",
-        PassiveItemType::Spellbinder => "Spellbinder",
-        PassiveItemType::Duplicator => "Duplicator",
-        PassiveItemType::Pummarola => "Pummarola",
-    }
-}
-
-fn passive_description(pt: PassiveItemType) -> &'static str {
-    match pt {
-        PassiveItemType::Spinach => "+10% damage per level.",
-        PassiveItemType::Wings => "+10% move speed per level.",
-        PassiveItemType::HollowHeart => "+20% max HP per level.",
-        PassiveItemType::Clover => "+10% luck per level.",
-        PassiveItemType::EmptyTome => "-8% weapon cooldown per level.",
-        PassiveItemType::Bracer => "+10% projectile speed per level.",
-        PassiveItemType::Spellbinder => "+10% weapon duration per level.",
-        PassiveItemType::Duplicator => "+1 projectile count per level.",
-        PassiveItemType::Pummarola => "+0.5 HP regeneration/s per level.",
-    }
-}
-
 // ---------------------------------------------------------------------------
 // System
 // ---------------------------------------------------------------------------
 
 /// Spawns the level-up card selection overlay when entering [`AppState::LevelUp`].
 ///
-/// Reads [`LevelUpChoices`] and spawns one interactive card per choice.
-/// Each card is tagged with [`DespawnOnExit`]`(`[`AppState::LevelUp`]`)` via
-/// the root overlay, so all nodes are automatically removed when the overlay
-/// closes.
+/// Reads [`LevelUpChoices`] and spawns one interactive card per choice via
+/// [`spawn_upgrade_card`].  Each card is tagged with
+/// [`DespawnOnExit`]`(`[`AppState::LevelUp`]`)` via the root overlay node.
 pub fn setup_level_up_screen(
     mut commands: Commands,
     choices: Res<LevelUpChoices>,
     mut next_state: ResMut<NextState<AppState>>,
     screen_cfg: LevelUpScreenParams,
+    heading_cfg: ScreenHeadingHudParams,
+    card_cfg: UpgradeCardHudParams,
 ) {
     // Guard against an empty pool (all items maxed, or player query failed).
     // Without cards there is no way to dismiss the overlay, which would
@@ -174,42 +61,19 @@ pub fn setup_level_up_screen(
         return;
     }
 
-    let (
-        overlay_color,
-        heading_color,
-        card_normal,
-        subtitle_color,
-        card_width,
-        card_height,
-        card_gap,
-    ) = if let Some(c) = screen_cfg.get() {
-        (
-            Color::from(&c.overlay_color),
-            Color::from(&c.heading_color),
-            Color::from(&c.card_normal),
-            Color::from(&c.subtitle_color),
-            c.card_width,
-            c.card_height,
-            c.card_gap,
-        )
-    } else {
-        (
-            DEFAULT_OVERLAY_COLOR,
-            DEFAULT_HEADING_COLOR,
-            DEFAULT_CARD_NORMAL,
-            DEFAULT_SUBTITLE_COLOR,
-            DEFAULT_CARD_WIDTH,
-            DEFAULT_CARD_HEIGHT,
-            DEFAULT_CARD_GAP,
-        )
-    };
-
-    // Clamp card dimensions so that invalid RON values cannot produce a
-    // zero-sized or negative-max-width layout.  card_width must be > 32 to
-    // keep the description text max_width positive.
-    let card_width = card_width.max(64.0);
-    let card_height = card_height.max(64.0);
-    let card_gap = card_gap.max(0.0);
+    let overlay_color = screen_cfg
+        .get()
+        .map(|c| Color::from(&c.overlay_color))
+        .unwrap_or(DEFAULT_OVERLAY_COLOR);
+    let heading_color = screen_cfg
+        .get()
+        .map(|c| Color::from(&c.heading_color))
+        .unwrap_or(DEFAULT_HEADING_COLOR);
+    let card_gap = card_cfg
+        .get()
+        .map(|c| c.card_gap)
+        .unwrap_or(DEFAULT_CARD_GAP)
+        .max(0.0);
 
     commands
         .spawn((
@@ -227,15 +91,8 @@ pub fn setup_level_up_screen(
             LevelUpScreenBg,
         ))
         .with_children(|root| {
-            // "LEVEL UP!" heading.
-            root.spawn((
-                Text::new("LEVEL UP!"),
-                TextFont {
-                    font_size: DEFAULT_FONT_SIZE_LARGE,
-                    ..default()
-                },
-                TextColor(heading_color),
-            ));
+            // "LEVEL UP!" heading — gold; color is screen-specific.
+            spawn_screen_heading(root, "LEVEL UP!", heading_color, heading_cfg.get());
 
             // Row of upgrade cards.
             root.spawn((
@@ -250,120 +107,10 @@ pub fn setup_level_up_screen(
             ))
             .with_children(|row| {
                 for (i, choice) in choices.choices.iter().enumerate() {
-                    spawn_card(
-                        row,
-                        i,
-                        choice,
-                        card_normal,
-                        subtitle_color,
-                        card_width,
-                        card_height,
-                    );
+                    spawn_upgrade_card(row, i, choice, card_cfg.get());
                 }
             });
         });
-}
-
-/// Spawns a single upgrade card button inside the card row.
-#[allow(clippy::too_many_arguments)]
-fn spawn_card(
-    parent: &mut ChildSpawnerCommands,
-    index: usize,
-    choice: &UpgradeChoice,
-    card_normal: Color,
-    subtitle_color: Color,
-    card_width: f32,
-    card_height: f32,
-) {
-    parent
-        .spawn((
-            Button,
-            Node {
-                width: Val::Px(card_width),
-                height: Val::Px(card_height),
-                flex_direction: FlexDirection::Column,
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                padding: UiRect::all(Val::Px(16.0)),
-                row_gap: Val::Px(12.0),
-                ..default()
-            },
-            BackgroundColor(card_normal),
-            MenuButton {
-                action: ButtonAction::SelectUpgrade(index),
-            },
-            LevelUpCard { index },
-        ))
-        .with_children(|card| {
-            // Subtitle: upgrade type label.
-            card.spawn((
-                Text::new(choice_subtitle(choice)),
-                TextFont {
-                    font_size: DEFAULT_FONT_SIZE_SMALL,
-                    ..default()
-                },
-                TextColor(subtitle_color),
-            ));
-
-            // Item name.
-            card.spawn((
-                Text::new(choice_name(choice)),
-                TextFont {
-                    font_size: DEFAULT_FONT_SIZE_MEDIUM,
-                    ..default()
-                },
-                TextColor(DEFAULT_TEXT_COLOR),
-            ));
-
-            // Effect description.
-            card.spawn((
-                Text::new(choice_description(choice)),
-                TextFont {
-                    font_size: DEFAULT_FONT_SIZE_SMALL,
-                    ..default()
-                },
-                TextColor(DEFAULT_TEXT_COLOR),
-                Node {
-                    max_width: Val::Px(card_width - 32.0),
-                    ..default()
-                },
-            ));
-        });
-}
-
-/// Query filter for interactive [`LevelUpCard`] nodes.
-type ChangedCard = (Changed<Interaction>, With<LevelUpCard>);
-
-/// Overrides card button colors to use the card-specific palette instead of
-/// the standard menu-button palette.
-///
-/// Runs every frame in all states so card hover/press feedback is always
-/// available.
-pub fn handle_card_interaction(
-    mut card_q: Query<(&Interaction, &mut BackgroundColor), ChangedCard>,
-    card_cfg: LevelUpScreenParams,
-) {
-    let (normal, hover, pressed) = if let Some(c) = card_cfg.get() {
-        (
-            Color::from(&c.card_normal),
-            Color::from(&c.card_hover),
-            Color::from(&c.card_pressed),
-        )
-    } else {
-        (
-            DEFAULT_CARD_NORMAL,
-            DEFAULT_CARD_HOVER,
-            DEFAULT_CARD_PRESSED,
-        )
-    };
-
-    for (interaction, mut bg) in card_q.iter_mut() {
-        *bg = BackgroundColor(match interaction {
-            Interaction::Pressed => pressed,
-            Interaction::Hovered => hover,
-            Interaction::None => normal,
-        });
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -376,6 +123,8 @@ mod tests {
     use vs_core::types::{PassiveItemType, UpgradeChoice, WeaponType};
 
     use super::*;
+    use crate::components::{ButtonAction, MenuButton};
+    use crate::hud::upgrade_card::UpgradeCardHud;
 
     fn build_app() -> App {
         let mut app = App::new();
@@ -397,87 +146,7 @@ mod tests {
         app.world_mut().resource_mut::<LevelUpChoices>().choices = choices;
     }
 
-    // --- Display text helpers ---
-
-    #[test]
-    fn weapon_name_covers_all_variants() {
-        let weapons = [
-            WeaponType::Whip,
-            WeaponType::MagicWand,
-            WeaponType::Knife,
-            WeaponType::Garlic,
-            WeaponType::Bible,
-            WeaponType::ThunderRing,
-            WeaponType::Cross,
-            WeaponType::FireWand,
-            WeaponType::BloodyTear,
-            WeaponType::HolyWand,
-            WeaponType::ThousandEdge,
-            WeaponType::SoulEater,
-            WeaponType::UnholyVespers,
-            WeaponType::LightningRing,
-        ];
-        for wt in weapons {
-            assert!(
-                !weapon_name(wt).is_empty(),
-                "weapon_name({wt:?}) must not be empty"
-            );
-            assert!(
-                !weapon_description(wt).is_empty(),
-                "weapon_description({wt:?}) must not be empty"
-            );
-        }
-    }
-
-    #[test]
-    fn passive_name_covers_all_variants() {
-        let passives = [
-            PassiveItemType::Spinach,
-            PassiveItemType::Wings,
-            PassiveItemType::HollowHeart,
-            PassiveItemType::Clover,
-            PassiveItemType::EmptyTome,
-            PassiveItemType::Bracer,
-            PassiveItemType::Spellbinder,
-            PassiveItemType::Duplicator,
-            PassiveItemType::Pummarola,
-        ];
-        for pt in passives {
-            assert!(
-                !passive_name(pt).is_empty(),
-                "passive_name({pt:?}) must not be empty"
-            );
-            assert!(
-                !passive_description(pt).is_empty(),
-                "passive_description({pt:?}) must not be empty"
-            );
-        }
-    }
-
-    #[test]
-    fn choice_subtitle_returns_correct_category() {
-        assert_eq!(
-            choice_subtitle(&UpgradeChoice::NewWeapon(WeaponType::Whip)),
-            "New Weapon"
-        );
-        assert_eq!(
-            choice_subtitle(&UpgradeChoice::WeaponUpgrade(WeaponType::Whip)),
-            "Weapon Upgrade"
-        );
-        assert_eq!(
-            choice_subtitle(&UpgradeChoice::PassiveItem(PassiveItemType::Spinach)),
-            "New Passive"
-        );
-        assert_eq!(
-            choice_subtitle(&UpgradeChoice::PassiveUpgrade(PassiveItemType::Spinach)),
-            "Passive Upgrade"
-        );
-    }
-
-    // --- Screen spawning ---
-
-    /// No choices — soft-lock guard returns to Playing without spawning the
-    /// overlay.
+    /// No choices — soft-lock guard returns to Playing without spawning the overlay.
     #[test]
     fn setup_level_up_screen_with_no_choices_returns_to_playing() {
         let mut app = build_app();
@@ -485,7 +154,6 @@ mod tests {
 
         enter_level_up(&mut app);
 
-        // Overlay must NOT have been spawned.
         let mut q = app
             .world_mut()
             .query_filtered::<Entity, With<LevelUpScreenBg>>();
@@ -494,8 +162,6 @@ mod tests {
             0,
             "no LevelUpScreenBg should exist when choices are empty"
         );
-
-        // State should have been set back to Playing.
         assert_eq!(
             *app.world().resource::<State<AppState>>(),
             AppState::Playing,
@@ -503,7 +169,7 @@ mod tests {
         );
     }
 
-    /// Three choices produce exactly three LevelUpCard entities.
+    /// Three choices produce exactly three UpgradeCardHud entities.
     #[test]
     fn setup_level_up_screen_spawns_one_card_per_choice() {
         let mut app = build_app();
@@ -522,11 +188,11 @@ mod tests {
 
         let mut q = app
             .world_mut()
-            .query_filtered::<Entity, With<LevelUpCard>>();
+            .query_filtered::<Entity, With<UpgradeCardHud>>();
         assert_eq!(
             q.iter(app.world()).count(),
             3,
-            "exactly 3 LevelUpCard entities expected for 3 choices"
+            "exactly 3 UpgradeCardHud entities expected for 3 choices"
         );
     }
 
@@ -548,7 +214,7 @@ mod tests {
 
         let mut q = app
             .world_mut()
-            .query_filtered::<Entity, (With<Button>, With<LevelUpCard>)>();
+            .query_filtered::<Entity, (With<Button>, With<UpgradeCardHud>)>();
         assert_eq!(
             q.iter(app.world()).count(),
             2,
@@ -572,7 +238,7 @@ mod tests {
 
         enter_level_up(&mut app);
 
-        let mut q = app.world_mut().query::<(&LevelUpCard, &MenuButton)>();
+        let mut q = app.world_mut().query::<(&UpgradeCardHud, &MenuButton)>();
         let mut pairs: Vec<(usize, ButtonAction)> = q
             .iter(app.world())
             .map(|(card, btn)| (card.index, btn.action))
@@ -594,7 +260,6 @@ mod tests {
 
         enter_level_up(&mut app);
 
-        // Verify overlay present.
         {
             let mut q = app
                 .world_mut()
@@ -602,7 +267,6 @@ mod tests {
             assert_eq!(q.iter(app.world()).count(), 1);
         }
 
-        // Leave LevelUp state.
         app.world_mut()
             .resource_mut::<NextState<AppState>>()
             .set(AppState::Playing);

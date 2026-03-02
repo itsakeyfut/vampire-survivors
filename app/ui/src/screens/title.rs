@@ -1,33 +1,44 @@
 //! Title screen — the first screen the player sees when the game starts.
 //!
-//! Spawns a full-screen layout containing the game title and a Start button.
-//! All entities are tagged with [`DespawnOnExit`]`(AppState::Title)` so Bevy
-//! automatically despawns them when the state transitions away from `Title`.
+//! Spawns a full-screen layout containing a screen heading and a large menu
+//! button, composed from HUD widget functions.  All entities are tagged with
+//! [`DespawnOnExit`]`(AppState::Title)` so Bevy automatically despawns them
+//! when the state transitions away from `Title`.
 //!
-//! Visual properties are read from [`UiStyleParams`]; the `DEFAULT_*`
-//! constants in [`crate::styles`] are used as fallbacks while the RON config
-//! is still loading.
+//! - Background and title text colour: [`UiStyleParams`]
+//! - Heading font size / margin: [`ScreenHeadingHudParams`]
+//! - Button dimensions and colors: [`MenuButtonHudParams`]
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
 use vs_core::states::AppState;
 
-use crate::components::{ButtonAction, MenuButton};
+use crate::components::ButtonAction;
 use crate::config::{
-    TitleButtonLabel, TitleHeadingText, TitleScreenBg, TitleStartButton, UiStyleParams,
+    MenuButtonHudParams, ScreenHeadingHudParams, TitleHeadingText, TitleScreenBg, UiStyleParams,
 };
-use crate::styles::{
-    DEFAULT_BG_COLOR, DEFAULT_BUTTON_LARGE_HEIGHT, DEFAULT_BUTTON_LARGE_WIDTH,
-    DEFAULT_BUTTON_NORMAL, DEFAULT_FONT_SIZE_HUGE, DEFAULT_FONT_SIZE_LARGE, DEFAULT_TEXT_COLOR,
-    DEFAULT_TITLE_COLOR,
-};
+use crate::hud::menu_button::spawn_large_menu_button;
+use crate::hud::screen_heading::ScreenHeadingHud;
+use crate::styles::{DEFAULT_BG_COLOR, DEFAULT_TITLE_COLOR};
+
+// ---------------------------------------------------------------------------
+// Fallback constants
+// ---------------------------------------------------------------------------
+
+const DEFAULT_FONT_SIZE: f32 = 72.0;
+const DEFAULT_MARGIN_BOTTOM: f32 = 80.0;
 
 // ---------------------------------------------------------------------------
 // Systems
 // ---------------------------------------------------------------------------
 
 /// Spawns the title screen UI when entering [`AppState::Title`].
-pub fn setup_title_screen(mut commands: Commands, ui_style: UiStyleParams) {
+pub fn setup_title_screen(
+    mut commands: Commands,
+    ui_style: UiStyleParams,
+    heading_cfg: ScreenHeadingHudParams,
+    btn_cfg: MenuButtonHudParams,
+) {
     let bg_color = ui_style
         .get()
         .map(|c| Color::from(&c.bg_color))
@@ -36,30 +47,14 @@ pub fn setup_title_screen(mut commands: Commands, ui_style: UiStyleParams) {
         .get()
         .map(|c| Color::from(&c.title_color))
         .unwrap_or(DEFAULT_TITLE_COLOR);
-    let text_color = ui_style
+    let heading_font_size = heading_cfg
         .get()
-        .map(|c| Color::from(&c.text_color))
-        .unwrap_or(DEFAULT_TEXT_COLOR);
-    let button_normal = ui_style
+        .map(|c| c.font_size)
+        .unwrap_or(DEFAULT_FONT_SIZE);
+    let heading_margin = heading_cfg
         .get()
-        .map(|c| Color::from(&c.button_normal))
-        .unwrap_or(DEFAULT_BUTTON_NORMAL);
-    let font_size_huge = ui_style
-        .get()
-        .map(|c| c.font_size_huge)
-        .unwrap_or(DEFAULT_FONT_SIZE_HUGE);
-    let font_size_large = ui_style
-        .get()
-        .map(|c| c.font_size_large)
-        .unwrap_or(DEFAULT_FONT_SIZE_LARGE);
-    let button_width = ui_style
-        .get()
-        .map(|c| c.button_large_width)
-        .unwrap_or(DEFAULT_BUTTON_LARGE_WIDTH);
-    let button_height = ui_style
-        .get()
-        .map(|c| c.button_large_height)
-        .unwrap_or(DEFAULT_BUTTON_LARGE_HEIGHT);
+        .map(|c| c.margin_bottom)
+        .unwrap_or(DEFAULT_MARGIN_BOTTOM);
 
     commands
         .spawn((
@@ -76,49 +71,27 @@ pub fn setup_title_screen(mut commands: Commands, ui_style: UiStyleParams) {
             TitleScreenBg,
         ))
         .with_children(|parent| {
-            // Game title
+            // Game title heading.
+            // Carries both the generic HUD marker (ScreenHeadingHud) for
+            // hot_reload_screen_heading_hud and the screen-specific TitleHeadingText
+            // marker so hot_reload_ui_style can update the title color.
             parent.spawn((
                 Text::new("Vampire Survivors"),
                 TextFont {
-                    font_size: font_size_huge,
+                    font_size: heading_font_size,
                     ..default()
                 },
                 TextColor(title_color),
                 Node {
-                    margin: UiRect::bottom(Val::Px(80.0)),
+                    margin: UiRect::bottom(Val::Px(heading_margin)),
                     ..default()
                 },
+                ScreenHeadingHud,
                 TitleHeadingText,
             ));
 
-            // Start button
-            parent
-                .spawn((
-                    Button,
-                    Node {
-                        width: Val::Px(button_width),
-                        height: Val::Px(button_height),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    BackgroundColor(button_normal),
-                    MenuButton {
-                        action: ButtonAction::StartGame,
-                    },
-                    TitleStartButton,
-                ))
-                .with_children(|btn| {
-                    btn.spawn((
-                        Text::new("Start"),
-                        TextFont {
-                            font_size: font_size_large,
-                            ..default()
-                        },
-                        TextColor(text_color),
-                        TitleButtonLabel,
-                    ));
-                });
+            // Start button.
+            spawn_large_menu_button(parent, "Start", ButtonAction::StartGame, btn_cfg.get());
         });
 }
 
@@ -131,6 +104,8 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
+    use crate::components::MenuButton;
+    use crate::hud::menu_button::LargeMenuButtonHud;
 
     fn build_app() -> App {
         let mut app = App::new();
@@ -139,27 +114,28 @@ mod tests {
         app
     }
 
+    fn enter_title(app: &mut App) {
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Playing);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Title);
+        app.update();
+        app.update();
+    }
+
     #[test]
     fn setup_title_screen_spawns_nodes() {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::Title), setup_title_screen);
-        // Title is the default state. Transition away first so we can
-        // re-enter Title and trigger OnEnter(Title).
-        app.world_mut()
-            .resource_mut::<NextState<AppState>>()
-            .set(AppState::Playing);
-        app.update(); // Title → Playing
-        app.world_mut()
-            .resource_mut::<NextState<AppState>>()
-            .set(AppState::Title);
-        app.update(); // Playing → Title (fires OnEnter(Title))
-        app.update(); // let spawned nodes settle
+        enter_title(&mut app);
 
-        let mut node_q = app.world_mut().query_filtered::<Entity, With<Node>>();
-        let node_count = node_q.iter(app.world()).count();
+        let mut q = app.world_mut().query_filtered::<Entity, With<Node>>();
         assert!(
-            node_count > 0,
-            "title screen should spawn at least one Node"
+            q.iter(app.world()).count() > 0,
+            "title screen must spawn at least one Node"
         );
     }
 
@@ -167,20 +143,12 @@ mod tests {
     fn setup_title_screen_has_exactly_one_button() {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::Title), setup_title_screen);
-        app.world_mut()
-            .resource_mut::<NextState<AppState>>()
-            .set(AppState::Playing);
-        app.update();
-        app.world_mut()
-            .resource_mut::<NextState<AppState>>()
-            .set(AppState::Title);
-        app.update();
-        app.update();
+        enter_title(&mut app);
 
-        let mut button_q = app.world_mut().query_filtered::<Entity, With<Button>>();
-        let button_count = button_q.iter(app.world()).count();
+        let mut q = app.world_mut().query_filtered::<Entity, With<Button>>();
         assert_eq!(
-            button_count, 1,
+            q.iter(app.world()).count(),
+            1,
             "title screen should have exactly one button"
         );
     }
@@ -189,15 +157,7 @@ mod tests {
     fn start_button_has_start_game_action() {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::Title), setup_title_screen);
-        app.world_mut()
-            .resource_mut::<NextState<AppState>>()
-            .set(AppState::Playing);
-        app.update();
-        app.world_mut()
-            .resource_mut::<NextState<AppState>>()
-            .set(AppState::Title);
-        app.update();
-        app.update();
+        enter_title(&mut app);
 
         let mut q = app.world_mut().query::<&MenuButton>();
         let btn = q.single(app.world()).expect("MenuButton should exist");
@@ -208,15 +168,7 @@ mod tests {
     fn title_screen_bg_has_marker_component() {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::Title), setup_title_screen);
-        app.world_mut()
-            .resource_mut::<NextState<AppState>>()
-            .set(AppState::Playing);
-        app.update();
-        app.world_mut()
-            .resource_mut::<NextState<AppState>>()
-            .set(AppState::Title);
-        app.update();
-        app.update();
+        enter_title(&mut app);
 
         let mut q = app
             .world_mut()
@@ -224,31 +176,39 @@ mod tests {
         assert_eq!(
             q.iter(app.world()).count(),
             1,
-            "exactly one TitleScreenBg entity expected"
+            "exactly one TitleScreenBg expected"
         );
     }
 
     #[test]
-    fn title_screen_button_has_marker_component() {
+    fn title_screen_button_has_hud_marker() {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::Title), setup_title_screen);
-        app.world_mut()
-            .resource_mut::<NextState<AppState>>()
-            .set(AppState::Playing);
-        app.update();
-        app.world_mut()
-            .resource_mut::<NextState<AppState>>()
-            .set(AppState::Title);
-        app.update();
-        app.update();
+        enter_title(&mut app);
 
         let mut q = app
             .world_mut()
-            .query_filtered::<Entity, With<TitleStartButton>>();
+            .query_filtered::<Entity, With<LargeMenuButtonHud>>();
         assert_eq!(
             q.iter(app.world()).count(),
             1,
-            "exactly one TitleStartButton entity expected"
+            "exactly one LargeMenuButtonHud expected"
+        );
+    }
+
+    #[test]
+    fn title_screen_heading_has_hud_marker() {
+        let mut app = build_app();
+        app.add_systems(OnEnter(AppState::Title), setup_title_screen);
+        enter_title(&mut app);
+
+        let mut q = app
+            .world_mut()
+            .query_filtered::<Entity, With<ScreenHeadingHud>>();
+        assert_eq!(
+            q.iter(app.world()).count(),
+            1,
+            "exactly one ScreenHeadingHud expected"
         );
     }
 }
