@@ -3,7 +3,7 @@
 //! [`generate_level_up_choices`] runs once on entering [`AppState::LevelUp`].
 //! It inspects the player's current [`WeaponInventory`] and
 //! [`PassiveInventory`], builds a pool of every valid [`UpgradeChoice`], and
-//! randomly selects up to [`CHOICE_COUNT`] options to present on the UI.
+//! randomly selects up to [`DEFAULT_CHOICE_COUNT`] options to present on the UI.
 //!
 //! ## Selection rules
 //!
@@ -67,18 +67,20 @@ const ALL_PASSIVES: [PassiveItemType; 9] = [
     PassiveItemType::Pummarola,
 ];
 
-/// Number of upgrade cards shown to the player on each level-up.
-pub const CHOICE_COUNT: usize = 3;
+/// Fallback number of upgrade cards shown to the player on each level-up.
+///
+/// Used when the RON game config has not yet loaded.
+const DEFAULT_CHOICE_COUNT: usize = 3;
 
 // ---------------------------------------------------------------------------
 // System
 // ---------------------------------------------------------------------------
 
-/// Generates [`CHOICE_COUNT`] random upgrade choices and stores them in
+/// Generates [`DEFAULT_CHOICE_COUNT`] random upgrade choices and stores them in
 /// [`LevelUpChoices`].
 ///
 /// Runs on [`OnEnter(AppState::LevelUp)`](crate::states::AppState::LevelUp).
-/// When fewer than [`CHOICE_COUNT`] valid choices exist (e.g. all items are
+/// When fewer than [`DEFAULT_CHOICE_COUNT`] valid choices exist (e.g. all items are
 /// maxed), all remaining options are returned.
 pub fn generate_level_up_choices(
     player_q: Query<(&WeaponInventory, &PassiveInventory), With<Player>>,
@@ -91,6 +93,9 @@ pub fn generate_level_up_choices(
     };
 
     let cfg = game_cfg.get();
+    let choice_count = cfg
+        .map(|c| c.level_up_choice_count)
+        .unwrap_or(DEFAULT_CHOICE_COUNT);
     let max_weapon_level = cfg
         .map(|c| c.max_weapon_level)
         .unwrap_or(DEFAULT_MAX_WEAPON_LEVEL);
@@ -138,9 +143,9 @@ pub fn generate_level_up_choices(
         }
     }
 
-    // Shuffle the pool and take up to CHOICE_COUNT choices.
+    // Shuffle the pool and take up to choice_count choices.
     fisher_yates_shuffle(&mut pool);
-    pool.truncate(CHOICE_COUNT);
+    pool.truncate(choice_count);
     level_up_choices.choices = pool;
 }
 
@@ -211,7 +216,7 @@ mod tests {
 
     // --- Choice count ---
 
-    /// With a full pool, exactly CHOICE_COUNT choices are returned.
+    /// With a full pool, exactly DEFAULT_CHOICE_COUNT choices are returned.
     #[test]
     fn returns_at_most_choice_count() {
         let mut app = build_app();
@@ -220,12 +225,12 @@ mod tests {
         run(&mut app);
         assert_eq!(
             choices(&app).len(),
-            CHOICE_COUNT,
-            "exactly {CHOICE_COUNT} choices expected with large pool"
+            DEFAULT_CHOICE_COUNT,
+            "exactly {DEFAULT_CHOICE_COUNT} choices expected with large pool"
         );
     }
 
-    /// With a tiny pool (fewer than CHOICE_COUNT items), all are returned.
+    /// With a tiny pool (fewer than DEFAULT_CHOICE_COUNT items), all are returned.
     #[test]
     fn returns_all_when_pool_smaller_than_choice_count() {
         let mut app = build_app();
@@ -370,8 +375,8 @@ mod tests {
         let c = choices(&app);
         assert_eq!(
             c.len(),
-            CHOICE_COUNT,
-            "7 unowned weapons → at least {CHOICE_COUNT} choices"
+            DEFAULT_CHOICE_COUNT,
+            "7 unowned weapons → at least {DEFAULT_CHOICE_COUNT} choices"
         );
         assert!(
             c.iter().all(|ch| matches!(ch, UpgradeChoice::NewWeapon(_))),
