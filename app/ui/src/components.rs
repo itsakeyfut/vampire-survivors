@@ -6,6 +6,7 @@
 //! code.
 
 use bevy::prelude::*;
+use vs_core::resources::PendingUpgradeIndex;
 use vs_core::states::AppState;
 
 use crate::config::MenuButtonHudParams;
@@ -71,6 +72,7 @@ pub fn handle_button_interaction(
     >,
     mut next_state: ResMut<NextState<AppState>>,
     btn_cfg: MenuButtonHudParams,
+    mut pending: Option<ResMut<PendingUpgradeIndex>>,
 ) {
     let color_normal = btn_cfg
         .get()
@@ -89,7 +91,7 @@ pub fn handle_button_interaction(
         match *interaction {
             Interaction::Pressed => {
                 *bg = BackgroundColor(color_pressed);
-                apply_action(button.action, &mut next_state);
+                apply_action(button.action, &mut next_state, &mut pending);
             }
             Interaction::Hovered => {
                 *bg = BackgroundColor(color_hover);
@@ -101,7 +103,11 @@ pub fn handle_button_interaction(
     }
 }
 
-fn apply_action(action: ButtonAction, next_state: &mut NextState<AppState>) {
+fn apply_action(
+    action: ButtonAction,
+    next_state: &mut NextState<AppState>,
+    pending: &mut Option<ResMut<PendingUpgradeIndex>>,
+) {
     match action {
         ButtonAction::StartGame => {
             next_state.set(AppState::Playing);
@@ -109,7 +115,10 @@ fn apply_action(action: ButtonAction, next_state: &mut NextState<AppState>) {
         ButtonAction::GoToTitle => {
             next_state.set(AppState::Title);
         }
-        ButtonAction::SelectUpgrade(_) => {
+        ButtonAction::SelectUpgrade(index) => {
+            if let Some(p) = pending {
+                p.0 = Some(index);
+            }
             next_state.set(AppState::Playing);
         }
     }
@@ -147,7 +156,7 @@ mod tests {
 
         {
             let mut next_state = app.world_mut().resource_mut::<NextState<AppState>>();
-            apply_action(ButtonAction::StartGame, &mut next_state);
+            apply_action(ButtonAction::StartGame, &mut next_state, &mut None);
         }
         app.update();
 
@@ -172,11 +181,31 @@ mod tests {
 
         {
             let mut next_state = app.world_mut().resource_mut::<NextState<AppState>>();
-            apply_action(ButtonAction::GoToTitle, &mut next_state);
+            apply_action(ButtonAction::GoToTitle, &mut next_state, &mut None);
         }
         app.update();
 
         assert_eq!(*app.world().resource::<State<AppState>>(), AppState::Title);
+    }
+
+    #[test]
+    fn apply_action_select_upgrade_sets_playing_state() {
+        use bevy::state::app::StatesPlugin;
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin));
+        app.init_state::<AppState>();
+
+        {
+            let mut next_state = app.world_mut().resource_mut::<NextState<AppState>>();
+            // None pending — PendingUpgradeIndex not available in this isolated test.
+            apply_action(ButtonAction::SelectUpgrade(1), &mut next_state, &mut None);
+        }
+        app.update();
+
+        assert_eq!(
+            *app.world().resource::<State<AppState>>(),
+            AppState::Playing
+        );
     }
 
     #[test]
