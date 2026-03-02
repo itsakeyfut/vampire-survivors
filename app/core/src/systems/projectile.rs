@@ -11,11 +11,10 @@
 //! weapon-specific fire systems (tasks 4.4 / 4.5) to spawn a fully
 //! equipped projectile entity without duplicating component boilerplate.
 
-use bevy::{prelude::*, state::state_scoped::DespawnOnExit};
+use bevy::prelude::*;
 
 use crate::{
-    components::{CircleCollider, Projectile, ProjectileVelocity},
-    states::AppState,
+    components::{CircleCollider, GameSessionEntity, Projectile, ProjectileVelocity},
     types::WeaponType,
 };
 
@@ -61,8 +60,8 @@ pub fn despawn_expired_projectiles(
 
 /// Spawns a single [`Projectile`] entity traveling in `velocity`.
 ///
-/// The entity automatically carries [`DespawnOnExit`] so it is cleaned
-/// up when the game leaves [`AppState::Playing`].
+/// The entity carries [`GameSessionEntity`] so it is cleaned up when the
+/// run ends.
 ///
 /// # Parameters
 /// - `position` — World-space spawn point (pixels).
@@ -89,7 +88,7 @@ pub fn spawn_projectile(
 ) -> Entity {
     commands
         .spawn((
-            DespawnOnExit(AppState::Playing),
+            GameSessionEntity,
             Projectile {
                 damage,
                 piercing,

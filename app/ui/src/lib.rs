@@ -12,6 +12,7 @@
 
 use bevy::prelude::*;
 use vs_core::states::AppState;
+use vs_core::systems::level_up_choices::generate_level_up_choices;
 
 pub mod camera;
 pub mod components;
@@ -38,6 +39,22 @@ impl Plugin for GameUIPlugin {
             .add_systems(
                 OnEnter(AppState::GameOver),
                 screens::game_over::setup_game_over_screen,
+            )
+            // Level-up card selection overlay.
+            // Must run after generate_level_up_choices so LevelUpChoices is
+            // already populated when the UI reads it.
+            .add_systems(
+                OnEnter(AppState::LevelUp),
+                screens::level_up::setup_level_up_screen
+                    .after(generate_level_up_choices),
+            )
+            // Card-specific hover/press colors run in all states.
+            // Must run after handle_button_interaction so card colors take
+            // precedence (cards carry both MenuButton and LevelUpCard).
+            .add_systems(
+                Update,
+                screens::level_up::handle_card_interaction
+                    .after(components::handle_button_interaction),
             )
             // Smooth player-follow only runs during active gameplay.
             .add_systems(

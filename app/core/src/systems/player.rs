@@ -1,12 +1,12 @@
-use bevy::{prelude::*, state::state_scoped::DespawnOnExit};
+use bevy::prelude::*;
 
 use crate::{
     components::{
-        CircleCollider, PassiveInventory, Player, PlayerStats, PlayerWhipSide, WeaponInventory,
+        CircleCollider, GameSessionEntity, PassiveInventory, Player, PlayerStats, PlayerWhipSide,
+        WeaponInventory,
     },
     config::PlayerParams,
     resources::SelectedCharacter,
-    states::AppState,
     types::{CharacterType, WeaponState, WeaponType, WhipSide},
 };
 
@@ -31,11 +31,16 @@ fn starting_weapon_for(character: CharacterType) -> WeaponType {
     }
 }
 
-/// Spawns the player entity and a 2D camera when entering [`AppState::Playing`].
+/// Spawns the player entity when entering [`AppState::Playing`].
 ///
-/// Both entities carry [`DespawnOnExit`] so they are automatically despawned
-/// when the game leaves the `Playing` state — no explicit cleanup system is
-/// needed.
+/// The player persists through [`AppState::LevelUp`] and [`AppState::Paused`]
+/// so that gameplay systems (including upgrade choice generation) can still
+/// access the player's inventory while the game is paused.  Cleanup happens
+/// via [`despawn_game_session`] when the run truly ends.
+///
+/// Returns early when a [`Player`] entity already exists — this prevents
+/// double-spawning when the state re-enters `Playing` after a `LevelUp` or
+/// `Paused` round-trip.
 ///
 /// Stats and collider radius are read from [`PlayerParams`] when the config
 /// is loaded; otherwise falls back to [`PlayerStats::default()`] and
@@ -45,7 +50,12 @@ pub fn spawn_player(
     mut commands: Commands,
     player_cfg: PlayerParams,
     selected_character: Res<SelectedCharacter>,
+    existing_player: Query<Entity, With<Player>>,
 ) {
+    // Player persists through LevelUp / Paused; only spawn once per run.
+    if !existing_player.is_empty() {
+        return;
+    }
     // Derive stats and collider radius from config when available.
     let (stats, collider_radius) = if let Some(cfg) = player_cfg.get() {
         let stats = PlayerStats {
@@ -70,8 +80,10 @@ pub fn spawn_player(
     };
 
     // Player entity: cyan circle sprite + all required ECS components.
+    // GameSessionEntity (not DespawnOnExit) — player persists through LevelUp
+    // / Paused; despawn_game_session handles cleanup when the run ends.
     commands.spawn((
-        DespawnOnExit(AppState::Playing),
+        GameSessionEntity,
         Player,
         stats,
         Sprite {
@@ -90,6 +102,22 @@ pub fn spawn_player(
         // Whip starts on the right side; flips each swing.
         PlayerWhipSide(WhipSide::Right),
     ));
+}
+
+/// Despawns all [`GameSessionEntity`] entities when the run ends.
+///
+/// Registered on [`OnEnter(AppState::GameOver)`],
+/// [`OnEnter(AppState::Victory)`], and [`OnEnter(AppState::Title)`] so
+/// every gameplay entity (player, enemies, projectiles, XP gems, whip effects,
+/// …) is removed regardless of which path ends the run.
+/// This is a no-op when no session entities exist (e.g., on initial startup).
+pub fn despawn_game_session(
+    mut commands: Commands,
+    session_q: Query<Entity, With<GameSessionEntity>>,
+) {
+    for entity in session_q.iter() {
+        commands.entity(entity).despawn();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -140,6 +168,7 @@ mod tests {
     use bevy::ecs::system::RunSystemOnce as _;
 
     use super::*;
+    use crate::states::AppState;
 
     // -----------------------------------------------------------------------
     // Unit tests (pure logic, no ECS App)

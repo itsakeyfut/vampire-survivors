@@ -39,6 +39,12 @@ pub enum ButtonAction {
     StartGame,
     /// Return to the Title screen from any state.
     GoToTitle,
+    /// Confirm the upgrade card at the given index and resume gameplay.
+    ///
+    /// The index refers to the slot in [`vs_core::resources::LevelUpChoices`]
+    /// that was selected.  Gameplay systems that apply upgrades read this
+    /// index when re-entering [`AppState::Playing`].
+    SelectUpgrade(usize),
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +101,9 @@ fn apply_action(action: ButtonAction, next_state: &mut NextState<AppState>) {
         }
         ButtonAction::GoToTitle => {
             next_state.set(AppState::Title);
+        }
+        ButtonAction::SelectUpgrade(_) => {
+            next_state.set(AppState::Playing);
         }
     }
 }

@@ -8,9 +8,12 @@
 //! [`Enemy::xp_value`] field (sourced from `enemy.ron` at spawn time).
 //! No separate config lookup is needed here.
 
-use bevy::{prelude::*, state::state_scoped::DespawnOnExit};
+use bevy::prelude::*;
 
-use crate::{components::ExperienceGem, events::EnemyDiedEvent, states::AppState};
+use crate::{
+    components::{ExperienceGem, GameSessionEntity},
+    events::EnemyDiedEvent,
+};
 
 /// Gem visual radius in pixels (placeholder; replace with real sprite later).
 const GEM_RADIUS: f32 = 6.0;
@@ -25,8 +28,7 @@ const GEM_RADIUS: f32 = 6.0;
 /// - Gem value is taken directly from `event.xp_value`, which was set from
 ///   `enemy.ron` config when the enemy spawned.
 /// - Rendered as a green circle placeholder sprite (`GEM_RADIUS` px radius).
-/// - Tagged with [`DespawnOnExit`]`(`[`AppState::Playing`]`)` so gems are
-///   automatically cleaned up when the run ends.
+/// - Tagged with [`GameSessionEntity`] so gems are cleaned up when the run ends.
 ///
 /// Must run after [`apply_damage_to_enemies`](crate::systems::damage::apply_damage_to_enemies)
 /// so that `EnemyDiedEvent` messages are already written before this system
@@ -34,7 +36,7 @@ const GEM_RADIUS: f32 = 6.0;
 pub fn spawn_xp_gems(mut commands: Commands, mut died_events: MessageReader<EnemyDiedEvent>) {
     for event in died_events.read() {
         commands.spawn((
-            DespawnOnExit(AppState::Playing),
+            GameSessionEntity,
             ExperienceGem {
                 value: event.xp_value,
             },
