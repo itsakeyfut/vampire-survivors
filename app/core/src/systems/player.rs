@@ -36,7 +36,7 @@ fn starting_weapon_for(character: CharacterType) -> WeaponType {
 /// The player persists through [`AppState::LevelUp`] and [`AppState::Paused`]
 /// so that gameplay systems (including upgrade choice generation) can still
 /// access the player's inventory while the game is paused.  Cleanup happens
-/// via [`despawn_player`] when the run truly ends.
+/// via [`despawn_game_session`] when the run truly ends.
 ///
 /// Returns early when a [`Player`] entity already exists — this prevents
 /// double-spawning when the state re-enters `Playing` after a `LevelUp` or

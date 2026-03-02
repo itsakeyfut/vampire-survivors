@@ -178,7 +178,19 @@ fn passive_description(pt: PassiveItemType) -> &'static str {
 /// Each card is tagged with [`DespawnOnExit`]`(`[`AppState::LevelUp`]`)` via
 /// the root overlay, so all nodes are automatically removed when the overlay
 /// closes.
-pub fn setup_level_up_screen(mut commands: Commands, choices: Res<LevelUpChoices>) {
+pub fn setup_level_up_screen(
+    mut commands: Commands,
+    choices: Res<LevelUpChoices>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
+    // Guard against an empty pool (all items maxed, or player query failed).
+    // Without cards there is no way to dismiss the overlay, which would
+    // soft-lock the game.  Return to Playing immediately in that case.
+    if choices.choices.is_empty() {
+        next_state.set(AppState::Playing);
+        return;
+    }
+
     commands
         .spawn((
             Node {
@@ -412,21 +424,30 @@ mod tests {
 
     // --- Screen spawning ---
 
-    /// No choices — screen spawns overlay with empty card row (no cards).
+    /// No choices — soft-lock guard returns to Playing without spawning the
+    /// overlay.
     #[test]
-    fn setup_level_up_screen_with_no_choices_spawns_overlay() {
+    fn setup_level_up_screen_with_no_choices_returns_to_playing() {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::LevelUp), setup_level_up_screen);
 
         enter_level_up(&mut app);
 
+        // Overlay must NOT have been spawned.
         let mut q = app
             .world_mut()
             .query_filtered::<Entity, With<LevelUpScreenBg>>();
         assert_eq!(
             q.iter(app.world()).count(),
-            1,
-            "exactly one LevelUpScreenBg expected"
+            0,
+            "no LevelUpScreenBg should exist when choices are empty"
+        );
+
+        // State should have been set back to Playing.
+        assert_eq!(
+            *app.world().resource::<State<AppState>>(),
+            AppState::Playing,
+            "state should return to Playing when there are no choices"
         );
     }
 
