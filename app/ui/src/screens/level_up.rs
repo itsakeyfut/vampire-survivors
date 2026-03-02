@@ -14,14 +14,24 @@ use vs_core::states::AppState;
 use vs_core::types::{PassiveItemType, UpgradeChoice, WeaponType};
 
 use crate::components::{ButtonAction, MenuButton};
-use crate::config::level_up::{
-    DEFAULT_CARD_GAP, DEFAULT_CARD_HEIGHT, DEFAULT_CARD_HOVER, DEFAULT_CARD_NORMAL,
-    DEFAULT_CARD_PRESSED, DEFAULT_CARD_WIDTH, DEFAULT_HEADING_COLOR, DEFAULT_OVERLAY_COLOR,
-    DEFAULT_SUBTITLE_COLOR, LevelUpScreenParams,
-};
+use crate::config::level_up::LevelUpScreenParams;
 use crate::styles::{
     DEFAULT_FONT_SIZE_LARGE, DEFAULT_FONT_SIZE_MEDIUM, DEFAULT_FONT_SIZE_SMALL, DEFAULT_TEXT_COLOR,
 };
+
+// ---------------------------------------------------------------------------
+// Fallback constants
+// ---------------------------------------------------------------------------
+
+const DEFAULT_OVERLAY_COLOR: Color = Color::srgba(0.02, 0.02, 0.06, 0.92);
+const DEFAULT_HEADING_COLOR: Color = Color::srgb(1.0, 0.85, 0.20);
+const DEFAULT_CARD_NORMAL: Color = Color::srgb(0.12, 0.08, 0.28);
+const DEFAULT_CARD_HOVER: Color = Color::srgb(0.22, 0.14, 0.48);
+const DEFAULT_CARD_PRESSED: Color = Color::srgb(0.08, 0.05, 0.18);
+const DEFAULT_SUBTITLE_COLOR: Color = Color::srgb(0.85, 0.70, 0.30);
+const DEFAULT_CARD_WIDTH: f32 = 260.0;
+const DEFAULT_CARD_HEIGHT: f32 = 320.0;
+const DEFAULT_CARD_GAP: f32 = 30.0;
 
 // ---------------------------------------------------------------------------
 // Marker components
@@ -193,6 +203,13 @@ pub fn setup_level_up_screen(
             DEFAULT_CARD_GAP,
         )
     };
+
+    // Clamp card dimensions so that invalid RON values cannot produce a
+    // zero-sized or negative-max-width layout.  card_width must be > 32 to
+    // keep the description text max_width positive.
+    let card_width = card_width.max(64.0);
+    let card_height = card_height.max(64.0);
+    let card_gap = card_gap.max(0.0);
 
     commands
         .spawn((

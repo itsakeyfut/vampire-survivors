@@ -2,44 +2,13 @@
 //!
 //! Loaded from `assets/config/ui/screen/level_up.ron`.
 //! Systems read the current values via [`LevelUpScreenParams`] and fall back
-//! to the `DEFAULT_*` constants defined here when the asset is not yet loaded.
+//! to private `DEFAULT_*` constants defined in each consumer module.
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use serde::Deserialize;
 
 use super::{SrgbColor, SrgbaColor};
-
-// ---------------------------------------------------------------------------
-// Fallback constants
-// ---------------------------------------------------------------------------
-
-/// Semi-transparent dark overlay behind the upgrade cards.
-pub(crate) const DEFAULT_OVERLAY_COLOR: Color = Color::srgba(0.02, 0.02, 0.06, 0.92);
-
-/// "LEVEL UP!" heading color — gold.
-pub(crate) const DEFAULT_HEADING_COLOR: Color = Color::srgb(1.0, 0.85, 0.20);
-
-/// Card background color (resting state).
-pub(crate) const DEFAULT_CARD_NORMAL: Color = Color::srgb(0.12, 0.08, 0.28);
-
-/// Card background color on hover.
-pub(crate) const DEFAULT_CARD_HOVER: Color = Color::srgb(0.22, 0.14, 0.48);
-
-/// Card background color while pressed.
-pub(crate) const DEFAULT_CARD_PRESSED: Color = Color::srgb(0.08, 0.05, 0.18);
-
-/// Upgrade type subtitle text color — dim gold.
-pub(crate) const DEFAULT_SUBTITLE_COLOR: Color = Color::srgb(0.85, 0.70, 0.30);
-
-/// Width of each upgrade card in pixels.
-pub(crate) const DEFAULT_CARD_WIDTH: f32 = 260.0;
-
-/// Height of each upgrade card in pixels.
-pub(crate) const DEFAULT_CARD_HEIGHT: f32 = 320.0;
-
-/// Horizontal gap between adjacent cards in pixels.
-pub(crate) const DEFAULT_CARD_GAP: f32 = 30.0;
 
 // ---------------------------------------------------------------------------
 // Config asset
@@ -163,12 +132,5 @@ LevelUpScreenConfig(
         assert_eq!(cfg.card_width, 260.0);
         assert_eq!(cfg.card_height, 320.0);
         assert_eq!(cfg.card_gap, 30.0);
-    }
-
-    #[test]
-    fn default_card_dimensions_are_positive() {
-        assert!(DEFAULT_CARD_WIDTH > 0.0);
-        assert!(DEFAULT_CARD_HEIGHT > 0.0);
-        assert!(DEFAULT_CARD_GAP > 0.0);
     }
 }
