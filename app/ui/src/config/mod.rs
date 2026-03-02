@@ -5,7 +5,7 @@
 //!
 //! | File                                    | Config type                | Controls                           |
 //! |-----------------------------------------|----------------------------|------------------------------------|
-//! | `config/ui/styles.ron`                  | [`UiStyleConfig`]          | Colors, font sizes, button sizes   |
+//! | `config/ui/styles.ron`                  | [`UiStyleConfig`]          | Shared background and title colors |
 //! | `config/ui/screen/level_up.ron`         | [`LevelUpScreenConfig`]    | Level-up overlay and heading color |
 //! | `config/ui/hud/screen_heading.ron`      | [`ScreenHeadingHudConfig`] | Heading font size and margin       |
 //! | `config/ui/hud/menu_button.ron`         | [`MenuButtonHudConfig`]    | Button dimensions, colors, font    |

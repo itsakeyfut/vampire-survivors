@@ -167,8 +167,11 @@ pub fn spawn_upgrade_card(
         .map(|c| c.card_height)
         .unwrap_or(DEFAULT_CARD_HEIGHT)
         .max(64.0);
-    let padding = cfg.map(|c| c.padding).unwrap_or(DEFAULT_PADDING);
-    let inner_gap = cfg.map(|c| c.inner_gap).unwrap_or(DEFAULT_INNER_GAP);
+    let padding = cfg.map(|c| c.padding).unwrap_or(DEFAULT_PADDING).max(0.0);
+    let inner_gap = cfg
+        .map(|c| c.inner_gap)
+        .unwrap_or(DEFAULT_INNER_GAP)
+        .max(0.0);
     let card_normal = cfg
         .map(|c| Color::from(&c.card_normal))
         .unwrap_or(DEFAULT_CARD_NORMAL);
@@ -180,13 +183,16 @@ pub fn spawn_upgrade_card(
         .unwrap_or(DEFAULT_TEXT_COLOR);
     let font_size_name = cfg
         .map(|c| c.font_size_name)
-        .unwrap_or(DEFAULT_FONT_SIZE_NAME);
+        .unwrap_or(DEFAULT_FONT_SIZE_NAME)
+        .max(1.0);
     let font_size_subtitle = cfg
         .map(|c| c.font_size_subtitle)
-        .unwrap_or(DEFAULT_FONT_SIZE_SUBTITLE);
+        .unwrap_or(DEFAULT_FONT_SIZE_SUBTITLE)
+        .max(1.0);
     let font_size_desc = cfg
         .map(|c| c.font_size_desc)
-        .unwrap_or(DEFAULT_FONT_SIZE_DESC);
+        .unwrap_or(DEFAULT_FONT_SIZE_DESC)
+        .max(1.0);
 
     parent
         .spawn((
