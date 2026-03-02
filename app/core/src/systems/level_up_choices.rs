@@ -527,18 +527,19 @@ mod tests {
         assert_eq!(v.len(), 10);
     }
 
-    /// `fisher_yates_shuffle` preserves all elements (set equality).
+    /// `fisher_yates_shuffle` preserves all elements and their counts (multiset equality).
     #[test]
     fn fisher_yates_preserves_elements() {
-        use std::collections::HashSet;
         let original: Vec<i32> = (0..10).collect();
         let mut v = original.clone();
         fisher_yates_shuffle(&mut v);
-        let orig_set: HashSet<_> = original.into_iter().collect();
-        let shuf_set: HashSet<_> = v.into_iter().collect();
+        let mut expected = original;
+        let mut actual = v;
+        expected.sort_unstable();
+        actual.sort_unstable();
         assert_eq!(
-            orig_set, shuf_set,
-            "shuffle must not add or remove elements"
+            expected, actual,
+            "shuffle must preserve all elements and counts"
         );
     }
 }
