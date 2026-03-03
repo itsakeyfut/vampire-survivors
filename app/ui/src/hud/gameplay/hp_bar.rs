@@ -54,6 +54,12 @@ pub struct HudHpBarTrack;
 #[derive(Component, Debug)]
 pub struct HudHpBarLabel;
 
+/// Marks the column container node of the HP bar widget.
+///
+/// [`hot_reload_hp_bar_hud`] uses this to update `row_gap` (label gap).
+#[derive(Component, Debug)]
+pub struct HudHpBarRoot;
+
 // ---------------------------------------------------------------------------
 // Spawn
 // ---------------------------------------------------------------------------
@@ -81,11 +87,14 @@ pub fn spawn_hp_bar(parent: &mut ChildSpawnerCommands, cfg: Option<&HpBarHudConf
         .unwrap_or(DEFAULT_TEXT_COLOR);
 
     parent
-        .spawn(Node {
-            flex_direction: FlexDirection::Column,
-            row_gap: Val::Px(label_gap),
-            ..default()
-        })
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(label_gap),
+                ..default()
+            },
+            HudHpBarRoot,
+        ))
         .with_children(|col| {
             // "HP" label
             col.spawn((
@@ -162,7 +171,11 @@ pub fn hot_reload_hp_bar_hud(
     mut events: MessageReader<AssetEvent<HpBarHudConfig>>,
     cfg_assets: Res<Assets<HpBarHudConfig>>,
     cfg_handle: Option<Res<HpBarHudConfigHandle>>,
-    mut track_q: Query<(&mut BackgroundColor, &mut Node, &mut BorderRadius), With<HudHpBarTrack>>,
+    mut root_q: Query<&mut Node, With<HudHpBarRoot>>,
+    mut track_q: Query<
+        (&mut BackgroundColor, &mut Node, &mut BorderRadius),
+        (With<HudHpBarTrack>, Without<HudHpBarRoot>),
+    >,
     mut fill_q: Query<
         (&mut BackgroundColor, &mut BorderRadius),
         (With<HudHpBar>, Without<HudHpBarTrack>),
@@ -192,6 +205,9 @@ pub fn hot_reload_hp_bar_hud(
     }
 
     if needs_apply && let Some(cfg) = cfg_assets.get(&cfg_handle.0) {
+        for mut node in root_q.iter_mut() {
+            node.row_gap = Val::Px(cfg.label_gap);
+        }
         let radius = BorderRadius::all(Val::Px(cfg.bar_radius));
         for (mut bg, mut node, mut br) in track_q.iter_mut() {
             *bg = BackgroundColor(Color::from(&cfg.track_color));
