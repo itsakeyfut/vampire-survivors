@@ -1,0 +1,22 @@
+// Bible / UnholyVespers — tunable parameters.
+// Hot-reload enabled: edit while the game is running to balance in real time.
+//
+// Parameters:
+// - damage_by_level:       Damage per hit, one entry per level (Lv1..Lv8)
+// - orbit_radius_by_level: Distance from the player center in pixels,
+//                          one entry per level (scaled by area_multiplier at runtime)
+// - orbit_speed_by_level:  Angular velocity in radians/second, one entry per level
+//                          (full revolution at Lv1 takes 2π/2.0 ≈ 3.1 s;
+//                           at Lv8 takes 2π/3.0 ≈ 2.1 s)
+// - count_by_level:        Number of orbiting bodies, one entry per level (Lv1..Lv8)
+//                          Lv1-2: 1 orb, Lv3-4: 2 orbs, Lv5-8: 3 orbs
+//
+// Note: hit cooldown between repeated hits on the same enemy is defined as
+//       DEFAULT_BIBLE_HIT_COOLDOWN in systems/weapon_bible.rs (default 1.5 s).
+
+BibleConfig(
+    damage_by_level:       [20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0, 80.0],
+    orbit_radius_by_level: [80.0, 80.0, 80.0, 90.0, 90.0, 100.0, 100.0, 110.0],
+    orbit_speed_by_level:  [2.0,  2.0,  2.3,  2.3,  2.5,  2.5,   2.8,   3.0],
+    count_by_level:        [1,    1,    2,    2,    3,    3,     3,     3],
+)
