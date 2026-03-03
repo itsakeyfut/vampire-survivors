@@ -28,39 +28,26 @@ use bevy::prelude::*;
 
 use crate::{
     components::{PassiveInventory, Player, PlayerStats, WeaponInventory},
+    config::{GameParams, PassiveConfig, PassiveParams},
     resources::{LevelUpChoices, PendingUpgradeIndex},
     types::{PassiveItemType, PassiveState, UpgradeChoice, WeaponState},
 };
 
 // ---------------------------------------------------------------------------
-// Passive bonus constants (per level)
+// Fallback constants (used while passive.ron has not yet loaded)
 // ---------------------------------------------------------------------------
 
-/// Move-speed bonus per Wings level (pixels/second).
-/// Equals 10 % of the base move speed (200 px/s).
-const WINGS_SPEED_PER_LEVEL: f32 = 20.0;
-
-/// Max-HP bonus per HollowHeart level (absolute HP).
-/// Equals 20 % of the base max HP (100 HP).
-const HOLLOW_HEART_HP_PER_LEVEL: f32 = 20.0;
-
-/// Damage multiplier bonus per Spinach level.
-const SPINACH_DAMAGE_PER_LEVEL: f32 = 0.10;
-
-/// Luck multiplier bonus per Clover level.
-const CLOVER_LUCK_PER_LEVEL: f32 = 0.10;
-
-/// Cooldown reduction bonus per EmptyTome level.
-const EMPTY_TOME_CDR_PER_LEVEL: f32 = 0.08;
-
-/// Projectile speed multiplier bonus per Bracer level.
-const BRACER_PROJ_SPEED_PER_LEVEL: f32 = 0.10;
-
-/// Duration multiplier bonus per Spellbinder level.
-const SPELLBINDER_DURATION_PER_LEVEL: f32 = 0.10;
-
-/// HP regeneration bonus per Pummarola level (HP/s).
-const PUMMAROLA_REGEN_PER_LEVEL: f32 = 0.5;
+const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
+const DEFAULT_MAX_PASSIVE_LEVEL: u8 = 5;
+const DEFAULT_SPINACH_DAMAGE: f32 = 0.10;
+const DEFAULT_WINGS_SPEED: f32 = 20.0;
+const DEFAULT_HOLLOW_HEART_HP: f32 = 20.0;
+const DEFAULT_CLOVER_LUCK: f32 = 0.10;
+const DEFAULT_EMPTY_TOME_CDR: f32 = 0.08;
+const DEFAULT_BRACER_PROJ_SPEED: f32 = 0.10;
+const DEFAULT_SPELLBINDER_DURATION: f32 = 0.10;
+const DEFAULT_DUPLICATOR_PROJECTILES: u32 = 1;
+const DEFAULT_PUMMAROLA_REGEN: f32 = 0.5;
 
 // ---------------------------------------------------------------------------
 // System
@@ -77,6 +64,8 @@ const PUMMAROLA_REGEN_PER_LEVEL: f32 = 0.5;
 pub fn apply_selected_upgrade(
     mut pending: ResMut<PendingUpgradeIndex>,
     choices: Res<LevelUpChoices>,
+    game_cfg: GameParams,
+    passive_cfg: PassiveParams,
     mut player_q: Query<
         (
             &mut WeaponInventory,
@@ -103,6 +92,15 @@ pub fn apply_selected_upgrade(
         return;
     };
 
+    let gcfg = game_cfg.get();
+    let max_weapon_level = gcfg
+        .map(|c| c.max_weapon_level)
+        .unwrap_or(DEFAULT_MAX_WEAPON_LEVEL);
+    let max_passive_level = gcfg
+        .map(|c| c.max_passive_level)
+        .unwrap_or(DEFAULT_MAX_PASSIVE_LEVEL);
+    let cfg = passive_cfg.get();
+
     match choice {
         UpgradeChoice::NewWeapon(weapon_type) => {
             weapon_inv.weapons.push(WeaponState::new(weapon_type));
@@ -114,8 +112,12 @@ pub fn apply_selected_upgrade(
                 .iter_mut()
                 .find(|w| w.weapon_type == weapon_type)
             {
-                w.level = (w.level + 1).min(8);
-                info!("Upgraded {weapon_type:?} to level {}", w.level);
+                if w.level < max_weapon_level {
+                    w.level += 1;
+                    info!("Upgraded {weapon_type:?} to level {}", w.level);
+                } else {
+                    info!("{weapon_type:?} is already at max level");
+                }
             } else {
                 warn!("WeaponUpgrade for {weapon_type:?} but weapon not in inventory");
             }
@@ -125,7 +127,7 @@ pub fn apply_selected_upgrade(
                 item_type: passive_type,
                 level: 1,
             });
-            apply_passive_bonus(&mut stats, passive_type);
+            apply_passive_bonus(&mut stats, passive_type, cfg);
             info!("Acquired new passive: {passive_type:?}");
         }
         UpgradeChoice::PassiveUpgrade(passive_type) => {
@@ -134,9 +136,13 @@ pub fn apply_selected_upgrade(
                 .iter_mut()
                 .find(|p| p.item_type == passive_type)
             {
-                p.level = (p.level + 1).min(5);
-                apply_passive_bonus(&mut stats, passive_type);
-                info!("Upgraded {passive_type:?} to level {}", p.level);
+                if p.level < max_passive_level {
+                    p.level += 1;
+                    apply_passive_bonus(&mut stats, passive_type, cfg);
+                    info!("Upgraded {passive_type:?} to level {}", p.level);
+                } else {
+                    info!("{passive_type:?} is already at max level");
+                }
             } else {
                 warn!("PassiveUpgrade for {passive_type:?} but passive not in inventory");
             }
@@ -149,36 +155,70 @@ pub fn apply_selected_upgrade(
 /// Called both when a passive is first acquired (level 1) and when an existing
 /// passive is upgraded (level N → N+1), so the delta is always the per-level
 /// bonus amount.
-fn apply_passive_bonus(stats: &mut PlayerStats, passive_type: PassiveItemType) {
+///
+/// `cfg` is `Some` when `passive.ron` has finished loading; the function falls
+/// back to the `DEFAULT_*` constants defined in this module while the asset is
+/// still loading.
+fn apply_passive_bonus(
+    stats: &mut PlayerStats,
+    passive_type: PassiveItemType,
+    cfg: Option<&PassiveConfig>,
+) {
     match passive_type {
         PassiveItemType::Spinach => {
-            stats.damage_multiplier += SPINACH_DAMAGE_PER_LEVEL;
+            let delta = cfg
+                .map(|c| c.spinach_damage_per_level)
+                .unwrap_or(DEFAULT_SPINACH_DAMAGE);
+            stats.damage_multiplier += delta;
         }
         PassiveItemType::Wings => {
-            stats.move_speed += WINGS_SPEED_PER_LEVEL;
+            let delta = cfg
+                .map(|c| c.wings_speed_per_level)
+                .unwrap_or(DEFAULT_WINGS_SPEED);
+            stats.move_speed += delta;
         }
         PassiveItemType::HollowHeart => {
-            stats.max_hp += HOLLOW_HEART_HP_PER_LEVEL;
-            stats.current_hp += HOLLOW_HEART_HP_PER_LEVEL;
+            let delta = cfg
+                .map(|c| c.hollow_heart_hp_per_level)
+                .unwrap_or(DEFAULT_HOLLOW_HEART_HP);
+            stats.max_hp += delta;
+            stats.current_hp += delta;
         }
         PassiveItemType::Clover => {
-            stats.luck += CLOVER_LUCK_PER_LEVEL;
+            let delta = cfg
+                .map(|c| c.clover_luck_per_level)
+                .unwrap_or(DEFAULT_CLOVER_LUCK);
+            stats.luck += delta;
         }
         PassiveItemType::EmptyTome => {
-            stats.cooldown_reduction =
-                (stats.cooldown_reduction + EMPTY_TOME_CDR_PER_LEVEL).min(0.9);
+            let delta = cfg
+                .map(|c| c.empty_tome_cdr_per_level)
+                .unwrap_or(DEFAULT_EMPTY_TOME_CDR);
+            stats.cooldown_reduction = (stats.cooldown_reduction + delta).min(0.9);
         }
         PassiveItemType::Bracer => {
-            stats.projectile_speed_mult += BRACER_PROJ_SPEED_PER_LEVEL;
+            let delta = cfg
+                .map(|c| c.bracer_proj_speed_per_level)
+                .unwrap_or(DEFAULT_BRACER_PROJ_SPEED);
+            stats.projectile_speed_mult += delta;
         }
         PassiveItemType::Spellbinder => {
-            stats.duration_multiplier += SPELLBINDER_DURATION_PER_LEVEL;
+            let delta = cfg
+                .map(|c| c.spellbinder_duration_per_level)
+                .unwrap_or(DEFAULT_SPELLBINDER_DURATION);
+            stats.duration_multiplier += delta;
         }
         PassiveItemType::Duplicator => {
-            stats.extra_projectiles += 1;
+            let delta = cfg
+                .map(|c| c.duplicator_projectiles_per_level)
+                .unwrap_or(DEFAULT_DUPLICATOR_PROJECTILES);
+            stats.extra_projectiles += delta;
         }
         PassiveItemType::Pummarola => {
-            stats.hp_regen += PUMMAROLA_REGEN_PER_LEVEL;
+            let delta = cfg
+                .map(|c| c.pummarola_regen_per_level)
+                .unwrap_or(DEFAULT_PUMMAROLA_REGEN);
+            stats.hp_regen += delta;
         }
     }
 }
@@ -369,8 +409,8 @@ mod tests {
 
         let stats = app.world().get::<PlayerStats>(entity).unwrap();
         assert!(
-            (stats.damage_multiplier - (base_dmg + SPINACH_DAMAGE_PER_LEVEL)).abs() < 1e-6,
-            "damage_multiplier should increase by {SPINACH_DAMAGE_PER_LEVEL}"
+            (stats.damage_multiplier - (base_dmg + DEFAULT_SPINACH_DAMAGE)).abs() < 1e-6,
+            "damage_multiplier should increase by {DEFAULT_SPINACH_DAMAGE}"
         );
     }
 
@@ -389,8 +429,8 @@ mod tests {
 
         let stats = app.world().get::<PlayerStats>(entity).unwrap();
         assert!(
-            (stats.move_speed - (base_speed + WINGS_SPEED_PER_LEVEL)).abs() < 1e-6,
-            "move_speed should increase by {WINGS_SPEED_PER_LEVEL}"
+            (stats.move_speed - (base_speed + DEFAULT_WINGS_SPEED)).abs() < 1e-6,
+            "move_speed should increase by {DEFAULT_WINGS_SPEED}"
         );
     }
 
@@ -412,12 +452,12 @@ mod tests {
 
         let stats = app.world().get::<PlayerStats>(entity).unwrap();
         assert!(
-            (stats.max_hp - (base_max_hp + HOLLOW_HEART_HP_PER_LEVEL)).abs() < 1e-6,
-            "max_hp should increase by {HOLLOW_HEART_HP_PER_LEVEL}"
+            (stats.max_hp - (base_max_hp + DEFAULT_HOLLOW_HEART_HP)).abs() < 1e-6,
+            "max_hp should increase by {DEFAULT_HOLLOW_HEART_HP}"
         );
         assert!(
-            (stats.current_hp - (base_cur_hp + HOLLOW_HEART_HP_PER_LEVEL)).abs() < 1e-6,
-            "current_hp should also increase by {HOLLOW_HEART_HP_PER_LEVEL}"
+            (stats.current_hp - (base_cur_hp + DEFAULT_HOLLOW_HEART_HP)).abs() < 1e-6,
+            "current_hp should also increase by {DEFAULT_HOLLOW_HEART_HP}"
         );
     }
 
@@ -440,8 +480,8 @@ mod tests {
 
         let stats = app.world().get::<PlayerStats>(entity).unwrap();
         assert!(
-            (stats.cooldown_reduction - (base_cdr + EMPTY_TOME_CDR_PER_LEVEL)).abs() < 1e-6,
-            "cooldown_reduction should increase by {EMPTY_TOME_CDR_PER_LEVEL}"
+            (stats.cooldown_reduction - (base_cdr + DEFAULT_EMPTY_TOME_CDR)).abs() < 1e-6,
+            "cooldown_reduction should increase by {DEFAULT_EMPTY_TOME_CDR}"
         );
     }
 
@@ -550,7 +590,7 @@ mod tests {
 
         let stats = app.world().get::<PlayerStats>(entity).unwrap();
         assert!(
-            (stats.damage_multiplier - (base_dmg + SPINACH_DAMAGE_PER_LEVEL)).abs() < 1e-6,
+            (stats.damage_multiplier - (base_dmg + DEFAULT_SPINACH_DAMAGE)).abs() < 1e-6,
             "damage_multiplier must increase on PassiveUpgrade"
         );
     }

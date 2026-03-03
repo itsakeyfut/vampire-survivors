@@ -8,20 +8,23 @@
 //!
 //! # Sub-modules
 //!
-//! | Module | Contents |
-//! |--------|----------|
-//! | [`player`] | `PlayerConfig` + `PlayerParams` SystemParam bundle |
-//! | [`enemy`]  | `EnemyConfig`, `EnemyStatsEntry` + `EnemyParams` SystemParam bundle |
-//! | [`game`]   | `GameConfig` + `GameParams` SystemParam bundle |
-//! | [`weapon`] | `WeaponConfig` + `WeaponParams` SystemParam bundle |
+//! | Module    | Contents |
+//! |-----------|----------|
+//! | [`player`]  | `PlayerConfig` + `PlayerParams` SystemParam bundle |
+//! | [`enemy`]   | `EnemyConfig`, `EnemyStatsEntry` + `EnemyParams` SystemParam bundle |
+//! | [`game`]    | `GameConfig` + `GameParams` SystemParam bundle |
+//! | [`weapon`]  | `WeaponConfig` + `WeaponParams` SystemParam bundle |
+//! | [`passive`] | `PassiveConfig` + `PassiveParams` SystemParam bundle |
 
 pub mod enemy;
 pub mod game;
+pub mod passive;
 pub mod player;
 pub mod weapon;
 
 pub use enemy::*;
 pub use game::*;
+pub use passive::*;
 pub use player::*;
 pub use weapon::*;
 
@@ -79,6 +82,7 @@ ron_asset_loader!(PlayerConfigLoader, PlayerConfig);
 ron_asset_loader!(EnemyConfigLoader, EnemyConfig);
 ron_asset_loader!(GameConfigLoader, GameConfig);
 ron_asset_loader!(WeaponConfigLoader, WeaponConfig);
+ron_asset_loader!(PassiveConfigLoader, PassiveConfig);
 
 // ---------------------------------------------------------------------------
 // AllConfigs — private SystemParam for wait_for_configs
@@ -96,6 +100,8 @@ struct AllConfigs<'w> {
     game_assets: Res<'w, Assets<GameConfig>>,
     weapon_handle: Res<'w, WeaponConfigHandle>,
     weapon_assets: Res<'w, Assets<WeaponConfig>>,
+    passive_handle: Res<'w, PassiveConfigHandle>,
+    passive_assets: Res<'w, Assets<PassiveConfig>>,
 }
 
 // ---------------------------------------------------------------------------
@@ -124,7 +130,9 @@ impl Plugin for GameConfigPlugin {
             .init_asset::<GameConfig>()
             .register_asset_loader(GameConfigLoader)
             .init_asset::<WeaponConfig>()
-            .register_asset_loader(WeaponConfigLoader);
+            .register_asset_loader(WeaponConfigLoader)
+            .init_asset::<PassiveConfig>()
+            .register_asset_loader(PassiveConfigLoader);
 
         // Load all config files and insert handles as resources.
         let asset_server = app.world_mut().resource::<AssetServer>();
@@ -132,11 +140,13 @@ impl Plugin for GameConfigPlugin {
         let enemy_handle: Handle<EnemyConfig> = asset_server.load("config/enemy.ron");
         let game_handle: Handle<GameConfig> = asset_server.load("config/game.ron");
         let weapon_handle: Handle<WeaponConfig> = asset_server.load("config/weapons.ron");
+        let passive_handle: Handle<PassiveConfig> = asset_server.load("config/passive.ron");
 
         app.insert_resource(PlayerConfigHandle(player_handle))
             .insert_resource(EnemyConfigHandle(enemy_handle))
             .insert_resource(GameConfigHandle(game_handle))
-            .insert_resource(WeaponConfigHandle(weapon_handle));
+            .insert_resource(WeaponConfigHandle(weapon_handle))
+            .insert_resource(PassiveConfigHandle(passive_handle));
 
         // Hot-reload systems run in all states so live-editing always works.
         app.add_systems(
@@ -171,8 +181,14 @@ fn wait_for_configs(configs: AllConfigs, mut next_state: ResMut<NextState<AppSta
             .weapon_assets
             .get(&configs.weapon_handle.0)
             .is_some()
+        && configs
+            .passive_assets
+            .get(&configs.passive_handle.0)
+            .is_some()
     {
-        info!("✅ All configs loaded (player, enemy, game, weapon), transitioning to Title");
+        info!(
+            "✅ All configs loaded (player, enemy, game, weapon, passive), transitioning to Title"
+        );
         next_state.set(AppState::Title);
     }
 }
