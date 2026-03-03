@@ -41,6 +41,7 @@ use systems::weapon_cooldown::tick_weapon_cooldowns;
 use systems::weapon_garlic::{fire_garlic, spawn_garlic_visual, update_garlic_visual};
 use systems::weapon_knife::fire_knife;
 use systems::weapon_magic_wand::fire_magic_wand;
+use systems::weapon_thunder_ring::{despawn_thunder_effects, fire_thunder_ring};
 use systems::weapon_whip::{despawn_whip_effects, fire_whip};
 
 /// Core game plugin. Registers states, inserts default resources, and wires up
@@ -120,6 +121,7 @@ impl Plugin for GameCorePlugin {
                     fire_garlic
                         .after(tick_weapon_cooldowns)
                         .after(update_spatial_grid),
+                    fire_thunder_ring.after(tick_weapon_cooldowns),
                     fire_whip
                         .after(tick_weapon_cooldowns)
                         .after(update_spatial_grid),
@@ -133,6 +135,7 @@ impl Plugin for GameCorePlugin {
                         .after(fire_magic_wand)
                         .after(fire_knife)
                         .after(orbit_bible)
+                        .after(fire_thunder_ring)
                         .after(projectile_enemy_collision),
                     tick_invincibility.before(enemy_player_collision),
                     enemy_player_collision.after(update_spatial_grid),
@@ -170,6 +173,7 @@ impl Plugin for GameCorePlugin {
                     spawn_garlic_visual,
                     update_garlic_visual,
                     despawn_whip_effects,
+                    despawn_thunder_effects,
                     despawn_expired_projectiles,
                 )
                     .run_if(in_state(AppState::Playing)),
