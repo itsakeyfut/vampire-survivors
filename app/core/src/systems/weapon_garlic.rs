@@ -22,7 +22,9 @@
 //! A [`GarlicAura`] entity is spawned as a child of the player on the first
 //! [`WeaponFiredEvent`] for [`WeaponType::Garlic`] (or [`WeaponType::SoulEater`]).
 //! It carries an [`AuraWeapon`] component that holds the current damage and
-//! radius, and a [`Sprite`] visualising the aura extent (diameter = 2 × radius).
+//! radius.  The circle visual is added by [`spawn_garlic_visual`] (via
+//! `Mesh2d(Circle::new(1.0))`) and kept in sync by [`update_garlic_visual`]
+//! (via `Transform::scale`).
 //!
 //! As a child entity its [`Transform`] is relative to the player, so it tracks
 //! the player position automatically via Bevy's transform propagation.
@@ -36,9 +38,9 @@
 //!
 //! The aura fires every time its weapon cooldown expires (driven by
 //! `tick_weapon_cooldowns`), using the base-cooldown table in
-//! `types/weapon.rs`.  [`AuraWeapon::tick_timer`] and
-//! [`AuraWeapon::tick_interval`] are kept in sync with those values but the
-//! actual scheduling is handled externally.
+//! `types/weapon.rs`.
+
+use std::collections::HashSet;
 
 use bevy::prelude::*;
 
@@ -55,8 +57,7 @@ use crate::{
 // ---------------------------------------------------------------------------
 
 /// Damage per aura tick at each weapon level (index 0 = level 1).
-const DEFAULT_GARLIC_DAMAGE_BY_LEVEL: [f32; 8] =
-    [5.0, 5.0, 8.0, 8.0, 10.0, 12.0, 15.0, 20.0];
+const DEFAULT_GARLIC_DAMAGE_BY_LEVEL: [f32; 8] = [5.0, 5.0, 8.0, 8.0, 10.0, 12.0, 15.0, 20.0];
 
 /// Aura radius in pixels at each weapon level (index 0 = level 1).
 const DEFAULT_GARLIC_RADIUS_BY_LEVEL: [f32; 8] =
@@ -79,19 +80,22 @@ pub struct GarlicAura {
 }
 
 // ---------------------------------------------------------------------------
-// System
+// Systems
 // ---------------------------------------------------------------------------
 
 /// Activates the Garlic aura when a [`WeaponFiredEvent`] arrives for
 /// [`WeaponType::Garlic`] or [`WeaponType::SoulEater`].
 ///
 /// - On the first activation a [`GarlicAura`] child entity is spawned under
-///   the player, carrying [`AuraWeapon`] stats and a translucent [`Sprite`]
-///   visual (diameter = 2 × radius).
-/// - On every subsequent activation the aura stats and visual are updated to
-///   match the current level and player stats.
+///   the player (game-logic components only; the circle visual is added by
+///   [`spawn_garlic_visual`] on the following frame).
+/// - On every subsequent activation the [`AuraWeapon`] stats are updated;
+///   [`update_garlic_visual`] then syncs the visual radius automatically.
 /// - A [`DamageEnemyEvent`] is emitted for each enemy within the
 ///   area-scaled radius (found via [`SpatialGrid`]).
+/// - A [`HashSet`] guards against duplicate spawns when multiple
+///   same-type events arrive in the same system run (commands are deferred,
+///   so the freshly-queued entity is not yet visible to `aura_q`).
 ///
 /// Must run after [`super::spatial::update_spatial_grid`] so the grid
 /// reflects the current frame's enemy positions.
@@ -101,12 +105,15 @@ pub fn fire_garlic(
     mut damage_events: MessageWriter<DamageEnemyEvent>,
     player_q: Query<(&Transform, &PlayerStats), With<Player>>,
     enemy_q: Query<&Transform, With<Enemy>>,
-    mut aura_q: Query<(Entity, &GarlicAura, &mut AuraWeapon, &mut Sprite), Without<Player>>,
+    mut aura_q: Query<(Entity, &GarlicAura, &mut AuraWeapon), Without<Player>>,
     spatial_grid: Res<SpatialGrid>,
     garlic_cfg: GarlicParams,
     mut commands: Commands,
 ) {
     let cfg = garlic_cfg.get();
+    // Track players for which a spawn was already queued this run, so that
+    // two same-frame Garlic events cannot produce duplicate aura entities.
+    let mut spawn_scheduled_for: HashSet<Entity> = HashSet::new();
 
     for event in fired_events.read() {
         let is_soul_eater = event.weapon_type == WeaponType::SoulEater;
@@ -136,18 +143,21 @@ pub fn fire_garlic(
         // Find any existing aura belonging to this player.
         let existing_entity = aura_q
             .iter()
-            .find_map(|(entity, aura, ..)| (aura.player == event.player).then_some(entity));
+            .find_map(|(entity, aura, _)| (aura.player == event.player).then_some(entity));
 
         if let Some(entity) = existing_entity {
-            // Update stats and visual when level or player stats change.
-            if let Ok((_, _, mut aura_weapon, mut sprite)) = aura_q.get_mut(entity) {
+            // Update stats on level-up or player-stat change.
+            // update_garlic_visual will sync the visual radius automatically
+            // via Changed<AuraWeapon>.
+            if let Ok((_, _, mut aura_weapon)) = aura_q.get_mut(entity) {
                 aura_weapon.damage = damage;
                 aura_weapon.radius = radius;
-                sprite.custom_size = Some(Vec2::splat(radius * 2.0));
             }
-        } else {
-            // First activation: spawn the aura entity as a child of the player
-            // so its transform tracks the player automatically.
+        } else if spawn_scheduled_for.insert(event.player) {
+            // First activation (and not already queued this run): spawn the
+            // aura entity as a child of the player so its transform tracks the
+            // player automatically.  The circle visual is inserted by
+            // spawn_garlic_visual on the next frame.
             commands.entity(event.player).with_children(|parent| {
                 parent.spawn((
                     GarlicAura {
@@ -159,12 +169,8 @@ pub fn fire_garlic(
                         tick_timer: 0.0,
                         tick_interval: 0.0, // scheduling is driven by weapon cooldown
                     },
-                    Sprite {
-                        color: Color::srgba(0.7, 0.3, 1.0, 0.25),
-                        custom_size: Some(Vec2::splat(radius * 2.0)),
-                        ..default()
-                    },
-                    Transform::from_xyz(0.0, 0.0, 3.0),
+                    // Scale encodes the aura radius (unit circle scaled to radius).
+                    Transform::from_xyz(0.0, 0.0, 3.0).with_scale(Vec3::splat(radius)),
                     GameSessionEntity,
                 ));
             });
@@ -184,6 +190,41 @@ pub fn fire_garlic(
                 });
             }
         }
+    }
+}
+
+/// Adds a circle visual to newly spawned [`GarlicAura`] entities.
+///
+/// Runs whenever `Added<GarlicAura>` is detected (the frame after the
+/// entity is flushed from [`fire_garlic`]'s deferred commands).
+/// Uses a unit [`Circle`] mesh scaled by [`Transform::scale`] so that
+/// [`update_garlic_visual`] can adjust the displayed radius cheaply.
+pub fn spawn_garlic_visual(
+    mut commands: Commands,
+    query: Query<Entity, Added<GarlicAura>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    for entity in query.iter() {
+        let mesh = meshes.add(Circle::new(1.0));
+        let material = materials.add(ColorMaterial::from_color(Color::srgba(0.7, 0.3, 1.0, 0.25)));
+        commands
+            .entity(entity)
+            .insert((Mesh2d(mesh), MeshMaterial2d(material)));
+    }
+}
+
+/// Keeps the aura circle visual in sync with the current [`AuraWeapon::radius`].
+///
+/// Runs whenever [`AuraWeapon`] is mutated on a [`GarlicAura`] entity
+/// (including when it is first added).  Updates `Transform::scale` so the
+/// unit circle mesh reflects the true radius.
+#[allow(clippy::type_complexity)]
+pub fn update_garlic_visual(
+    mut aura_q: Query<(&AuraWeapon, &mut Transform), (With<GarlicAura>, Changed<AuraWeapon>)>,
+) {
+    for (aura, mut transform) in aura_q.iter_mut() {
+        transform.scale = Vec3::splat(aura.radius);
     }
 }
 
@@ -351,6 +392,42 @@ mod tests {
             .iter(app.world())
             .count();
         assert_eq!(count, 1, "GarlicAura must not be duplicated on second fire");
+    }
+
+    /// Two same-frame Garlic events for the same player do not produce two auras.
+    #[test]
+    fn garlic_aura_not_duplicated_on_same_frame_events() {
+        let mut app = build_app();
+        let player = spawn_player(&mut app);
+
+        // Queue two events before running the system.
+        app.world_mut().write_message(WeaponFiredEvent {
+            player,
+            weapon_type: WeaponType::Garlic,
+            level: 1,
+        });
+        app.world_mut().write_message(WeaponFiredEvent {
+            player,
+            weapon_type: WeaponType::Garlic,
+            level: 1,
+        });
+        app.world_mut()
+            .run_system_once(crate::systems::spatial::update_spatial_grid)
+            .unwrap();
+        app.world_mut()
+            .run_system_once(fire_garlic)
+            .expect("fire_garlic should run");
+        app.world_mut().flush();
+
+        let count = app
+            .world_mut()
+            .query::<&GarlicAura>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            count, 1,
+            "two same-frame events must not produce two GarlicAura entities"
+        );
     }
 
     /// Level 3 deals more damage per tick than level 1.
