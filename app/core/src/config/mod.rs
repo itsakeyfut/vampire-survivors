@@ -8,12 +8,12 @@
 //!
 //! # Sub-modules
 //!
-//! | Module    | Contents |
-//! |-----------|----------|
+//! | Module      | Contents |
+//! |-------------|----------|
 //! | [`player`]  | `PlayerConfig` + `PlayerParams` SystemParam bundle |
 //! | [`enemy`]   | `EnemyConfig`, `EnemyStatsEntry` + `EnemyParams` SystemParam bundle |
 //! | [`game`]    | `GameConfig` + `GameParams` SystemParam bundle |
-//! | [`weapon`]  | `WeaponConfig` + `WeaponParams` SystemParam bundle |
+//! | [`weapon`]  | Per-weapon configs (`WhipConfig`, `MagicWandConfig`, `KnifeConfig`, …) |
 //! | [`passive`] | `PassiveConfig` + `PassiveParams` SystemParam bundle |
 
 pub mod enemy;
@@ -77,12 +77,16 @@ macro_rules! ron_asset_loader {
     };
 }
 
-// Loader types generated from the macro (all in mod.rs so the macro is local here)
+// Non-weapon config loaders
 ron_asset_loader!(PlayerConfigLoader, PlayerConfig);
 ron_asset_loader!(EnemyConfigLoader, EnemyConfig);
 ron_asset_loader!(GameConfigLoader, GameConfig);
-ron_asset_loader!(WeaponConfigLoader, WeaponConfig);
 ron_asset_loader!(PassiveConfigLoader, PassiveConfig);
+
+// Per-weapon config loaders
+ron_asset_loader!(WhipConfigLoader, WhipConfig);
+ron_asset_loader!(MagicWandConfigLoader, MagicWandConfig);
+ron_asset_loader!(KnifeConfigLoader, KnifeConfig);
 
 // ---------------------------------------------------------------------------
 // AllConfigs — private SystemParam for wait_for_configs
@@ -98,10 +102,14 @@ struct AllConfigs<'w> {
     enemy_assets: Res<'w, Assets<EnemyConfig>>,
     game_handle: Res<'w, GameConfigHandle>,
     game_assets: Res<'w, Assets<GameConfig>>,
-    weapon_handle: Res<'w, WeaponConfigHandle>,
-    weapon_assets: Res<'w, Assets<WeaponConfig>>,
     passive_handle: Res<'w, PassiveConfigHandle>,
     passive_assets: Res<'w, Assets<PassiveConfig>>,
+    whip_handle: Res<'w, WhipConfigHandle>,
+    whip_assets: Res<'w, Assets<WhipConfig>>,
+    magic_wand_handle: Res<'w, MagicWandConfigHandle>,
+    magic_wand_assets: Res<'w, Assets<MagicWandConfig>>,
+    knife_handle: Res<'w, KnifeConfigHandle>,
+    knife_assets: Res<'w, Assets<KnifeConfig>>,
 }
 
 // ---------------------------------------------------------------------------
@@ -112,7 +120,7 @@ struct AllConfigs<'w> {
 ///
 /// Registers all RON asset loaders, loads the config files from
 /// `assets/config/`, inserts handles as resources, and wires hot-reload
-/// systems. Transitions `Loading → Title` once all three configs are ready.
+/// systems. Transitions `Loading → Title` once all configs are ready.
 ///
 /// **Must be registered in the binary** (`main.rs`), after `DefaultPlugins`
 /// and before `GameCorePlugin`.
@@ -122,31 +130,42 @@ impl Plugin for GameConfigPlugin {
     fn build(&self, app: &mut App) {
         info!("🔧 Initializing GameConfigPlugin...");
 
-        // Register asset types and loaders.
+        // Register non-weapon asset types and loaders.
         app.init_asset::<PlayerConfig>()
             .register_asset_loader(PlayerConfigLoader)
             .init_asset::<EnemyConfig>()
             .register_asset_loader(EnemyConfigLoader)
             .init_asset::<GameConfig>()
             .register_asset_loader(GameConfigLoader)
-            .init_asset::<WeaponConfig>()
-            .register_asset_loader(WeaponConfigLoader)
             .init_asset::<PassiveConfig>()
             .register_asset_loader(PassiveConfigLoader);
+
+        // Register per-weapon asset types and loaders.
+        app.init_asset::<WhipConfig>()
+            .register_asset_loader(WhipConfigLoader)
+            .init_asset::<MagicWandConfig>()
+            .register_asset_loader(MagicWandConfigLoader)
+            .init_asset::<KnifeConfig>()
+            .register_asset_loader(KnifeConfigLoader);
 
         // Load all config files and insert handles as resources.
         let asset_server = app.world_mut().resource::<AssetServer>();
         let player_handle: Handle<PlayerConfig> = asset_server.load("config/player.ron");
         let enemy_handle: Handle<EnemyConfig> = asset_server.load("config/enemy.ron");
         let game_handle: Handle<GameConfig> = asset_server.load("config/game.ron");
-        let weapon_handle: Handle<WeaponConfig> = asset_server.load("config/weapons.ron");
         let passive_handle: Handle<PassiveConfig> = asset_server.load("config/passive.ron");
+        let whip_handle: Handle<WhipConfig> = asset_server.load("config/weapons/whip.ron");
+        let magic_wand_handle: Handle<MagicWandConfig> =
+            asset_server.load("config/weapons/magic_wand.ron");
+        let knife_handle: Handle<KnifeConfig> = asset_server.load("config/weapons/knife.ron");
 
         app.insert_resource(PlayerConfigHandle(player_handle))
             .insert_resource(EnemyConfigHandle(enemy_handle))
             .insert_resource(GameConfigHandle(game_handle))
-            .insert_resource(WeaponConfigHandle(weapon_handle))
-            .insert_resource(PassiveConfigHandle(passive_handle));
+            .insert_resource(PassiveConfigHandle(passive_handle))
+            .insert_resource(WhipConfigHandle(whip_handle))
+            .insert_resource(MagicWandConfigHandle(magic_wand_handle))
+            .insert_resource(KnifeConfigHandle(knife_handle));
 
         // Hot-reload systems run in all states so live-editing always works.
         app.add_systems(
@@ -162,7 +181,7 @@ impl Plugin for GameConfigPlugin {
         app.add_systems(Update, wait_for_configs.run_if(in_state(AppState::Loading)));
 
         info!(
-            "✅ GameConfigPlugin initialized (player, enemy, game, weapon, passive configs loading)"
+            "✅ GameConfigPlugin initialized (player, enemy, game, passive, whip, magic_wand, knife configs loading)"
         );
     }
 }
@@ -173,24 +192,25 @@ impl Plugin for GameConfigPlugin {
 
 /// Transitions from `Loading` → `Title` once all required RON configs are ready.
 fn wait_for_configs(configs: AllConfigs, mut next_state: ResMut<NextState<AppState>>) {
-    if configs
+    let all_ready = configs
         .player_assets
         .get(&configs.player_handle.0)
         .is_some()
         && configs.enemy_assets.get(&configs.enemy_handle.0).is_some()
         && configs.game_assets.get(&configs.game_handle.0).is_some()
         && configs
-            .weapon_assets
-            .get(&configs.weapon_handle.0)
-            .is_some()
-        && configs
             .passive_assets
             .get(&configs.passive_handle.0)
             .is_some()
-    {
-        info!(
-            "✅ All configs loaded (player, enemy, game, weapon, passive), transitioning to Title"
-        );
+        && configs.whip_assets.get(&configs.whip_handle.0).is_some()
+        && configs
+            .magic_wand_assets
+            .get(&configs.magic_wand_handle.0)
+            .is_some()
+        && configs.knife_assets.get(&configs.knife_handle.0).is_some();
+
+    if all_ready {
+        info!("✅ All configs loaded, transitioning to Title");
         next_state.set(AppState::Title);
     }
 }

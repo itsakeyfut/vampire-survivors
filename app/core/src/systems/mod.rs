@@ -22,5 +22,6 @@ pub mod projectile;
 pub mod projectile_collision;
 pub mod spatial;
 pub mod weapon_cooldown;
+pub mod weapon_knife;
 pub mod weapon_magic_wand;
 pub mod weapon_whip;

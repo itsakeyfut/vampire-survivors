@@ -31,6 +31,20 @@ pub struct Player;
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PlayerWhipSide(pub WhipSide);
 
+/// The direction the player is currently facing (or last moved toward).
+///
+/// Updated by [`crate::systems::player::player_movement`] whenever the player
+/// moves.  Defaults to `Vec2::X` (facing right) so directional weapons like
+/// Knife have a valid target even before the player's first input.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct PlayerFacingDirection(pub Vec2);
+
+impl Default for PlayerFacingDirection {
+    fn default() -> Self {
+        Self(Vec2::X)
+    }
+}
+
 /// All mutable player statistics. Passive items modify these values.
 #[derive(Component, Debug, Clone)]
 pub struct PlayerStats {
