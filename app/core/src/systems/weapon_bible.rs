@@ -118,7 +118,7 @@ pub struct BibleOrb {
 pub fn fire_bible(
     mut fired_events: MessageReader<WeaponFiredEvent>,
     player_q: Query<&PlayerStats, With<Player>>,
-    mut orb_q: Query<(Entity, &BibleOrb, &mut OrbitWeapon)>,
+    mut orb_q: Query<(Entity, &mut BibleOrb, &mut OrbitWeapon)>,
     bible_cfg: BibleParams,
     mut commands: Commands,
 ) {
@@ -166,8 +166,11 @@ pub fn fire_bible(
         let existing_count = existing.len();
 
         // Update stats on all existing orbs without disturbing orbit angles.
+        // Also sync weapon_type so damage attribution stays correct after
+        // Bible → UnholyVespers evolution.
         for entity in &existing {
-            if let Ok((_, _, mut orb_weapon)) = orb_q.get_mut(*entity) {
+            if let Ok((_, mut orb, mut orb_weapon)) = orb_q.get_mut(*entity) {
+                orb.weapon_type = event.weapon_type;
                 orb_weapon.damage = damage;
                 orb_weapon.orbit_radius = radius;
                 orb_weapon.orbit_speed = base_speed;
@@ -254,7 +257,7 @@ pub fn orbit_bible(
         });
 
         // --- Damage enemies within orb collision radius ---
-        let check_radius = radius + DEFAULT_BIBLE_ORB_RADIUS;
+        let check_radius = DEFAULT_BIBLE_ORB_RADIUS;
         for enemy_entity in spatial_grid.get_nearby(orb_world_pos, check_radius) {
             if orb_weapon.hit_cooldown.contains_key(&enemy_entity) {
                 continue;
