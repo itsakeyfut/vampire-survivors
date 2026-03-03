@@ -1,9 +1,8 @@
 //! Bible weapon — orbiting projectile bodies that circle the player.
 //!
-//! The Bible spawns one or more [`BibleOrb`] entities as children of the player.
-//! Each orb revolves around the player at a fixed radius, damaging any enemy it
-//! overlaps.  A per-enemy hit cooldown prevents the same enemy from being hit
-//! more than once per orbit.
+//! The Bible spawns one or more [`BibleOrb`] entities that revolve around the
+//! player at a fixed radius, damaging any enemy they overlap.  A per-enemy hit
+//! cooldown prevents the same enemy from being hit more than once per orbit.
 //!
 //! ## Level progression
 //!
@@ -20,16 +19,16 @@
 //!
 //! ## Orb entities
 //!
-//! Each [`BibleOrb`] is spawned as a **child** of the player so its
-//! [`Transform`] is in player-local space.  [`orbit_bible`] advances
-//! `orbit_angle` each frame and writes the new local position to `Transform`.
-//! Bevy's transform propagation then keeps [`GlobalTransform`] in sync
-//! automatically.
+//! Each [`BibleOrb`] is a top-level [`GameSessionEntity`] (not a child of the
+//! player).  [`orbit_bible`] writes its **world-space** [`Transform`] directly
+//! every frame by computing `player_world_pos + orbit_offset`, so
+//! [`GlobalTransform`] is set by Bevy's transform propagation on the entity
+//! itself rather than via parent-child hierarchy.
 //!
 //! When the weapon levels up to a tier that requires more orbs, [`fire_bible`]
-//! despawns the old orbs and spawns the new set evenly spaced at
-//! `2π × i / count` radians.  A [`HashSet`] guard prevents duplicate spawns
-//! when multiple same-type events arrive in the same system run.
+//! appends additional orbs at evenly-spaced angles.  A [`HashSet`] guard
+//! prevents duplicate spawns when multiple same-type events arrive in the same
+//! system run.
 //!
 //! ## Orbit radius scaling
 //!
@@ -39,8 +38,9 @@
 //! ## Hit cooldown
 //!
 //! [`OrbitWeapon::hit_cooldown`] is a per-enemy timer map.  When an orb
-//! overlaps an enemy it starts a `DEFAULT_BIBLE_HIT_COOLDOWN`-second cooldown
-//! for that enemy, preventing continuous damage spam as the orb passes through.
+//! overlaps an enemy it starts a cooldown (configured via
+//! [`BibleConfig::hit_cooldown_secs`]) for that enemy, preventing continuous
+//! damage spam as the orb passes through.
 
 use std::collections::{HashMap, HashSet};
 use std::f32::consts::TAU;
@@ -72,10 +72,10 @@ const DEFAULT_BIBLE_ORBIT_SPEED_BY_LEVEL: [f32; 8] = [2.0, 2.0, 2.3, 2.3, 2.5, 2
 /// Number of orbiting bodies at each weapon level.
 const DEFAULT_BIBLE_COUNT_BY_LEVEL: [u32; 8] = [1, 1, 2, 2, 3, 3, 3, 3];
 
-/// How long (seconds) to wait before hitting the same enemy again.
+/// Fallback hit cooldown while RON config is still loading.
 const DEFAULT_BIBLE_HIT_COOLDOWN: f32 = 1.5;
 
-/// Collision radius of each orb in pixels.
+/// Fallback orb collision radius while RON config is still loading.
 const DEFAULT_BIBLE_ORB_RADIUS: f32 = 12.0;
 
 /// Visual radius of each orb circle mesh (pixels).
@@ -222,10 +222,18 @@ pub fn orbit_bible(
     player_q: Query<&Transform, (With<Player>, Without<BibleOrb>)>,
     mut orb_q: Query<(&BibleOrb, &mut OrbitWeapon, &mut Transform), Without<Player>>,
     enemy_q: Query<&Transform, (With<Enemy>, Without<BibleOrb>)>,
+    bible_cfg: BibleParams,
     spatial_grid: Res<SpatialGrid>,
     mut damage_events: MessageWriter<DamageEnemyEvent>,
 ) {
     let dt = time.delta_secs();
+    let cfg = bible_cfg.get();
+    let orb_collision_radius = cfg
+        .map(|c| c.orb_collision_radius)
+        .unwrap_or(DEFAULT_BIBLE_ORB_RADIUS);
+    let hit_cooldown_secs = cfg
+        .map(|c| c.hit_cooldown_secs)
+        .unwrap_or(DEFAULT_BIBLE_HIT_COOLDOWN);
 
     for (orb, mut orb_weapon, mut transform) in orb_q.iter_mut() {
         // --- Advance orbital angle ---
@@ -237,10 +245,12 @@ pub fn orbit_bible(
         let radius = orb_weapon.orbit_radius;
 
         // --- Compute world position from player position + orbit offset ---
-        let player_world_pos = player_q
-            .get(orb.player)
-            .map(|tf| tf.translation.truncate())
-            .unwrap_or(Vec2::ZERO);
+        // Skip this orb if the owning player no longer exists (avoids snapping
+        // to origin and emitting stale damage events).
+        let Ok(player_tf) = player_q.get(orb.player) else {
+            continue;
+        };
+        let player_world_pos = player_tf.translation.truncate();
         let orb_world_pos =
             player_world_pos + Vec2::new(radius * angle.cos(), radius * angle.sin());
 
@@ -257,8 +267,7 @@ pub fn orbit_bible(
         });
 
         // --- Damage enemies within orb collision radius ---
-        let check_radius = DEFAULT_BIBLE_ORB_RADIUS;
-        for enemy_entity in spatial_grid.get_nearby(orb_world_pos, check_radius) {
+        for enemy_entity in spatial_grid.get_nearby(orb_world_pos, orb_collision_radius) {
             if orb_weapon.hit_cooldown.contains_key(&enemy_entity) {
                 continue;
             }
@@ -266,7 +275,7 @@ pub fn orbit_bible(
                 continue;
             };
             let dist = (enemy_tf.translation.truncate() - orb_world_pos).length();
-            if dist <= DEFAULT_BIBLE_ORB_RADIUS {
+            if dist <= orb_collision_radius {
                 damage_events.write(DamageEnemyEvent {
                     entity: enemy_entity,
                     damage: orb_weapon.damage,
@@ -274,7 +283,7 @@ pub fn orbit_bible(
                 });
                 orb_weapon
                     .hit_cooldown
-                    .insert(enemy_entity, DEFAULT_BIBLE_HIT_COOLDOWN);
+                    .insert(enemy_entity, hit_cooldown_secs);
             }
         }
     }

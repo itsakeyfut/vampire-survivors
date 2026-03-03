@@ -17,6 +17,10 @@ pub struct BibleConfig {
     pub orbit_speed_by_level: Vec<f32>,
     /// Number of orbiting bodies at each weapon level.
     pub count_by_level: Vec<u32>,
+    /// Collision radius of each orb in pixels (used for hit detection).
+    pub orb_collision_radius: f32,
+    /// Seconds before the same enemy can be hit again by the same orb.
+    pub hit_cooldown_secs: f32,
 }
 
 /// Resource holding the handle to the loaded [`BibleConfig`].
@@ -50,35 +54,34 @@ impl<'w> BibleParams<'w> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn bible_config_deserialization() {
-        let ron = r#"
+    fn full_ron() -> &'static str {
+        r#"
 BibleConfig(
     damage_by_level: [20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0, 80.0],
     orbit_radius_by_level: [80.0, 80.0, 80.0, 90.0, 90.0, 100.0, 100.0, 110.0],
     orbit_speed_by_level: [2.0, 2.0, 2.3, 2.3, 2.5, 2.5, 2.8, 3.0],
     count_by_level: [1, 1, 2, 2, 3, 3, 3, 3],
+    orb_collision_radius: 12.0,
+    hit_cooldown_secs: 1.5,
 )
-"#;
-        let cfg: BibleConfig = ron::de::from_str(ron).unwrap();
+"#
+    }
+
+    #[test]
+    fn bible_config_deserialization() {
+        let cfg: BibleConfig = ron::de::from_str(full_ron()).unwrap();
         assert_eq!(cfg.damage_by_level[0], 20.0);
         assert_eq!(cfg.damage_by_level[7], 80.0);
         assert_eq!(cfg.orbit_radius_by_level[0], 80.0);
         assert_eq!(cfg.orbit_radius_by_level[7], 110.0);
         assert_eq!(cfg.count_by_level, vec![1, 1, 2, 2, 3, 3, 3, 3]);
+        assert_eq!(cfg.orb_collision_radius, 12.0);
+        assert_eq!(cfg.hit_cooldown_secs, 1.5);
     }
 
     #[test]
     fn bible_config_count_increases_with_level() {
-        let ron = r#"
-BibleConfig(
-    damage_by_level: [20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0, 80.0],
-    orbit_radius_by_level: [80.0, 80.0, 80.0, 90.0, 90.0, 100.0, 100.0, 110.0],
-    orbit_speed_by_level: [2.0, 2.0, 2.3, 2.3, 2.5, 2.5, 2.8, 3.0],
-    count_by_level: [1, 1, 2, 2, 3, 3, 3, 3],
-)
-"#;
-        let cfg: BibleConfig = ron::de::from_str(ron).unwrap();
+        let cfg: BibleConfig = ron::de::from_str(full_ron()).unwrap();
         // Level 1/2 → 1 orb; Level 3/4 → 2 orbs; Level 5+ → 3 orbs
         assert_eq!(cfg.count_by_level[0], 1);
         assert_eq!(cfg.count_by_level[2], 2);
