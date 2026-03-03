@@ -37,6 +37,7 @@ use systems::projectile::{despawn_expired_projectiles, move_projectiles};
 use systems::projectile_collision::projectile_enemy_collision;
 use systems::spatial::update_spatial_grid;
 use systems::weapon_cooldown::tick_weapon_cooldowns;
+use systems::weapon_knife::fire_knife;
 use systems::weapon_magic_wand::fire_magic_wand;
 use systems::weapon_whip::{despawn_whip_effects, fire_whip};
 
@@ -111,6 +112,7 @@ impl Plugin for GameCorePlugin {
                     tick_weapon_cooldowns.after(player_movement),
                     update_spatial_grid.after(move_enemies),
                     fire_magic_wand.after(tick_weapon_cooldowns),
+                    fire_knife.after(tick_weapon_cooldowns),
                     fire_whip
                         .after(tick_weapon_cooldowns)
                         .after(update_spatial_grid),
@@ -121,6 +123,7 @@ impl Plugin for GameCorePlugin {
                     apply_damage_to_enemies
                         .after(fire_whip)
                         .after(fire_magic_wand)
+                        .after(fire_knife)
                         .after(projectile_enemy_collision),
                     despawn_whip_effects,
                     despawn_expired_projectiles,

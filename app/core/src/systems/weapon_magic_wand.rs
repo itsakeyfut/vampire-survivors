@@ -21,7 +21,7 @@ use bevy::prelude::*;
 
 use crate::{
     components::{Enemy, Player, PlayerStats},
-    config::WeaponParams,
+    config::weapon::magic_wand::MagicWandParams,
     events::WeaponFiredEvent,
     systems::projectile::spawn_projectile,
     types::WeaponType,
@@ -56,23 +56,21 @@ pub fn fire_magic_wand(
     mut commands: Commands,
     player_q: Query<(&Transform, &PlayerStats), With<Player>>,
     enemy_q: Query<&Transform, With<Enemy>>,
-    weapon_cfg: WeaponParams,
+    magic_wand_cfg: MagicWandParams,
 ) {
-    let cfg = weapon_cfg.get();
-    let speed = cfg
-        .map(|c| c.magic_wand_speed)
-        .unwrap_or(DEFAULT_MAGIC_WAND_SPEED);
+    let cfg = magic_wand_cfg.get();
+    let speed = cfg.map(|c| c.speed).unwrap_or(DEFAULT_MAGIC_WAND_SPEED);
     let base_damage = cfg
-        .map(|c| c.magic_wand_base_damage)
+        .map(|c| c.base_damage)
         .unwrap_or(DEFAULT_MAGIC_WAND_BASE_DAMAGE);
     let dmg_per_level = cfg
-        .map(|c| c.magic_wand_damage_per_level)
+        .map(|c| c.damage_per_level)
         .unwrap_or(DEFAULT_MAGIC_WAND_DAMAGE_PER_LEVEL);
     let lifetime = cfg
-        .map(|c| c.magic_wand_lifetime)
+        .map(|c| c.lifetime)
         .unwrap_or(DEFAULT_MAGIC_WAND_LIFETIME);
     let collider_r = cfg
-        .map(|c| c.magic_wand_collider_radius)
+        .map(|c| c.collider_radius)
         .unwrap_or(DEFAULT_MAGIC_WAND_COLLIDER_RADIUS);
 
     for event in fired_events.read() {

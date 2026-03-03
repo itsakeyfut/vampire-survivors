@@ -2,8 +2,8 @@ use bevy::prelude::*;
 
 use crate::{
     components::{
-        CircleCollider, GameSessionEntity, PassiveInventory, Player, PlayerStats, PlayerWhipSide,
-        WeaponInventory,
+        CircleCollider, GameSessionEntity, PassiveInventory, Player, PlayerFacingDirection,
+        PlayerStats, PlayerWhipSide, WeaponInventory,
     },
     config::PlayerParams,
     resources::SelectedCharacter,
@@ -101,6 +101,8 @@ pub fn spawn_player(
         PassiveInventory::default(),
         // Whip starts on the right side; flips each swing.
         PlayerWhipSide(WhipSide::Right),
+        // Knife reads this to know which direction to fire.
+        PlayerFacingDirection::default(),
     ));
 }
 
@@ -129,12 +131,14 @@ pub fn despawn_game_session(
 /// - Input from all four cardinal directions is summed then normalised so that
 ///   diagonal movement is not faster than axis-aligned movement.
 /// - Movement is frame-rate independent: distance = speed × Δt.
+/// - [`PlayerFacingDirection`] is updated whenever the player moves, so that
+///   directional weapons (e.g. Knife) always have a valid aim vector.
 pub fn player_movement(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&mut Transform, &PlayerStats), With<Player>>,
+    mut query: Query<(&mut Transform, &PlayerStats, &mut PlayerFacingDirection), With<Player>>,
 ) {
-    let Ok((mut transform, stats)) = query.single_mut() else {
+    let Ok((mut transform, stats, mut facing)) = query.single_mut() else {
         return;
     };
 
@@ -154,7 +158,9 @@ pub fn player_movement(
     }
 
     if direction != Vec2::ZERO {
-        let delta = direction.normalize() * stats.move_speed * time.delta_secs();
+        let normalized = direction.normalize();
+        facing.0 = normalized;
+        let delta = normalized * stats.move_speed * time.delta_secs();
         transform.translation += delta.extend(0.0);
     }
 }
@@ -279,6 +285,7 @@ mod tests {
         app.world_mut().spawn((
             Player,
             PlayerStats::default(),
+            PlayerFacingDirection::default(),
             Transform::from_xyz(0.0, 0.0, 0.0),
         ));
 
@@ -359,6 +366,7 @@ mod tests {
         app.world_mut().spawn((
             Player,
             PlayerStats::default(),
+            PlayerFacingDirection::default(),
             Transform::from_xyz(0.0, 0.0, 0.0),
         ));
 
