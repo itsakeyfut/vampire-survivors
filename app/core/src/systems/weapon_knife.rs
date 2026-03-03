@@ -85,7 +85,9 @@ pub fn fire_knife(
     knife_cfg: KnifeParams,
 ) {
     let cfg = knife_cfg.get();
-    let base_speed = cfg.map(|c| c.base_speed).unwrap_or(DEFAULT_KNIFE_BASE_SPEED);
+    let base_speed = cfg
+        .map(|c| c.base_speed)
+        .unwrap_or(DEFAULT_KNIFE_BASE_SPEED);
     let speed_per_two = cfg
         .map(|c| c.speed_per_two_levels)
         .unwrap_or(DEFAULT_KNIFE_SPEED_PER_TWO_LEVELS);

@@ -83,14 +83,18 @@ pub fn fire_whip(
 ) {
     let cfg = whip_cfg.get();
     let range_base = cfg.map(|c| c.range).unwrap_or(DEFAULT_WHIP_RANGE);
-    let base_damage = cfg.map(|c| c.base_damage).unwrap_or(DEFAULT_WHIP_BASE_DAMAGE);
+    let base_damage = cfg
+        .map(|c| c.base_damage)
+        .unwrap_or(DEFAULT_WHIP_BASE_DAMAGE);
     let dmg_per_level = cfg
         .map(|c| c.damage_per_level)
         .unwrap_or(DEFAULT_WHIP_DAMAGE_PER_LEVEL);
     let effect_dur = cfg
         .map(|c| c.effect_duration)
         .unwrap_or(DEFAULT_WHIP_EFFECT_DURATION);
-    let spread = cfg.map(|c| c.spread_factor).unwrap_or(DEFAULT_WHIP_SPREAD_FACTOR);
+    let spread = cfg
+        .map(|c| c.spread_factor)
+        .unwrap_or(DEFAULT_WHIP_SPREAD_FACTOR);
 
     for event in fired_events.read() {
         if event.weapon_type != WeaponType::Whip && event.weapon_type != WeaponType::BloodyTear {
