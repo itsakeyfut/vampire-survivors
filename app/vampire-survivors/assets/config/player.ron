@@ -1,26 +1,48 @@
 // Player configuration — all base stats and collider radii.
 // Loaded at startup and hot-reloaded when this file is saved during play.
+//
+// Parameters:
+// - base_hp:                    Starting maximum HP
+// - base_speed:                 Move speed in pixels per second
+// - base_damage_mult:           Damage multiplier (1.0 = no bonus)
+// - base_cooldown_reduction:    Cooldown reduction fraction (0.0–0.9)
+// - base_projectile_speed:      Projectile speed multiplier (1.0 = no bonus)
+// - base_duration_mult:         Weapon duration multiplier (1.0 = no bonus)
+// - base_area_mult:             Weapon area multiplier (1.0 = no bonus)
+// - base_luck:                  Luck stat (affects drop rates)
+// - base_hp_regen:              HP regeneration per second at game start
+// - pickup_radius:              Radius (px) within which XP gems are attracted
+// - invincibility_time:         Invincibility duration (s) after taking damage
+// - collider_radius:            Player body collider radius in pixels
+// - collider_projectile_small:  Small projectile collider radius in pixels
+// - collider_projectile_large:  Large projectile collider radius in pixels
+// - collider_xp_gem:            XP gem collider radius in pixels
+// - collider_gold_coin:         Gold coin collider radius in pixels
+// - collider_treasure:          Treasure chest collider radius in pixels
+// - gem_attraction_speed:       Speed (px/s) at which attracted gems move to player
+// - gem_absorption_radius:      Distance (px) at which a gem is absorbed by the player
+
 PlayerConfig(
     // Base player stats
-    base_hp: 100.0,
-    base_speed: 200.0,
-    base_damage_mult: 1.0,
-    base_cooldown_reduction: 0.0,
-    base_projectile_speed: 1.0,
-    base_duration_mult: 1.0,
-    base_area_mult: 1.0,
-    base_luck: 1.0,
-    base_hp_regen: 0.0,
-    pickup_radius: 80.0,
-    invincibility_time: 0.5,
+    base_hp:                   100.0,
+    base_speed:                200.0,
+    base_damage_mult:          1.0,
+    base_cooldown_reduction:   0.0,
+    base_projectile_speed:     1.0,
+    base_duration_mult:        1.0,
+    base_area_mult:            1.0,
+    base_luck:                 1.0,
+    base_hp_regen:             0.0,
+    pickup_radius:             80.0,
+    invincibility_time:        0.5,
     // Collider radii (pixels)
-    collider_radius: 12.0,
+    collider_radius:           12.0,
     collider_projectile_small: 5.0,
     collider_projectile_large: 10.0,
-    collider_xp_gem: 6.0,
-    collider_gold_coin: 6.0,
-    collider_treasure: 20.0,
+    collider_xp_gem:           6.0,
+    collider_gold_coin:        6.0,
+    collider_treasure:         20.0,
     // XP gem attraction
-    gem_attraction_speed: 200.0,
-    gem_absorption_radius: 8.0,
+    gem_attraction_speed:      200.0,
+    gem_absorption_radius:     8.0,
 )
