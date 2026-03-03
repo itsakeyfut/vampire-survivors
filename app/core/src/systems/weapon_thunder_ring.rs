@@ -56,8 +56,14 @@ const DEFAULT_THUNDER_RING_COUNT_BY_LEVEL: [u32; 8] = [1, 1, 2, 2, 3, 3, 3, 4];
 /// Fallback visual effect duration while RON config is still loading.
 const DEFAULT_THUNDER_RING_EFFECT_DURATION: f32 = 0.2;
 
-/// Visual size of each lightning flash sprite (pixels, square).
-const THUNDER_STRIKE_VISUAL_SIZE: f32 = 24.0;
+/// Fallback flash sprite side length (pixels) while RON config is still loading.
+const DEFAULT_THUNDER_RING_VISUAL_SIZE: f32 = 24.0;
+
+/// Fallback flash sprite RGBA color while RON config is still loading.
+const DEFAULT_THUNDER_RING_VISUAL_COLOR: (f32, f32, f32, f32) = (0.9, 1.0, 0.2, 0.85);
+
+/// Fallback strike sprite z-depth while RON config is still loading.
+const DEFAULT_THUNDER_RING_STRIKE_Z: f32 = 6.0;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -87,8 +93,9 @@ pub struct ThunderStrikeEffect {
 /// 3. Emits a [`DamageEnemyEvent`] for each target.
 /// 4. Spawns a [`ThunderStrikeEffect`] sprite at each target's position.
 ///
-/// A [`HashSet`] guard prevents duplicate processing when multiple events
-/// for the same player arrive in the same system run.
+/// Every event is processed independently — multiple events in the same frame
+/// (e.g. catch-up ticks from [`super::weapon_cooldown::tick_weapon_cooldowns`]
+/// after a frame hitch) each trigger a full activation.
 pub fn fire_thunder_ring(
     mut fired_events: MessageReader<WeaponFiredEvent>,
     player_q: Query<&PlayerStats, With<Player>>,
@@ -120,6 +127,15 @@ pub fn fire_thunder_ring(
         let effect_duration = cfg
             .map(|c| c.effect_duration)
             .unwrap_or(DEFAULT_THUNDER_RING_EFFECT_DURATION);
+        let visual_size = cfg
+            .map(|c| c.visual_size)
+            .unwrap_or(DEFAULT_THUNDER_RING_VISUAL_SIZE);
+        let visual_color = cfg
+            .map(|c| c.visual_color)
+            .unwrap_or(DEFAULT_THUNDER_RING_VISUAL_COLOR);
+        let strike_z = cfg
+            .map(|c| c.strike_z)
+            .unwrap_or(DEFAULT_THUNDER_RING_STRIKE_Z);
 
         let damage = base_damage * stats.damage_multiplier;
         let count = (base_count + stats.extra_projectiles) as usize;
@@ -145,16 +161,17 @@ pub fn fire_thunder_ring(
                 damage,
                 weapon_type: event.weapon_type,
             });
+            let (r, g, b, a) = visual_color;
             commands.spawn((
                 ThunderStrikeEffect {
                     remaining: effect_duration,
                 },
                 Sprite {
-                    color: Color::srgba(0.9, 1.0, 0.2, 0.85),
-                    custom_size: Some(Vec2::splat(THUNDER_STRIKE_VISUAL_SIZE)),
+                    color: Color::srgba(r, g, b, a),
+                    custom_size: Some(Vec2::splat(visual_size)),
                     ..default()
                 },
-                Transform::from_xyz(enemy_pos.x, enemy_pos.y, 6.0),
+                Transform::from_xyz(enemy_pos.x, enemy_pos.y, strike_z),
                 GameSessionEntity,
             ));
         }

@@ -15,6 +15,12 @@ pub struct ThunderRingConfig {
     pub count_by_level: Vec<u32>,
     /// Duration of the lightning flash visual in seconds.
     pub effect_duration: f32,
+    /// Side length of the square lightning flash sprite in pixels.
+    pub visual_size: f32,
+    /// RGBA color of the lightning flash sprite (values in `[0.0, 1.0]`).
+    pub visual_color: (f32, f32, f32, f32),
+    /// Z-depth of the strike sprite (higher = drawn on top).
+    pub strike_z: f32,
 }
 
 /// Resource holding the handle to the loaded [`ThunderRingConfig`].
@@ -54,6 +60,9 @@ ThunderRingConfig(
     damage_by_level: [40.0, 50.0, 60.0, 60.0, 70.0, 80.0, 90.0, 100.0],
     count_by_level: [1, 1, 2, 2, 3, 3, 3, 4],
     effect_duration: 0.2,
+    visual_size: 24.0,
+    visual_color: (0.9, 1.0, 0.2, 0.85),
+    strike_z: 6.0,
 )
 "#
     }
@@ -65,6 +74,9 @@ ThunderRingConfig(
         assert_eq!(cfg.damage_by_level[7], 100.0);
         assert_eq!(cfg.count_by_level, vec![1, 1, 2, 2, 3, 3, 3, 4]);
         assert_eq!(cfg.effect_duration, 0.2);
+        assert_eq!(cfg.visual_size, 24.0);
+        assert_eq!(cfg.visual_color, (0.9, 1.0, 0.2, 0.85));
+        assert_eq!(cfg.strike_z, 6.0);
     }
 
     #[test]
