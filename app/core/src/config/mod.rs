@@ -161,7 +161,9 @@ impl Plugin for GameConfigPlugin {
         // Transition Loading → Title once all required configs are ready.
         app.add_systems(Update, wait_for_configs.run_if(in_state(AppState::Loading)));
 
-        info!("✅ GameConfigPlugin initialized (player, enemy, game, weapon configs loading)");
+        info!(
+            "✅ GameConfigPlugin initialized (player, enemy, game, weapon, passive configs loading)"
+        );
     }
 }
 
