@@ -13,10 +13,11 @@ use events::{
     WeaponFiredEvent,
 };
 use resources::{
-    EnemySpawner, GameData, LevelUpChoices, MetaProgress, SelectedCharacter, SpatialGrid,
-    TreasureSpawner,
+    EnemySpawner, GameData, LevelUpChoices, MetaProgress, PendingUpgradeIndex, SelectedCharacter,
+    SpatialGrid, TreasureSpawner,
 };
 use states::AppState;
+use systems::apply_upgrade::apply_selected_upgrade;
 use systems::damage::apply_damage_to_enemies;
 use systems::difficulty::update_difficulty;
 use systems::enemy_ai::move_enemies;
@@ -58,6 +59,7 @@ impl Plugin for GameCorePlugin {
             .insert_resource(TreasureSpawner::default())
             .insert_resource(SpatialGrid::default())
             .insert_resource(LevelUpChoices::default())
+            .insert_resource(PendingUpgradeIndex::default())
             .insert_resource(SelectedCharacter::default())
             // ---------------------------------------------------------------
             // Persistent meta-progression (loaded from save/meta.json)
@@ -77,7 +79,12 @@ impl Plugin for GameCorePlugin {
             // ---------------------------------------------------------------
             // spawn_player skips silently when a Player entity already exists,
             // so re-entering Playing from LevelUp / Paused is safe.
-            .add_systems(OnEnter(AppState::Playing), spawn_player)
+            // apply_selected_upgrade reads PendingUpgradeIndex; it is a no-op
+            // when None (e.g. Title → Playing on game start).
+            .add_systems(
+                OnEnter(AppState::Playing),
+                (spawn_player, apply_selected_upgrade).chain(),
+            )
             // Clean up all gameplay entities when the run truly ends.
             // despawn_game_session removes every GameSessionEntity (player,
             // enemies, gems, projectiles, whip effects, …).

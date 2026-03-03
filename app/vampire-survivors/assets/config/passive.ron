@@ -1,0 +1,26 @@
+// Passive item per-level stat bonuses.
+// Edit while the game is running — changes take effect on the next upgrade pick.
+//
+// Parameters:
+// - spinach_damage_per_level:          Damage multiplier added per Spinach level (1.0 = base)
+// - wings_speed_per_level:             Move speed added per Wings level (pixels/second)
+// - hollow_heart_hp_per_level:         Max HP (and current HP) added per HollowHeart level
+// - clover_luck_per_level:             Luck multiplier added per Clover level
+// - empty_tome_cdr_per_level:          Cooldown reduction fraction added per EmptyTome level
+//                                      (total CDR is capped at 0.9 regardless of how many levels)
+// - bracer_proj_speed_per_level:       Projectile speed multiplier added per Bracer level
+// - spellbinder_duration_per_level:    Weapon duration multiplier added per Spellbinder level
+// - duplicator_projectiles_per_level:  Extra projectiles added per Duplicator level
+// - pummarola_regen_per_level:         HP regeneration (HP/s) added per Pummarola level
+
+PassiveConfig(
+    spinach_damage_per_level:         0.10,
+    wings_speed_per_level:            20.0,
+    hollow_heart_hp_per_level:        20.0,
+    clover_luck_per_level:            0.10,
+    empty_tome_cdr_per_level:         0.08,
+    bracer_proj_speed_per_level:      0.10,
+    spellbinder_duration_per_level:   0.10,
+    duplicator_projectiles_per_level: 1,
+    pummarola_regen_per_level:        0.5,
+)
