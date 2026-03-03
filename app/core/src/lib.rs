@@ -37,7 +37,7 @@ use systems::projectile::{despawn_expired_projectiles, move_projectiles};
 use systems::projectile_collision::projectile_enemy_collision;
 use systems::spatial::update_spatial_grid;
 use systems::weapon_cooldown::tick_weapon_cooldowns;
-use systems::weapon_garlic::fire_garlic;
+use systems::weapon_garlic::{fire_garlic, spawn_garlic_visual, update_garlic_visual};
 use systems::weapon_knife::fire_knife;
 use systems::weapon_magic_wand::fire_magic_wand;
 use systems::weapon_whip::{despawn_whip_effects, fire_whip};
@@ -130,6 +130,8 @@ impl Plugin for GameCorePlugin {
                         .after(fire_magic_wand)
                         .after(fire_knife)
                         .after(projectile_enemy_collision),
+                    spawn_garlic_visual,
+                    update_garlic_visual,
                     despawn_whip_effects,
                     despawn_expired_projectiles,
                     tick_invincibility.before(enemy_player_collision),
