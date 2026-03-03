@@ -55,11 +55,11 @@ use crate::{
 // ---------------------------------------------------------------------------
 
 /// Damage per aura tick at each weapon level (index 0 = level 1).
-pub(crate) const DEFAULT_GARLIC_DAMAGE_BY_LEVEL: [f32; 8] =
+const DEFAULT_GARLIC_DAMAGE_BY_LEVEL: [f32; 8] =
     [5.0, 5.0, 8.0, 8.0, 10.0, 12.0, 15.0, 20.0];
 
 /// Aura radius in pixels at each weapon level (index 0 = level 1).
-pub(crate) const DEFAULT_GARLIC_RADIUS_BY_LEVEL: [f32; 8] =
+const DEFAULT_GARLIC_RADIUS_BY_LEVEL: [f32; 8] =
     [80.0, 90.0, 90.0, 100.0, 110.0, 120.0, 130.0, 150.0];
 
 // ---------------------------------------------------------------------------
@@ -176,7 +176,7 @@ pub fn fire_garlic(
                 continue;
             };
             let dist = (enemy_tf.translation.truncate() - player_pos).length();
-            if dist < radius {
+            if dist <= radius {
                 damage_events.write(DamageEnemyEvent {
                     entity: enemy_entity,
                     damage,
