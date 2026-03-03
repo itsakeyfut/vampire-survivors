@@ -26,4 +26,5 @@ pub mod weapon_cooldown;
 pub mod weapon_garlic;
 pub mod weapon_knife;
 pub mod weapon_magic_wand;
+pub mod weapon_thunder_ring;
 pub mod weapon_whip;

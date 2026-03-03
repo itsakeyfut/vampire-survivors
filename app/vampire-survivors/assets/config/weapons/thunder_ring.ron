@@ -1,0 +1,15 @@
+// Thunder Ring / LightningRing — tunable parameters.
+// Hot-reload enabled: edit while the game is running to balance in real time.
+//
+// Parameters:
+// - damage_by_level: Damage per lightning strike, one entry per level (Lv1..Lv8)
+// - count_by_level:  Number of simultaneous strikes per activation,
+//                    one entry per level (Lv1..Lv8)
+//                    Lv1-2: 1 strike, Lv3-5: 2 strikes, Lv6-7: 3 strikes, Lv8: 4 strikes
+// - effect_duration: Duration of the lightning flash visual in seconds
+
+ThunderRingConfig(
+    damage_by_level: [40.0, 50.0, 60.0, 60.0, 70.0, 80.0, 90.0, 100.0],
+    count_by_level:  [1,    1,    2,    2,    3,    3,    3,    4],
+    effect_duration: 0.2,
+)
