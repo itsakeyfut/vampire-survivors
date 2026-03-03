@@ -1,0 +1,20 @@
+// Cross boomerang — tunable parameters.
+// Hot-reload enabled: edit while the game is running to balance in real time.
+//
+// Parameters:
+// - damage_by_level:    Damage per hit, one entry per level (Lv1..Lv8)
+// - speed_by_level:     Projectile speed in px/s, one entry per level (Lv1..Lv8)
+// - max_range_by_level: Distance before reversal in px, one entry per level (Lv1..Lv8)
+// - count_by_level:     Number of projectiles per activation, one entry per level (Lv1..Lv8)
+//                       Lv1-4: 1 projectile, Lv5-8: 2 projectiles
+// - spread_angle_deg:   Angular gap between adjacent projectiles in a fan (degrees)
+// - collider_radius:    Circle collider radius for hit detection (pixels)
+
+CrossConfig(
+    damage_by_level:    [50.0,  60.0,  70.0,  80.0,  90.0,  110.0, 130.0, 160.0],
+    speed_by_level:     [300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 430.0, 460.0],
+    max_range_by_level: [150.0, 160.0, 175.0, 190.0, 205.0, 220.0, 235.0, 250.0],
+    count_by_level:     [1,     1,     1,     1,     2,     2,     2,     2],
+    spread_angle_deg:   30.0,
+    collider_radius:    8.0,
+)

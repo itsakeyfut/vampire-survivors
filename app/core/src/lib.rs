@@ -38,6 +38,7 @@ use systems::projectile_collision::projectile_enemy_collision;
 use systems::spatial::update_spatial_grid;
 use systems::weapon_bible::{fire_bible, orbit_bible, spawn_bible_visual};
 use systems::weapon_cooldown::tick_weapon_cooldowns;
+use systems::weapon_cross::{fire_cross, update_cross};
 use systems::weapon_garlic::{fire_garlic, spawn_garlic_visual, update_garlic_visual};
 use systems::weapon_knife::fire_knife;
 use systems::weapon_magic_wand::fire_magic_wand;
@@ -122,10 +123,12 @@ impl Plugin for GameCorePlugin {
                         .after(tick_weapon_cooldowns)
                         .after(update_spatial_grid),
                     fire_thunder_ring.after(tick_weapon_cooldowns),
+                    fire_cross.after(tick_weapon_cooldowns),
                     fire_whip
                         .after(tick_weapon_cooldowns)
                         .after(update_spatial_grid),
                     move_projectiles,
+                    update_cross.after(move_projectiles),
                     projectile_enemy_collision
                         .after(update_spatial_grid)
                         .after(move_projectiles),
