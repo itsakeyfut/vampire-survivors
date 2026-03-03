@@ -31,8 +31,6 @@
 //! world position.  [`despawn_thunder_effects`] removes it after
 //! `effect_duration` seconds.
 
-use std::collections::HashSet;
-
 use rand::RngExt;
 
 use bevy::prelude::*;
@@ -100,14 +98,10 @@ pub fn fire_thunder_ring(
     mut commands: Commands,
 ) {
     let cfg = thunder_cfg.get();
-    let mut processed_players: HashSet<Entity> = HashSet::new();
 
     for event in fired_events.read() {
         let is_lightning_ring = event.weapon_type == WeaponType::LightningRing;
         if event.weapon_type != WeaponType::ThunderRing && !is_lightning_ring {
-            continue;
-        }
-        if !processed_players.insert(event.player) {
             continue;
         }
 
@@ -188,6 +182,7 @@ pub fn despawn_thunder_effects(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use std::time::Duration;
 
     use bevy::ecs::system::RunSystemOnce as _;
@@ -460,9 +455,13 @@ mod tests {
         );
     }
 
-    /// Same-frame duplicate events for the same player produce only one activation.
+    /// Two same-frame events produce two independent activations.
+    ///
+    /// `tick_weapon_cooldowns` intentionally emits multiple events in one
+    /// frame to catch up on missed ticks (e.g. after a frame hitch).  Each
+    /// event must fire independently so no activations are silently dropped.
     #[test]
-    fn thunder_ring_not_duplicated_on_same_frame_events() {
+    fn thunder_ring_fires_all_same_frame_events() {
         let mut app = build_app();
         let player = spawn_player(&mut app);
         spawn_enemy(&mut app, Vec2::new(100.0, 0.0));
@@ -484,8 +483,8 @@ mod tests {
 
         assert_eq!(
             damage_events(&app).len(),
-            1,
-            "two same-frame events must produce only one activation"
+            2,
+            "two same-frame events must each produce an independent activation"
         );
     }
 
