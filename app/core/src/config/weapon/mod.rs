@@ -8,11 +8,14 @@
 //! | `config/weapons/whip.ron`           | [`WhipConfig`]      | Whip / BloodyTear          |
 //! | `config/weapons/magic_wand.ron`     | [`MagicWandConfig`] | Magic Wand / HolyWand      |
 //! | `config/weapons/knife.ron`          | [`KnifeConfig`]     | Knife / ThousandEdge       |
+//! | `config/weapons/garlic.ron`         | [`GarlicConfig`]    | Garlic / SoulEater         |
 
+pub mod garlic;
 pub mod knife;
 pub mod magic_wand;
 pub mod whip;
 
+pub use garlic::{GarlicConfig, GarlicConfigHandle, GarlicParams};
 pub use knife::{KnifeConfig, KnifeConfigHandle, KnifeParams};
 pub use magic_wand::{MagicWandConfig, MagicWandConfigHandle, MagicWandParams};
 pub use whip::{WhipConfig, WhipConfigHandle, WhipParams};

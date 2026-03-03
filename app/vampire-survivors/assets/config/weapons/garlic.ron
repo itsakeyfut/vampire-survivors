@@ -1,0 +1,14 @@
+// Garlic / SoulEater — tunable parameters.
+// Hot-reload enabled: edit while the game is running to balance in real time.
+//
+// Parameters:
+// - damage_by_level: Damage per aura tick, one entry per level (Lv1..Lv8)
+// - radius_by_level: Aura radius in pixels, one entry per level (Lv1..Lv8)
+//
+// Note: tick interval is controlled by the weapon cooldown table in
+//       types/weapon.rs (base_cooldown_secs), not a parameter here.
+
+GarlicConfig(
+    damage_by_level: [5.0, 5.0, 8.0, 8.0, 10.0, 12.0, 15.0, 20.0],
+    radius_by_level: [80.0, 90.0, 90.0, 100.0, 110.0, 120.0, 130.0, 150.0],
+)
