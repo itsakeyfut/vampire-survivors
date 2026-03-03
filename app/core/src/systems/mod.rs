@@ -21,6 +21,7 @@ pub mod player_collision;
 pub mod projectile;
 pub mod projectile_collision;
 pub mod spatial;
+pub mod weapon_bible;
 pub mod weapon_cooldown;
 pub mod weapon_garlic;
 pub mod weapon_knife;

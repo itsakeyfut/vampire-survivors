@@ -88,6 +88,7 @@ ron_asset_loader!(WhipConfigLoader, WhipConfig);
 ron_asset_loader!(MagicWandConfigLoader, MagicWandConfig);
 ron_asset_loader!(KnifeConfigLoader, KnifeConfig);
 ron_asset_loader!(GarlicConfigLoader, GarlicConfig);
+ron_asset_loader!(BibleConfigLoader, BibleConfig);
 
 // ---------------------------------------------------------------------------
 // AllConfigs — private SystemParam for wait_for_configs
@@ -113,6 +114,8 @@ struct AllConfigs<'w> {
     knife_assets: Res<'w, Assets<KnifeConfig>>,
     garlic_handle: Res<'w, GarlicConfigHandle>,
     garlic_assets: Res<'w, Assets<GarlicConfig>>,
+    bible_handle: Res<'w, BibleConfigHandle>,
+    bible_assets: Res<'w, Assets<BibleConfig>>,
 }
 
 // ---------------------------------------------------------------------------
@@ -151,7 +154,9 @@ impl Plugin for GameConfigPlugin {
             .init_asset::<KnifeConfig>()
             .register_asset_loader(KnifeConfigLoader)
             .init_asset::<GarlicConfig>()
-            .register_asset_loader(GarlicConfigLoader);
+            .register_asset_loader(GarlicConfigLoader)
+            .init_asset::<BibleConfig>()
+            .register_asset_loader(BibleConfigLoader);
 
         // Load all config files and insert handles as resources.
         let asset_server = app.world_mut().resource::<AssetServer>();
@@ -164,6 +169,7 @@ impl Plugin for GameConfigPlugin {
             asset_server.load("config/weapons/magic_wand.ron");
         let knife_handle: Handle<KnifeConfig> = asset_server.load("config/weapons/knife.ron");
         let garlic_handle: Handle<GarlicConfig> = asset_server.load("config/weapons/garlic.ron");
+        let bible_handle: Handle<BibleConfig> = asset_server.load("config/weapons/bible.ron");
 
         app.insert_resource(PlayerConfigHandle(player_handle))
             .insert_resource(EnemyConfigHandle(enemy_handle))
@@ -172,7 +178,8 @@ impl Plugin for GameConfigPlugin {
             .insert_resource(WhipConfigHandle(whip_handle))
             .insert_resource(MagicWandConfigHandle(magic_wand_handle))
             .insert_resource(KnifeConfigHandle(knife_handle))
-            .insert_resource(GarlicConfigHandle(garlic_handle));
+            .insert_resource(GarlicConfigHandle(garlic_handle))
+            .insert_resource(BibleConfigHandle(bible_handle));
 
         // Hot-reload systems run in all states so live-editing always works.
         app.add_systems(
@@ -188,7 +195,7 @@ impl Plugin for GameConfigPlugin {
         app.add_systems(Update, wait_for_configs.run_if(in_state(AppState::Loading)));
 
         info!(
-            "✅ GameConfigPlugin initialized (player, enemy, game, passive, whip, magic_wand, knife, garlic configs loading)"
+            "✅ GameConfigPlugin initialized (player, enemy, game, passive, whip, magic_wand, knife, garlic, bible configs loading)"
         );
     }
 }
@@ -218,7 +225,8 @@ fn wait_for_configs(configs: AllConfigs, mut next_state: ResMut<NextState<AppSta
         && configs
             .garlic_assets
             .get(&configs.garlic_handle.0)
-            .is_some();
+            .is_some()
+        && configs.bible_assets.get(&configs.bible_handle.0).is_some();
 
     if all_ready {
         info!("✅ All configs loaded, transitioning to Title");

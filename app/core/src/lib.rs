@@ -36,6 +36,7 @@ use systems::player_collision::{
 use systems::projectile::{despawn_expired_projectiles, move_projectiles};
 use systems::projectile_collision::projectile_enemy_collision;
 use systems::spatial::update_spatial_grid;
+use systems::weapon_bible::{fire_bible, orbit_bible, spawn_bible_visual};
 use systems::weapon_cooldown::tick_weapon_cooldowns;
 use systems::weapon_garlic::{fire_garlic, spawn_garlic_visual, update_garlic_visual};
 use systems::weapon_knife::fire_knife;
@@ -114,6 +115,8 @@ impl Plugin for GameCorePlugin {
                     update_spatial_grid.after(move_enemies),
                     fire_magic_wand.after(tick_weapon_cooldowns),
                     fire_knife.after(tick_weapon_cooldowns),
+                    fire_bible.after(tick_weapon_cooldowns),
+                    orbit_bible.after(fire_bible).after(update_spatial_grid),
                     fire_garlic
                         .after(tick_weapon_cooldowns)
                         .after(update_spatial_grid),
@@ -129,11 +132,8 @@ impl Plugin for GameCorePlugin {
                         .after(fire_garlic)
                         .after(fire_magic_wand)
                         .after(fire_knife)
+                        .after(orbit_bible)
                         .after(projectile_enemy_collision),
-                    spawn_garlic_visual,
-                    update_garlic_visual,
-                    despawn_whip_effects,
-                    despawn_expired_projectiles,
                     tick_invincibility.before(enemy_player_collision),
                     enemy_player_collision.after(update_spatial_grid),
                     apply_damage_to_player.after(enemy_player_collision),
@@ -158,6 +158,19 @@ impl Plugin for GameCorePlugin {
                         .after(move_attracted_gems)
                         .before(check_player_death),
                     check_player_death.after(apply_damage_to_player),
+                )
+                    .run_if(in_state(AppState::Playing)),
+            )
+            // Playing state — per-frame gameplay systems (part 3: visuals and
+            // entity cleanup; independent of damage/XP ordering)
+            .add_systems(
+                Update,
+                (
+                    spawn_bible_visual,
+                    spawn_garlic_visual,
+                    update_garlic_visual,
+                    despawn_whip_effects,
+                    despawn_expired_projectiles,
                 )
                     .run_if(in_state(AppState::Playing)),
             );
