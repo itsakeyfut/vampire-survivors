@@ -3,13 +3,18 @@
 //! Each logical group of UI settings lives in its own submodule so it can be
 //! tuned independently:
 //!
-//! | File                                    | Config type                | Controls                           |
-//! |-----------------------------------------|----------------------------|------------------------------------|
-//! | `config/ui/styles.ron`                  | [`UiStyleConfig`]          | Shared background and title colors |
-//! | `config/ui/screen/level_up.ron`         | [`LevelUpScreenConfig`]    | Level-up overlay and heading color |
-//! | `config/ui/hud/screen_heading.ron`      | [`ScreenHeadingHudConfig`] | Heading font size and margin       |
-//! | `config/ui/hud/menu_button.ron`         | [`MenuButtonHudConfig`]    | Button dimensions, colors, font    |
-//! | `config/ui/hud/upgrade_card.ron`        | [`UpgradeCardHudConfig`]   | Card layout, colors, typography    |
+//! | File                                              | Config type                  | Controls                           |
+//! |---------------------------------------------------|------------------------------|------------------------------------|
+//! | `config/ui/styles.ron`                            | [`UiStyleConfig`]            | Shared background and title colors |
+//! | `config/ui/screen/level_up.ron`                   | [`LevelUpScreenConfig`]      | Level-up overlay and heading color |
+//! | `config/ui/hud/screen_heading.ron`                | [`ScreenHeadingHudConfig`]   | Heading font size and margin       |
+//! | `config/ui/hud/menu_button.ron`                   | [`MenuButtonHudConfig`]      | Button dimensions, colors, font    |
+//! | `config/ui/hud/upgrade_card.ron`                  | [`UpgradeCardHudConfig`]     | Card layout, colors, typography    |
+//! | `config/ui/hud/gameplay/hp_bar.ron`               | [`HpBarHudConfig`]           | HP bar dimensions, radius, colors  |
+//! | `config/ui/hud/gameplay/xp_bar.ron`               | [`XpBarHudConfig`]           | XP bar height and colors           |
+//! | `config/ui/hud/gameplay/timer.ron`                | [`TimerHudConfig`]           | Timer font size and color          |
+//! | `config/ui/hud/gameplay/level.ron`                | [`LevelHudConfig`]           | Level label font size and color    |
+//! | `config/ui/hud/gameplay/layout.ron`               | [`GameplayHudLayoutConfig`]  | Widget anchor positions            |
 //!
 //! All files are watched by Bevy's asset server, so edits take effect while
 //! the game is running (hot-reload).
@@ -19,9 +24,12 @@ pub mod level_up;
 pub mod styles;
 
 pub use hud::{
-    MenuButtonHudConfig, MenuButtonHudConfigHandle, MenuButtonHudParams, ScreenHeadingHudConfig,
-    ScreenHeadingHudConfigHandle, ScreenHeadingHudParams, UpgradeCardHudConfig,
-    UpgradeCardHudConfigHandle, UpgradeCardHudParams,
+    GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle, GameplayHudLayoutParams,
+    HpBarHudConfig, HpBarHudConfigHandle, HpBarHudParams, LevelHudConfig, LevelHudConfigHandle,
+    LevelHudParams, MenuButtonHudConfig, MenuButtonHudConfigHandle, MenuButtonHudParams,
+    ScreenHeadingHudConfig, ScreenHeadingHudConfigHandle, ScreenHeadingHudParams, TimerHudConfig,
+    TimerHudConfigHandle, TimerHudParams, UpgradeCardHudConfig, UpgradeCardHudConfigHandle,
+    UpgradeCardHudParams, XpBarHudConfig, XpBarHudConfigHandle, XpBarHudParams,
 };
 pub use level_up::{
     LevelUpScreenConfig, LevelUpScreenConfigHandle, LevelUpScreenParams, hot_reload_level_up_screen,
@@ -81,6 +89,13 @@ ron_asset_loader!(ScreenHeadingHudConfigLoader, ScreenHeadingHudConfig);
 ron_asset_loader!(MenuButtonHudConfigLoader, MenuButtonHudConfig);
 ron_asset_loader!(UpgradeCardHudConfigLoader, UpgradeCardHudConfig);
 
+// Gameplay HUD config loaders
+ron_asset_loader!(HpBarHudConfigLoader, HpBarHudConfig);
+ron_asset_loader!(XpBarHudConfigLoader, XpBarHudConfig);
+ron_asset_loader!(TimerHudConfigLoader, TimerHudConfig);
+ron_asset_loader!(LevelHudConfigLoader, LevelHudConfig);
+ron_asset_loader!(GameplayHudLayoutConfigLoader, GameplayHudLayoutConfig);
+
 // ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
@@ -107,6 +122,18 @@ impl Plugin for UiConfigPlugin {
             .init_asset::<UpgradeCardHudConfig>()
             .register_asset_loader(UpgradeCardHudConfigLoader);
 
+        // Gameplay HUD configs
+        app.init_asset::<HpBarHudConfig>()
+            .register_asset_loader(HpBarHudConfigLoader)
+            .init_asset::<XpBarHudConfig>()
+            .register_asset_loader(XpBarHudConfigLoader)
+            .init_asset::<TimerHudConfig>()
+            .register_asset_loader(TimerHudConfigLoader)
+            .init_asset::<LevelHudConfig>()
+            .register_asset_loader(LevelHudConfigLoader)
+            .init_asset::<GameplayHudLayoutConfig>()
+            .register_asset_loader(GameplayHudLayoutConfigLoader);
+
         let asset_server = app.world_mut().resource::<AssetServer>();
 
         // Load screen configs
@@ -122,11 +149,28 @@ impl Plugin for UiConfigPlugin {
         let upgrade_card_handle: Handle<UpgradeCardHudConfig> =
             asset_server.load("config/ui/hud/upgrade_card.ron");
 
+        // Load gameplay HUD configs
+        let hp_bar_handle: Handle<HpBarHudConfig> =
+            asset_server.load("config/ui/hud/gameplay/hp_bar.ron");
+        let xp_bar_handle: Handle<XpBarHudConfig> =
+            asset_server.load("config/ui/hud/gameplay/xp_bar.ron");
+        let timer_handle: Handle<TimerHudConfig> =
+            asset_server.load("config/ui/hud/gameplay/timer.ron");
+        let level_handle: Handle<LevelHudConfig> =
+            asset_server.load("config/ui/hud/gameplay/level.ron");
+        let layout_handle: Handle<GameplayHudLayoutConfig> =
+            asset_server.load("config/ui/hud/gameplay/layout.ron");
+
         app.insert_resource(UiStyleConfigHandle(style_handle))
             .insert_resource(LevelUpScreenConfigHandle(level_up_handle))
             .insert_resource(ScreenHeadingHudConfigHandle(screen_heading_handle))
             .insert_resource(MenuButtonHudConfigHandle(menu_button_handle))
-            .insert_resource(UpgradeCardHudConfigHandle(upgrade_card_handle));
+            .insert_resource(UpgradeCardHudConfigHandle(upgrade_card_handle))
+            .insert_resource(HpBarHudConfigHandle(hp_bar_handle))
+            .insert_resource(XpBarHudConfigHandle(xp_bar_handle))
+            .insert_resource(TimerHudConfigHandle(timer_handle))
+            .insert_resource(LevelHudConfigHandle(level_handle))
+            .insert_resource(GameplayHudLayoutConfigHandle(layout_handle));
 
         app.add_systems(Update, hot_reload_ui_style)
             .add_systems(Update, hot_reload_level_up_screen)
@@ -138,7 +182,12 @@ impl Plugin for UiConfigPlugin {
             .add_systems(
                 Update,
                 crate::hud::upgrade_card::hot_reload_upgrade_card_hud,
-            );
+            )
+            .add_systems(Update, crate::hud::gameplay::hp_bar::hot_reload_hp_bar_hud)
+            .add_systems(Update, crate::hud::gameplay::xp_bar::hot_reload_xp_bar_hud)
+            .add_systems(Update, crate::hud::gameplay::timer::hot_reload_timer_hud)
+            .add_systems(Update, crate::hud::gameplay::level::hot_reload_level_hud)
+            .add_systems(Update, crate::hud::gameplay::hot_reload_gameplay_layout);
 
         info!("✅ UiConfigPlugin initialized");
     }

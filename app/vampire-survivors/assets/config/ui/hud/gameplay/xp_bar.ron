@@ -1,0 +1,15 @@
+// XP bar HUD configuration
+// Controls the appearance of the XP progress bar pinned to the bottom of the screen.
+//
+// Hot-reload enabled: Edit this file while the game is running to see changes instantly!
+//
+// Parameters:
+// - bar_height:   Height of the bar in pixels
+// - fill_color:   Color of the filled (earned XP) portion (RGB, 0.0-1.0)
+// - track_color:  Color of the empty (remaining XP) portion (RGB, 0.0-1.0)
+
+XpBarHudConfig(
+    bar_height:  10.0,
+    fill_color:  (r: 0.25, g: 0.65, b: 1.00),
+    track_color: (r: 0.05, g: 0.08, b: 0.20),
+)

@@ -1,0 +1,13 @@
+// Level label HUD configuration
+// Controls the appearance of the current-level indicator displayed in the top-center.
+//
+// Hot-reload enabled: Edit this file while the game is running to see changes instantly!
+//
+// Parameters:
+// - font_size:   Font size of the level label in points
+// - text_color:  Level label text color (RGB, 0.0-1.0)
+
+LevelHudConfig(
+    font_size:  22.0,
+    text_color: (r: 0.95, g: 0.90, b: 0.85),
+)

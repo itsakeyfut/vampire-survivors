@@ -1,0 +1,11 @@
+// Gameplay HUD layout configuration
+// Controls the positioning of each widget anchor within the gameplay overlay.
+//
+// Hot-reload enabled: Edit this file while the game is running to see changes instantly!
+//
+// Parameters:
+// - edge_margin:  Distance in pixels from each screen edge to the nearest widget anchor
+
+GameplayHudLayoutConfig(
+    edge_margin: 12.0,
+)

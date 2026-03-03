@@ -56,6 +56,22 @@ impl Plugin for GameUIPlugin {
                 hud::upgrade_card::handle_card_interaction
                     .after(components::handle_button_interaction),
             )
+            // Gameplay HUD — spawned on enter, despawned on exit automatically.
+            .add_systems(
+                OnEnter(AppState::Playing),
+                hud::gameplay::setup_gameplay_hud,
+            )
+            // Gameplay HUD update systems — run only during active play.
+            .add_systems(
+                Update,
+                (
+                    hud::gameplay::hp_bar::update_hp_bar,
+                    hud::gameplay::xp_bar::update_xp_bar,
+                    hud::gameplay::timer::update_timer,
+                    hud::gameplay::level::update_level_text,
+                )
+                    .run_if(in_state(AppState::Playing)),
+            )
             // Smooth player-follow only runs during active gameplay.
             .add_systems(
                 Update,
