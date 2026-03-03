@@ -1,0 +1,13 @@
+// Timer HUD configuration
+// Controls the appearance of the elapsed-time counter displayed in the top-right corner.
+//
+// Hot-reload enabled: Edit this file while the game is running to see changes instantly!
+//
+// Parameters:
+// - font_size:   Font size of the timer text in points
+// - text_color:  Timer text color (RGB, 0.0-1.0)
+
+TimerHudConfig(
+    font_size:  28.0,
+    text_color: (r: 0.95, g: 0.90, b: 0.85),
+)

@@ -1,0 +1,25 @@
+// HP bar HUD configuration
+// Controls the appearance of the player HP bar displayed in the top-left corner.
+//
+// Hot-reload enabled: Edit this file while the game is running to see changes instantly!
+//
+// Parameters:
+// - bar_width:        Width of the track in pixels
+// - bar_height:       Height of the track in pixels
+// - bar_radius:       Corner radius of the track and fill in pixels
+// - label_font_size:  Font size of the "HP" label in points
+// - label_gap:        Vertical gap between the label and the track in pixels
+// - fill_color:       Color of the filled (current HP) portion (RGB, 0.0-1.0)
+// - track_color:      Color of the empty (missing HP) portion (RGB, 0.0-1.0)
+// - text_color:       Color of the "HP" label text (RGB, 0.0-1.0)
+
+HpBarHudConfig(
+    bar_width:        200.0,
+    bar_height:        16.0,
+    bar_radius:         4.0,
+    label_font_size:   14.0,
+    label_gap:          4.0,
+    fill_color:  (r: 0.85, g: 0.20, b: 0.20),
+    track_color: (r: 0.20, g: 0.05, b: 0.05),
+    text_color:  (r: 0.95, g: 0.90, b: 0.85),
+)
