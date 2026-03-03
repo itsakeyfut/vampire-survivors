@@ -21,12 +21,13 @@
 //!
 //! When `count > 1`, projectiles are spread in a symmetric fan centred on the
 //! facing direction.  The angular gap between adjacent knives is controlled by
-//! `knife_spread_angle_deg` in `assets/config/weapons.ron`.
+//! `spread_angle_deg` in `assets/config/weapons/knife.ron`.
 //!
-//! ## Damage formula
+//! ## Scaling formulas
 //!
 //! ```text
-//! damage = (base + floor((level − 1) / 2) × per_two_levels) × player.damage_multiplier
+//! speed  = (base + floor(level / 2) × speed_per_two_levels) × player.projectile_speed_mult
+//! damage = (base + floor((level − 1) / 2) × damage_per_two_levels) × player.damage_multiplier
 //! ```
 
 use bevy::prelude::*;
@@ -58,8 +59,8 @@ const DEFAULT_KNIFE_COLLIDER_RADIUS: f32 = 6.0;
 /// Angular gap between adjacent knives in a fan (degrees).
 const DEFAULT_KNIFE_SPREAD_ANGLE_DEG: f32 = 15.0;
 
-/// Number of projectiles spawned per activation by level (index 0 = level 1).
-const KNIFE_COUNT_BY_LEVEL: [u32; 8] = [1, 1, 2, 2, 3, 3, 4, 5];
+/// Fallback projectile count per level while RON config is still loading.
+const DEFAULT_KNIFE_COUNT_BY_LEVEL: [u32; 8] = [1, 1, 2, 2, 3, 3, 4, 5];
 
 /// Piercing value used for knife projectiles.
 /// `u32::MAX` ensures knives pass through every enemy for the duration of their
@@ -116,12 +117,18 @@ pub fn fire_knife(
         let level = event.level.clamp(1, 8) as usize;
 
         // --- Compute per-level stats ---
-        let step = (level - 1) / 2; // integer steps: 0 at lv1-2, 1 at lv3-4, …
-        let speed = (base_speed + step as f32 * speed_per_two) * stats.projectile_speed_mult;
-        let damage = (base_damage + step as f32 * dmg_per_two) * stats.damage_multiplier;
+        // Speed steps at every level: 0 at Lv1, 1 at Lv2-3, 2 at Lv4-5, …
+        let speed_step = level / 2;
+        // Damage steps every two levels: 0 at Lv1-2, 1 at Lv3-4, …
+        let dmg_step = (level - 1) / 2;
+        let speed = (base_speed + speed_step as f32 * speed_per_two) * stats.projectile_speed_mult;
+        let damage = (base_damage + dmg_step as f32 * dmg_per_two) * stats.damage_multiplier;
 
         // Base count from the level table, plus player's extra_projectiles bonus.
-        let mut count = KNIFE_COUNT_BY_LEVEL[level - 1] + stats.extra_projectiles;
+        let mut count = cfg
+            .and_then(|c| c.count_by_level.get(level - 1).copied())
+            .unwrap_or(DEFAULT_KNIFE_COUNT_BY_LEVEL[level - 1])
+            + stats.extra_projectiles;
         // ThousandEdge fires twice as many knives as the base Knife at the same level.
         if is_thousand_edge {
             count *= 2;

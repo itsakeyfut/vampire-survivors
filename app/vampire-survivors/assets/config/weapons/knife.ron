@@ -3,12 +3,13 @@
 //
 // Parameters:
 // - base_speed:            Projectile speed at level 1 (pixels per second)
-// - speed_per_two_levels:  Speed increase every two weapon levels
+// - speed_per_two_levels:  Speed increase per floor(level/2) step
 // - base_damage:           Damage dealt at level 1
-// - damage_per_two_levels: Damage increase every two weapon levels
+// - damage_per_two_levels: Damage increase per floor((level-1)/2) step
 // - lifetime:              Projectile lifetime in seconds
 // - collider_radius:       Projectile collider radius in pixels
 // - spread_angle_deg:      Angle between adjacent knives in a fan (degrees)
+// - count_by_level:        Projectiles fired per activation, one entry per level (Lv1..Lv8)
 
 KnifeConfig(
     base_speed:            600.0,
@@ -18,4 +19,5 @@ KnifeConfig(
     lifetime:              5.0,
     collider_radius:       6.0,
     spread_angle_deg:      15.0,
+    count_by_level:        [1, 1, 2, 2, 3, 3, 4, 5],
 )
