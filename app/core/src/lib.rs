@@ -131,7 +131,8 @@ impl Plugin for GameCorePlugin {
                     update_cross.after(move_projectiles),
                     projectile_enemy_collision
                         .after(update_spatial_grid)
-                        .after(move_projectiles),
+                        .after(move_projectiles)
+                        .after(update_cross),
                     apply_damage_to_enemies
                         .after(fire_whip)
                         .after(fire_garlic)
