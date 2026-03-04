@@ -421,6 +421,37 @@ mod tests {
 
     // --- Passive eligibility ---
 
+    /// Unowned passive appears as PassiveItem choice when a slot is open.
+    #[test]
+    fn unowned_passive_appears_as_new_passive_choice() {
+        let mut app = build_app();
+        // All weapons at max level → no weapon choices in pool.
+        // No passives owned → all 9 unowned; slot available.
+        let weapons: Vec<WeaponState> = BASE_WEAPONS
+            .iter()
+            .take(DEFAULT_MAX_WEAPONS)
+            .map(|&wt| {
+                let mut ws = WeaponState::new(wt);
+                ws.level = DEFAULT_MAX_WEAPON_LEVEL;
+                ws
+            })
+            .collect();
+        spawn_player(&mut app, weapons, vec![]);
+        run(&mut app);
+
+        let c = choices(&app);
+        assert_eq!(
+            c.len(),
+            DEFAULT_CHOICE_COUNT,
+            "expected {DEFAULT_CHOICE_COUNT} choices from passive pool"
+        );
+        assert!(
+            c.iter()
+                .all(|ch| matches!(ch, UpgradeChoice::PassiveItem(_))),
+            "all choices should be PassiveItem when no passives are owned: {c:?}"
+        );
+    }
+
     /// Owned passive below max level appears as PassiveUpgrade.
     #[test]
     fn owned_passive_below_max_is_upgradeable() {
