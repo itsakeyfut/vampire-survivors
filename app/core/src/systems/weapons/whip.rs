@@ -42,6 +42,10 @@ const DEFAULT_WHIP_DAMAGE_PER_LEVEL: f32 = 10.0;
 const DEFAULT_WHIP_EFFECT_DURATION: f32 = 0.15;
 /// Vertical spread factor: enemy passes when `rel.y.abs() < range * factor`.
 const DEFAULT_WHIP_SPREAD_FACTOR: f32 = 0.6;
+/// BloodyTear range multiplier relative to base Whip range (2× larger hitbox).
+const DEFAULT_BLOODY_TEAR_RANGE_MULT: f32 = 2.0;
+/// HP restored to the player per enemy hit by BloodyTear.
+const DEFAULT_BLOODY_TEAR_HP_DRAIN: f32 = 5.0;
 
 // ---------------------------------------------------------------------------
 // Whip swing effect component
@@ -75,7 +79,7 @@ pub struct WhipSwingEffect {
 pub fn fire_whip(
     mut fired_events: MessageReader<WeaponFiredEvent>,
     mut damage_events: MessageWriter<DamageEnemyEvent>,
-    mut player_q: Query<(&Transform, &PlayerStats, &mut PlayerWhipSide), With<Player>>,
+    mut player_q: Query<(&Transform, &mut PlayerStats, &mut PlayerWhipSide), With<Player>>,
     enemy_q: Query<&Transform, With<Enemy>>,
     spatial_grid: Res<SpatialGrid>,
     whip_cfg: WhipParams,
@@ -101,12 +105,19 @@ pub fn fire_whip(
             continue;
         }
 
-        let Ok((player_tf, stats, mut whip_side)) = player_q.get_mut(event.player) else {
+        let Ok((player_tf, mut stats, mut whip_side)) = player_q.get_mut(event.player) else {
             continue;
         };
 
+        let is_bloody_tear = event.weapon_type == WeaponType::BloodyTear;
         let player_pos = player_tf.translation.truncate();
-        let range = range_base * stats.area_multiplier;
+        // BloodyTear doubles the hitbox range.
+        let range_mult = if is_bloody_tear {
+            DEFAULT_BLOODY_TEAR_RANGE_MULT
+        } else {
+            1.0
+        };
+        let range = range_base * stats.area_multiplier * range_mult;
         let level = event.level.clamp(1, 8) as f32;
         let damage = (base_damage + dmg_per_level * (level - 1.0)) * stats.damage_multiplier;
         let direction = if whip_side.0 == WhipSide::Right {
@@ -116,6 +127,7 @@ pub fn fire_whip(
         };
 
         // Use SpatialGrid to narrow candidates, then apply exact fan check.
+        let mut hits = 0u32;
         for enemy_entity in spatial_grid.get_nearby(player_pos, range) {
             let Ok(enemy_tf) = enemy_q.get(enemy_entity) else {
                 continue;
@@ -127,7 +139,14 @@ pub fn fire_whip(
                     damage,
                     weapon_type: event.weapon_type,
                 });
+                hits += 1;
             }
+        }
+
+        // BloodyTear: restore HP for each enemy hit (life drain).
+        if is_bloody_tear && hits > 0 {
+            let drain = DEFAULT_BLOODY_TEAR_HP_DRAIN * hits as f32;
+            stats.current_hp = (stats.current_hp + drain).min(stats.max_hp);
         }
 
         // Spawn a short-lived colored rectangle as visual feedback.

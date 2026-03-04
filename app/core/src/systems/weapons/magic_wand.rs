@@ -27,6 +27,8 @@ use crate::{
     types::WeaponType,
 };
 
+use std::f32::consts::TAU;
+
 // ---------------------------------------------------------------------------
 // Fallback constants (used when RON config is not yet loaded)
 // ---------------------------------------------------------------------------
@@ -39,6 +41,10 @@ const DEFAULT_MAGIC_WAND_BASE_DAMAGE: f32 = 20.0;
 const DEFAULT_MAGIC_WAND_DAMAGE_PER_LEVEL: f32 = 10.0;
 /// Projectile lifetime in seconds.
 const DEFAULT_MAGIC_WAND_LIFETIME: f32 = 5.0;
+/// HolyWand fires in this many evenly-spaced directions (full circle).
+const DEFAULT_HOLY_WAND_DIRECTION_COUNT: u32 = 8;
+/// HolyWand projectiles pierce all enemies (effectively infinite).
+const HOLY_WAND_PIERCING: u32 = u32::MAX;
 /// Circle collider radius for hit detection (pixels).
 const DEFAULT_MAGIC_WAND_COLLIDER_RADIUS: f32 = 8.0;
 
@@ -83,39 +89,58 @@ pub fn fire_magic_wand(
         };
 
         let player_pos = player_tf.translation.truncate();
-
-        // Full scan: targeting is global (nearest on entire map) so a range-
-        // bounded SpatialGrid query would not help here.
-        // Enemies exactly on the player are excluded so direction is always
-        // non-zero; if all enemies are at the same position the event is skipped.
-        let nearest = enemy_q
-            .iter()
-            .map(|tf| tf.translation.truncate())
-            .filter(|pos| pos.distance_squared(player_pos) > f32::EPSILON)
-            .min_by(|a, b| {
-                let da = a.distance_squared(player_pos);
-                let db = b.distance_squared(player_pos);
-                da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
-            });
-
-        let Some(target_pos) = nearest else {
-            continue; // no targetable enemies
-        };
-
-        let dir = (target_pos - player_pos).normalize_or_zero();
-
         let level = event.level.clamp(1, 8) as f32;
         let damage = (base_damage + dmg_per_level * (level - 1.0)) * stats.damage_multiplier;
-        spawn_projectile(
-            &mut commands,
-            player_pos,
-            dir * speed,
-            damage,
-            lifetime,
-            0, // piercing = 0 (single hit)
-            collider_r,
-            event.weapon_type,
-        );
+
+        if event.weapon_type == WeaponType::HolyWand {
+            // HolyWand fires in all directions simultaneously with infinite pierce.
+            let dir_count = DEFAULT_HOLY_WAND_DIRECTION_COUNT;
+            for i in 0..dir_count {
+                let angle = TAU * i as f32 / dir_count as f32;
+                let dir = Vec2::new(angle.cos(), angle.sin());
+                spawn_projectile(
+                    &mut commands,
+                    player_pos,
+                    dir * speed,
+                    damage,
+                    lifetime,
+                    HOLY_WAND_PIERCING,
+                    collider_r,
+                    event.weapon_type,
+                );
+            }
+        } else {
+            // MagicWand: fire single homing projectile toward nearest enemy.
+            // Full scan: targeting is global (nearest on entire map) so a range-
+            // bounded SpatialGrid query would not help here.
+            // Enemies exactly on the player are excluded so direction is always
+            // non-zero; if all enemies are at the same position the event is skipped.
+            let nearest = enemy_q
+                .iter()
+                .map(|tf| tf.translation.truncate())
+                .filter(|pos| pos.distance_squared(player_pos) > f32::EPSILON)
+                .min_by(|a, b| {
+                    let da = a.distance_squared(player_pos);
+                    let db = b.distance_squared(player_pos);
+                    da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+                });
+
+            let Some(target_pos) = nearest else {
+                continue; // no targetable enemies
+            };
+
+            let dir = (target_pos - player_pos).normalize_or_zero();
+            spawn_projectile(
+                &mut commands,
+                player_pos,
+                dir * speed,
+                damage,
+                lifetime,
+                0, // piercing = 0 (single hit)
+                collider_r,
+                event.weapon_type,
+            );
+        }
     }
 }
 
@@ -359,7 +384,11 @@ mod tests {
         app.world_mut().flush();
 
         let projs = projectiles(&mut app);
-        assert_eq!(projs.len(), 1, "HolyWand should fire a projectile");
+        assert_eq!(
+            projs.len(),
+            DEFAULT_HOLY_WAND_DIRECTION_COUNT as usize,
+            "HolyWand should fire {DEFAULT_HOLY_WAND_DIRECTION_COUNT} projectiles"
+        );
     }
 
     /// Enemy exactly on the player is skipped; a farther enemy is targeted instead.

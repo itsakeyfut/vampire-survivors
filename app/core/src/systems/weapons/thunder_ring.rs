@@ -146,9 +146,16 @@ pub fn fire_thunder_ring(
             .map(|(e, tf)| (e, tf.translation.truncate()))
             .collect();
 
+        // LightningRing (evolved form) hits every enemy on screen; ThunderRing
+        // is capped to `count` targets.
+        let pick_count = if is_lightning_ring {
+            candidates.len()
+        } else {
+            count.min(candidates.len())
+        };
+
         // Fisher-Yates partial shuffle: move `pick_count` random entries to
         // the front of `candidates` so they can be taken as unique targets.
-        let pick_count = count.min(candidates.len());
         let mut rng = rand::rng();
         for i in 0..pick_count {
             let j = i + rng.random_range(0..(candidates.len() - i));
@@ -367,18 +374,30 @@ mod tests {
         );
     }
 
-    /// LightningRing (evolution) is handled by the same system.
+    /// LightningRing (evolution) hits ALL enemies regardless of count.
     #[test]
-    fn lightning_ring_fires_thunder_effects() {
+    fn lightning_ring_hits_all_enemies() {
         let mut app = build_app();
         let player = spawn_player(&mut app);
+        // Spawn more enemies than level-1 ThunderRing count (1).
         spawn_enemy(&mut app, Vec2::new(100.0, 0.0));
+        spawn_enemy(&mut app, Vec2::new(-100.0, 0.0));
+        spawn_enemy(&mut app, Vec2::new(0.0, 100.0));
+        spawn_enemy(&mut app, Vec2::new(0.0, -100.0));
+        spawn_enemy(&mut app, Vec2::new(50.0, 50.0));
 
         fire_once(&mut app, player, WeaponType::LightningRing, 1);
 
         let events = damage_events(&app);
-        assert_eq!(events.len(), 1, "LightningRing should deal damage");
-        assert_eq!(events[0].weapon_type, WeaponType::LightningRing);
+        assert_eq!(
+            events.len(),
+            5,
+            "LightningRing should hit all 5 enemies, got {}",
+            events.len()
+        );
+        for e in &events {
+            assert_eq!(e.weapon_type, WeaponType::LightningRing);
+        }
     }
 
     /// `extra_projectiles` increases the number of simultaneous strikes.

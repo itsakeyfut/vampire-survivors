@@ -62,6 +62,10 @@ const DEFAULT_GARLIC_DAMAGE_BY_LEVEL: [f32; 8] = [5.0, 5.0, 8.0, 8.0, 10.0, 12.0
 /// Aura radius in pixels at each weapon level (index 0 = level 1).
 const DEFAULT_GARLIC_RADIUS_BY_LEVEL: [f32; 8] =
     [80.0, 90.0, 90.0, 100.0, 110.0, 120.0, 130.0, 150.0];
+/// SoulEater multiplies the base Garlic damage by this factor.
+const DEFAULT_SOUL_EATER_DAMAGE_MULT: f32 = 3.0;
+/// HP restored to the player per enemy hit by SoulEater's aura.
+const DEFAULT_SOUL_EATER_HP_RECOVERY: f32 = 1.0;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -103,7 +107,7 @@ pub struct GarlicAura {
 pub fn fire_garlic(
     mut fired_events: MessageReader<WeaponFiredEvent>,
     mut damage_events: MessageWriter<DamageEnemyEvent>,
-    player_q: Query<(&Transform, &PlayerStats), With<Player>>,
+    mut player_q: Query<(&Transform, &mut PlayerStats), With<Player>>,
     enemy_q: Query<&Transform, With<Enemy>>,
     mut aura_q: Query<(Entity, &GarlicAura, &mut AuraWeapon), Without<Player>>,
     spatial_grid: Res<SpatialGrid>,
@@ -121,7 +125,7 @@ pub fn fire_garlic(
             continue;
         }
 
-        let Ok((player_tf, stats)) = player_q.get(event.player) else {
+        let Ok((player_tf, mut stats)) = player_q.get_mut(event.player) else {
             continue;
         };
 
@@ -136,7 +140,12 @@ pub fn fire_garlic(
             .and_then(|c| c.radius_by_level.get(level - 1).copied())
             .unwrap_or(DEFAULT_GARLIC_RADIUS_BY_LEVEL[level - 1]);
 
-        let damage = base_damage * stats.damage_multiplier;
+        let damage_mult = if is_soul_eater {
+            DEFAULT_SOUL_EATER_DAMAGE_MULT
+        } else {
+            1.0
+        };
+        let damage = base_damage * stats.damage_multiplier * damage_mult;
         let radius = base_radius * stats.area_multiplier;
 
         // --- Spawn or update the persistent GarlicAura entity ---
@@ -177,6 +186,7 @@ pub fn fire_garlic(
         }
 
         // --- Deal damage to all enemies within the aura radius ---
+        let mut hits = 0u32;
         for enemy_entity in spatial_grid.get_nearby(player_pos, radius) {
             let Ok(enemy_tf) = enemy_q.get(enemy_entity) else {
                 continue;
@@ -188,7 +198,14 @@ pub fn fire_garlic(
                     damage,
                     weapon_type: event.weapon_type,
                 });
+                hits += 1;
             }
+        }
+
+        // SoulEater: restore HP per enemy hit (life drain).
+        if is_soul_eater && hits > 0 {
+            let recovery = DEFAULT_SOUL_EATER_HP_RECOVERY * hits as f32;
+            stats.current_hp = (stats.current_hp + recovery).min(stats.max_hp);
         }
     }
 }
@@ -482,6 +499,66 @@ mod tests {
             damage_events(&app).len(),
             1,
             "SoulEater should deal aura damage"
+        );
+    }
+
+    /// SoulEater deals 3× the base Garlic damage.
+    #[test]
+    fn soul_eater_damage_is_tripled() {
+        let mut app = build_app();
+        let player = spawn_player(&mut app);
+        spawn_enemy(&mut app, Vec2::new(50.0, 0.0));
+
+        fire_once(&mut app, player, WeaponType::SoulEater, 1);
+
+        let events = damage_events(&app);
+        assert_eq!(events.len(), 1);
+        let expected = DEFAULT_GARLIC_DAMAGE_BY_LEVEL[0] * DEFAULT_SOUL_EATER_DAMAGE_MULT;
+        assert!(
+            (events[0].damage - expected).abs() < 1e-4,
+            "SoulEater Lv1 damage should be {expected}, got {}",
+            events[0].damage
+        );
+    }
+
+    /// SoulEater heals the player for each enemy hit within the aura.
+    #[test]
+    fn soul_eater_heals_player_per_hit() {
+        let mut app = build_app();
+        let player = spawn_player(&mut app);
+        // Damage player first so there is headroom to heal.
+        app.world_mut()
+            .get_mut::<PlayerStats>(player)
+            .unwrap()
+            .current_hp = 50.0;
+        spawn_enemy(&mut app, Vec2::new(30.0, 0.0));
+        spawn_enemy(&mut app, Vec2::new(-40.0, 0.0));
+
+        fire_once(&mut app, player, WeaponType::SoulEater, 1);
+
+        let hp = app.world().get::<PlayerStats>(player).unwrap().current_hp;
+        // Each of 2 hits heals DEFAULT_SOUL_EATER_HP_RECOVERY, so hp ≥ 50 + 2.
+        assert!(
+            hp >= 50.0 + DEFAULT_SOUL_EATER_HP_RECOVERY * 2.0 - 1e-4,
+            "SoulEater should heal player per enemy hit; hp = {hp}"
+        );
+    }
+
+    /// SoulEater does not overheal above max_hp.
+    #[test]
+    fn soul_eater_does_not_overheal() {
+        let mut app = build_app();
+        let player = spawn_player(&mut app);
+        // Player starts at max HP (100.0 by default).
+        spawn_enemy(&mut app, Vec2::new(30.0, 0.0));
+
+        fire_once(&mut app, player, WeaponType::SoulEater, 1);
+
+        let stats = app.world().get::<PlayerStats>(player).unwrap();
+        assert!(
+            stats.current_hp <= stats.max_hp,
+            "SoulEater must not overheal above max_hp; hp = {}",
+            stats.current_hp
         );
     }
 
