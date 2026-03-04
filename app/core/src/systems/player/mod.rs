@@ -20,6 +20,7 @@ impl Plugin for PlayerPlugin {
                 Update,
                 (
                     player_movement,
+                    regen_hp,
                     tick_invincibility.before(enemy_player_collision),
                     enemy_player_collision.after(update_spatial_grid),
                     apply_damage_to_player.after(enemy_player_collision),
@@ -193,6 +194,25 @@ pub fn player_movement(
         let delta = normalized * stats.move_speed * time.delta_secs();
         transform.translation += delta.extend(0.0);
     }
+}
+
+// ---------------------------------------------------------------------------
+// HP regeneration
+// ---------------------------------------------------------------------------
+
+/// Recovers the player's HP each frame at a rate of `hp_regen` points per
+/// second, clamped to `max_hp`.
+///
+/// The system is a no-op when `hp_regen` is zero or negative (the default),
+/// so it has no cost for characters that haven't acquired Pummarola.
+pub fn regen_hp(time: Res<Time>, mut query: Query<&mut PlayerStats, With<Player>>) {
+    let Ok(mut stats) = query.single_mut() else {
+        return;
+    };
+    if stats.hp_regen <= 0.0 {
+        return;
+    }
+    stats.current_hp = (stats.current_hp + stats.hp_regen * time.delta_secs()).min(stats.max_hp);
 }
 
 // ---------------------------------------------------------------------------
@@ -418,5 +438,87 @@ mod tests {
             .expect("Transform missing")
             .translation;
         assert_eq!(translation, Vec3::ZERO);
+    }
+
+    /// `regen_hp` recovers HP each frame at the configured rate, clamped to max_hp.
+    #[test]
+    fn regen_hp_recovers_health_over_time() {
+        use std::time::Duration;
+
+        let mut app = build_playing_app();
+
+        let mut stats = PlayerStats::default();
+        stats.current_hp = 50.0;
+        stats.max_hp = 100.0;
+        stats.hp_regen = 10.0; // 10 HP/s
+
+        app.world_mut().spawn((Player, stats));
+
+        // Advance 1 second and run the system.
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_secs(1));
+        app.world_mut()
+            .run_system_once(regen_hp)
+            .expect("regen_hp should run");
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).expect("player should exist");
+        let hp = app.world().get::<PlayerStats>(entity).unwrap().current_hp;
+        assert!((hp - 60.0).abs() < 0.01, "expected 60.0 HP, got {hp}");
+    }
+
+    /// `regen_hp` must not exceed max_hp.
+    #[test]
+    fn regen_hp_clamps_to_max_hp() {
+        use std::time::Duration;
+
+        let mut app = build_playing_app();
+
+        let mut stats = PlayerStats::default();
+        stats.current_hp = 99.0;
+        stats.max_hp = 100.0;
+        stats.hp_regen = 10.0;
+
+        app.world_mut().spawn((Player, stats));
+
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_secs(1));
+        app.world_mut()
+            .run_system_once(regen_hp)
+            .expect("regen_hp should run");
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).expect("player should exist");
+        let hp = app.world().get::<PlayerStats>(entity).unwrap().current_hp;
+        assert_eq!(hp, 100.0, "HP must not exceed max_hp");
+    }
+
+    /// `regen_hp` is a no-op when hp_regen is zero.
+    #[test]
+    fn regen_hp_zero_rate_does_nothing() {
+        use std::time::Duration;
+
+        let mut app = build_playing_app();
+
+        let mut stats = PlayerStats::default();
+        stats.current_hp = 50.0;
+        stats.max_hp = 100.0;
+        stats.hp_regen = 0.0;
+
+        app.world_mut().spawn((Player, stats));
+
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_secs(1));
+        app.world_mut()
+            .run_system_once(regen_hp)
+            .expect("regen_hp should run");
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).expect("player should exist");
+        let hp = app.world().get::<PlayerStats>(entity).unwrap().current_hp;
+        assert_eq!(hp, 50.0, "HP should not change when hp_regen is 0");
     }
 }
