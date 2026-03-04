@@ -161,13 +161,15 @@ pub fn apply_evolution(
 
 /// Spawns a treasure chest entity at the given world position.
 ///
+/// `radius` is the chest's collision radius in pixels; callers should pass
+/// `GameConfig::treasure_radius` (falling back to `DEFAULT_TREASURE_RADIUS`
+/// when config is not yet loaded).
+///
 /// Called by the spawner system when a treasure drop is triggered.
-pub fn spawn_treasure(commands: &mut Commands, position: Vec2) {
+pub fn spawn_treasure(commands: &mut Commands, position: Vec2, radius: f32) {
     commands.spawn((
         Transform::from_xyz(position.x, position.y, 0.0),
-        CircleCollider {
-            radius: DEFAULT_TREASURE_RADIUS,
-        },
+        CircleCollider { radius },
         Treasure,
         GameSessionEntity,
     ));
