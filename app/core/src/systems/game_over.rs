@@ -12,6 +12,22 @@ use crate::{
     states::AppState,
 };
 
+pub struct GameOverPlugin;
+
+impl Plugin for GameOverPlugin {
+    fn build(&self, app: &mut App) {
+        use crate::systems::player::collision::apply_damage_to_player;
+        use crate::systems::xp::level_up::check_level_up;
+        app.add_systems(
+            Update,
+            check_player_death
+                .after(apply_damage_to_player)
+                .after(check_level_up)
+                .run_if(in_state(AppState::Playing)),
+        );
+    }
+}
+
 /// Checks whether the player's HP has reached zero and triggers game over.
 ///
 /// Emits a [`GameOverEvent`] and sets [`NextState`] to [`AppState::GameOver`]
