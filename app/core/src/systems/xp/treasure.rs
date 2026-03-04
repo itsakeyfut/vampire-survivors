@@ -146,7 +146,7 @@ pub fn apply_evolution(
         if has_passive && get_evolved_weapon(ws.weapon_type) == evolved_type {
             *ws = WeaponState {
                 weapon_type: evolved_type,
-                level: 8,
+                level: ws.level, // preserve the earned level (always max for evolution)
                 cooldown_timer: 0.0,
                 evolved: true,
             };

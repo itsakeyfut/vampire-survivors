@@ -50,9 +50,9 @@ pub fn get_evolution_requirement(weapon: WeaponType) -> Option<PassiveItemType> 
 ///
 /// # Panics
 ///
-/// Panics in debug builds if `weapon` has no evolution path.  In release
-/// builds the panic is elided; callers should only call this after
-/// [`get_evolution_requirement`] returns `Some`.
+/// Panics in **all** builds if `weapon` has no evolution path.
+/// Callers must only call this after [`get_evolution_requirement`] returns
+/// `Some`.
 pub fn get_evolved_weapon(weapon: WeaponType) -> WeaponType {
     match weapon {
         WeaponType::Whip => WeaponType::BloodyTear,
