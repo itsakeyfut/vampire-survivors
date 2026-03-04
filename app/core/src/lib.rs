@@ -39,6 +39,10 @@ use systems::spatial::update_spatial_grid;
 use systems::weapon_bible::{fire_bible, orbit_bible, spawn_bible_visual};
 use systems::weapon_cooldown::tick_weapon_cooldowns;
 use systems::weapon_cross::{fire_cross, update_cross};
+use systems::weapon_fire_wand::{
+    despawn_expired_fireballs, despawn_explosion_effects, fire_fire_wand, fireball_enemy_collision,
+    move_fireballs,
+};
 use systems::weapon_garlic::{fire_garlic, spawn_garlic_visual, update_garlic_visual};
 use systems::weapon_knife::fire_knife;
 use systems::weapon_magic_wand::fire_magic_wand;
@@ -124,6 +128,7 @@ impl Plugin for GameCorePlugin {
                         .after(update_spatial_grid),
                     fire_thunder_ring.after(tick_weapon_cooldowns),
                     fire_cross.after(tick_weapon_cooldowns),
+                    fire_fire_wand.after(tick_weapon_cooldowns),
                     fire_whip
                         .after(tick_weapon_cooldowns)
                         .after(update_spatial_grid),
@@ -140,7 +145,8 @@ impl Plugin for GameCorePlugin {
                         .after(fire_knife)
                         .after(orbit_bible)
                         .after(fire_thunder_ring)
-                        .after(projectile_enemy_collision),
+                        .after(projectile_enemy_collision)
+                        .after(fireball_enemy_collision),
                     tick_invincibility.before(enemy_player_collision),
                     enemy_player_collision.after(update_spatial_grid),
                     apply_damage_to_player.after(enemy_player_collision),
@@ -168,6 +174,19 @@ impl Plugin for GameCorePlugin {
                 )
                     .run_if(in_state(AppState::Playing)),
             )
+            // Playing state — per-frame gameplay systems (part 2b: fireball
+            // movement and collision; separate block to stay within the
+            // 20-item system-tuple limit)
+            .add_systems(
+                Update,
+                (
+                    move_fireballs,
+                    fireball_enemy_collision
+                        .after(move_fireballs)
+                        .after(update_spatial_grid),
+                )
+                    .run_if(in_state(AppState::Playing)),
+            )
             // Playing state — per-frame gameplay systems (part 3: visuals and
             // entity cleanup; independent of damage/XP ordering)
             .add_systems(
@@ -179,6 +198,8 @@ impl Plugin for GameCorePlugin {
                     despawn_whip_effects,
                     despawn_thunder_effects,
                     despawn_expired_projectiles,
+                    despawn_explosion_effects,
+                    despawn_expired_fireballs,
                 )
                     .run_if(in_state(AppState::Playing)),
             );
