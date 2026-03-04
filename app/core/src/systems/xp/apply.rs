@@ -157,10 +157,15 @@ pub fn apply_selected_upgrade(
 /// Recomputes [`PlayerStats`] by applying all passive bonuses from
 /// `passive_inv` on top of `base`.
 ///
-/// Each passive item contributes a bonus based on its current level.  Unlike
+/// Each passive item contributes a bonus based on its current level, using the
+/// same per-level delta values stored in [`PassiveConfig`].  Unlike
 /// [`apply_passive_bonus`] — which applies a single level's delta — this
 /// function starts from the unmodified base values and produces a fully correct
 /// result regardless of how many times it is called.
+///
+/// `cfg` should be `Some` when `passive.ron` has finished loading; the function
+/// falls back to the `DEFAULT_*` constants defined in this module while the
+/// asset is still loading (same behaviour as [`apply_passive_bonus`]).
 ///
 /// The returned stats have `current_hp = base.max_hp`; callers must set
 /// `current_hp` to the appropriate value (e.g. preserving the player's current
@@ -168,7 +173,11 @@ pub fn apply_selected_upgrade(
 ///
 /// `cooldown_reduction` is clamped to 0.9 after all passives are applied so
 /// the effective cooldown is always at least 10 % of the base value.
-pub fn apply_passives(base: &BasePlayerStats, passive_inv: &PassiveInventory) -> PlayerStats {
+pub fn apply_passives(
+    base: &BasePlayerStats,
+    passive_inv: &PassiveInventory,
+    cfg: Option<&PassiveConfig>,
+) -> PlayerStats {
     let mut stats = PlayerStats {
         max_hp: base.max_hp,
         current_hp: base.max_hp,
@@ -189,15 +198,60 @@ pub fn apply_passives(base: &BasePlayerStats, passive_inv: &PassiveInventory) ->
     for passive in &passive_inv.items {
         let lv = passive.level as f32;
         match passive.item_type {
-            PassiveItemType::Spinach => stats.damage_multiplier *= 1.0 + 0.1 * lv,
-            PassiveItemType::Wings => stats.move_speed *= 1.0 + 0.1 * lv,
-            PassiveItemType::HollowHeart => stats.max_hp *= 1.0 + 0.2 * lv,
-            PassiveItemType::Clover => stats.luck *= 1.0 + 0.1 * lv,
-            PassiveItemType::EmptyTome => stats.cooldown_reduction += 0.08 * lv,
-            PassiveItemType::Bracer => stats.projectile_speed_mult *= 1.0 + 0.1 * lv,
-            PassiveItemType::Spellbinder => stats.duration_multiplier *= 1.0 + 0.1 * lv,
-            PassiveItemType::Duplicator => stats.extra_projectiles += passive.level as u32,
-            PassiveItemType::Pummarola => stats.hp_regen += 0.5 * lv,
+            PassiveItemType::Spinach => {
+                stats.damage_multiplier += cfg
+                    .map(|c| c.spinach_damage_per_level)
+                    .unwrap_or(DEFAULT_SPINACH_DAMAGE)
+                    * lv;
+            }
+            PassiveItemType::Wings => {
+                stats.move_speed += cfg
+                    .map(|c| c.wings_speed_per_level)
+                    .unwrap_or(DEFAULT_WINGS_SPEED)
+                    * lv;
+            }
+            PassiveItemType::HollowHeart => {
+                stats.max_hp += cfg
+                    .map(|c| c.hollow_heart_hp_per_level)
+                    .unwrap_or(DEFAULT_HOLLOW_HEART_HP)
+                    * lv;
+            }
+            PassiveItemType::Clover => {
+                stats.luck += cfg
+                    .map(|c| c.clover_luck_per_level)
+                    .unwrap_or(DEFAULT_CLOVER_LUCK)
+                    * lv;
+            }
+            PassiveItemType::EmptyTome => {
+                stats.cooldown_reduction += cfg
+                    .map(|c| c.empty_tome_cdr_per_level)
+                    .unwrap_or(DEFAULT_EMPTY_TOME_CDR)
+                    * lv;
+            }
+            PassiveItemType::Bracer => {
+                stats.projectile_speed_mult += cfg
+                    .map(|c| c.bracer_proj_speed_per_level)
+                    .unwrap_or(DEFAULT_BRACER_PROJ_SPEED)
+                    * lv;
+            }
+            PassiveItemType::Spellbinder => {
+                stats.duration_multiplier += cfg
+                    .map(|c| c.spellbinder_duration_per_level)
+                    .unwrap_or(DEFAULT_SPELLBINDER_DURATION)
+                    * lv;
+            }
+            PassiveItemType::Duplicator => {
+                stats.extra_projectiles += cfg
+                    .map(|c| c.duplicator_projectiles_per_level)
+                    .unwrap_or(DEFAULT_DUPLICATOR_PROJECTILES)
+                    * passive.level as u32;
+            }
+            PassiveItemType::Pummarola => {
+                stats.hp_regen += cfg
+                    .map(|c| c.pummarola_regen_per_level)
+                    .unwrap_or(DEFAULT_PUMMAROLA_REGEN)
+                    * lv;
+            }
         }
     }
 
@@ -220,12 +274,14 @@ pub fn recalculate_player_stats(
         (&BasePlayerStats, &PassiveInventory, &mut PlayerStats),
         (With<Player>, Changed<PassiveInventory>),
     >,
+    passive_cfg: PassiveParams,
 ) {
+    let cfg = passive_cfg.get();
     for (base, passive_inv, mut stats) in player_q.iter_mut() {
         let old_max_hp = stats.max_hp;
         let old_current_hp = stats.current_hp;
 
-        let mut new_stats = apply_passives(base, passive_inv);
+        let mut new_stats = apply_passives(base, passive_inv, cfg);
 
         // Preserve current HP, adjusting upward by any gain in max HP.
         let hp_delta = new_stats.max_hp - old_max_hp;
@@ -740,7 +796,7 @@ mod tests {
     /// No passives → returned stats match the base exactly.
     #[test]
     fn apply_passives_no_passives_returns_base() {
-        let result = apply_passives(&base(), &empty_inv());
+        let result = apply_passives(&base(), &empty_inv(), None);
         let b = base();
         assert_eq!(result.max_hp, b.max_hp);
         assert_eq!(result.move_speed, b.move_speed);
@@ -750,7 +806,7 @@ mod tests {
         assert_eq!(result.hp_regen, b.hp_regen);
     }
 
-    /// Spinach multiplies damage_multiplier by (1 + 0.1 × level).
+    /// Spinach adds `DEFAULT_SPINACH_DAMAGE × level` to damage_multiplier.
     #[test]
     fn apply_passives_spinach_scales_damage() {
         let mut inv = empty_inv();
@@ -758,8 +814,8 @@ mod tests {
             item_type: PassiveItemType::Spinach,
             level: 3,
         });
-        let result = apply_passives(&base(), &inv);
-        let expected = base().damage_multiplier * (1.0 + 0.1 * 3.0);
+        let result = apply_passives(&base(), &inv, None);
+        let expected = base().damage_multiplier + DEFAULT_SPINACH_DAMAGE * 3.0;
         assert!(
             (result.damage_multiplier - expected).abs() < 1e-6,
             "expected {expected}, got {}",
@@ -767,7 +823,7 @@ mod tests {
         );
     }
 
-    /// Wings multiplies move_speed by (1 + 0.1 × level).
+    /// Wings adds `DEFAULT_WINGS_SPEED × level` px/s to move_speed.
     #[test]
     fn apply_passives_wings_scales_speed() {
         let mut inv = empty_inv();
@@ -775,8 +831,8 @@ mod tests {
             item_type: PassiveItemType::Wings,
             level: 5,
         });
-        let result = apply_passives(&base(), &inv);
-        let expected = base().move_speed * (1.0 + 0.1 * 5.0);
+        let result = apply_passives(&base(), &inv, None);
+        let expected = base().move_speed + DEFAULT_WINGS_SPEED * 5.0;
         assert!(
             (result.move_speed - expected).abs() < 1e-4,
             "expected {expected}, got {}",
@@ -784,7 +840,7 @@ mod tests {
         );
     }
 
-    /// HollowHeart multiplies max_hp by (1 + 0.2 × level).
+    /// HollowHeart adds `DEFAULT_HOLLOW_HEART_HP × level` to max_hp.
     #[test]
     fn apply_passives_hollow_heart_scales_max_hp() {
         let mut inv = empty_inv();
@@ -792,8 +848,8 @@ mod tests {
             item_type: PassiveItemType::HollowHeart,
             level: 2,
         });
-        let result = apply_passives(&base(), &inv);
-        let expected = base().max_hp * (1.0 + 0.2 * 2.0);
+        let result = apply_passives(&base(), &inv, None);
+        let expected = base().max_hp + DEFAULT_HOLLOW_HEART_HP * 2.0;
         assert!(
             (result.max_hp - expected).abs() < 1e-4,
             "expected {expected}, got {}",
@@ -801,7 +857,7 @@ mod tests {
         );
     }
 
-    /// EmptyTome adds 0.08 × level to cooldown_reduction, capped at 0.9.
+    /// EmptyTome adds `DEFAULT_EMPTY_TOME_CDR × level` to cooldown_reduction, capped at 0.9.
     #[test]
     fn apply_passives_empty_tome_adds_cdr() {
         let mut inv = empty_inv();
@@ -809,8 +865,8 @@ mod tests {
             item_type: PassiveItemType::EmptyTome,
             level: 3,
         });
-        let result = apply_passives(&base(), &inv);
-        let expected = (base().cooldown_reduction + 0.08 * 3.0).min(0.9);
+        let result = apply_passives(&base(), &inv, None);
+        let expected = (base().cooldown_reduction + DEFAULT_EMPTY_TOME_CDR * 3.0).min(0.9);
         assert!(
             (result.cooldown_reduction - expected).abs() < 1e-6,
             "expected {expected}, got {}",
@@ -822,16 +878,14 @@ mod tests {
     #[test]
     fn apply_passives_empty_tome_capped_at_0_9() {
         let mut inv = empty_inv();
-        // Level 5 EmptyTome: base 0 + 0.08 × 5 × 2 passives = 0.8, still < 0.9 with one.
-        // Push a second one to exceed the cap.
         inv.items.push(PassiveState {
             item_type: PassiveItemType::EmptyTome,
             level: 5,
         });
-        // Manually set base CDR near cap.
+        // Manually set base CDR near cap so lv5 EmptyTome would exceed it.
         let mut b = base();
         b.cooldown_reduction = 0.55;
-        let result = apply_passives(&b, &inv);
+        let result = apply_passives(&b, &inv, None);
         assert!(
             result.cooldown_reduction <= 0.9 + 1e-6,
             "CDR must not exceed 0.9, got {}",
@@ -839,7 +893,7 @@ mod tests {
         );
     }
 
-    /// Duplicator adds level to extra_projectiles (additive, not multiplicative).
+    /// Duplicator adds `DEFAULT_DUPLICATOR_PROJECTILES × level` to extra_projectiles.
     #[test]
     fn apply_passives_duplicator_adds_extra_projectiles() {
         let mut inv = empty_inv();
@@ -847,15 +901,16 @@ mod tests {
             item_type: PassiveItemType::Duplicator,
             level: 3,
         });
-        let result = apply_passives(&base(), &inv);
+        let result = apply_passives(&base(), &inv, None);
         assert_eq!(
             result.extra_projectiles,
-            base().extra_projectiles + 3,
-            "Duplicator lv3 should add 3 extra projectiles"
+            base().extra_projectiles + DEFAULT_DUPLICATOR_PROJECTILES * 3,
+            "Duplicator lv3 should add {} extra projectiles",
+            DEFAULT_DUPLICATOR_PROJECTILES * 3
         );
     }
 
-    /// Pummarola adds 0.5 × level to hp_regen.
+    /// Pummarola adds `DEFAULT_PUMMAROLA_REGEN × level` to hp_regen.
     #[test]
     fn apply_passives_pummarola_adds_regen() {
         let mut inv = empty_inv();
@@ -863,8 +918,8 @@ mod tests {
             item_type: PassiveItemType::Pummarola,
             level: 4,
         });
-        let result = apply_passives(&base(), &inv);
-        let expected = base().hp_regen + 0.5 * 4.0;
+        let result = apply_passives(&base(), &inv, None);
+        let expected = base().hp_regen + DEFAULT_PUMMAROLA_REGEN * 4.0;
         assert!(
             (result.hp_regen - expected).abs() < 1e-6,
             "expected {expected}, got {}",
@@ -889,10 +944,10 @@ mod tests {
             level: 5,
         });
         let b = base();
-        let result = apply_passives(&b, &inv);
-        let expected_dmg = b.damage_multiplier * (1.0 + 0.1 * 2.0);
-        let expected_spd = b.move_speed * (1.0 + 0.1 * 1.0);
-        let expected_regen = b.hp_regen + 0.5 * 5.0;
+        let result = apply_passives(&b, &inv, None);
+        let expected_dmg = b.damage_multiplier + DEFAULT_SPINACH_DAMAGE * 2.0;
+        let expected_spd = b.move_speed + DEFAULT_WINGS_SPEED * 1.0;
+        let expected_regen = b.hp_regen + DEFAULT_PUMMAROLA_REGEN * 5.0;
         assert!((result.damage_multiplier - expected_dmg).abs() < 1e-5);
         assert!((result.move_speed - expected_spd).abs() < 1e-4);
         assert!((result.hp_regen - expected_regen).abs() < 1e-6);
