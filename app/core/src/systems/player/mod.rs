@@ -31,8 +31,8 @@ impl Plugin for PlayerPlugin {
 
 use crate::{
     components::{
-        CircleCollider, GameSessionEntity, PassiveInventory, Player, PlayerFacingDirection,
-        PlayerStats, PlayerWhipSide, WeaponInventory,
+        BasePlayerStats, CircleCollider, GameSessionEntity, PassiveInventory, Player,
+        PlayerFacingDirection, PlayerStats, PlayerWhipSide, WeaponInventory,
     },
     config::PlayerParams,
     resources::SelectedCharacter,
@@ -114,6 +114,7 @@ pub fn spawn_player(
     commands.spawn((
         GameSessionEntity,
         Player,
+        BasePlayerStats::from(&stats),
         stats,
         Sprite {
             color: Color::srgb(0.2, 0.8, 1.0),

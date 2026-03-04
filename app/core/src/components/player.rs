@@ -116,6 +116,51 @@ pub struct InvincibilityTimer {
     pub remaining: f32,
 }
 
+/// Base player statistics at run start, before passive items are applied.
+///
+/// Stored on the player entity by [`crate::systems::player::spawn_player`] and
+/// used by [`crate::systems::xp::apply::recalculate_player_stats`] to recompute
+/// [`PlayerStats`] from scratch whenever [`PassiveInventory`] changes.
+///
+/// Does **not** include `current_hp` — the system preserves actual health when
+/// recalculating, adjusting it by the change in `max_hp`.
+#[derive(Component, Debug, Clone)]
+pub struct BasePlayerStats {
+    pub max_hp: f32,
+    pub move_speed: f32,
+    pub damage_multiplier: f32,
+    pub cooldown_reduction: f32,
+    pub projectile_speed_mult: f32,
+    pub duration_multiplier: f32,
+    pub pickup_radius: f32,
+    pub gem_attraction_speed: f32,
+    pub gem_absorption_radius: f32,
+    pub area_multiplier: f32,
+    pub extra_projectiles: u32,
+    pub luck: f32,
+    pub hp_regen: f32,
+}
+
+impl From<&PlayerStats> for BasePlayerStats {
+    fn from(s: &PlayerStats) -> Self {
+        Self {
+            max_hp: s.max_hp,
+            move_speed: s.move_speed,
+            damage_multiplier: s.damage_multiplier,
+            cooldown_reduction: s.cooldown_reduction,
+            projectile_speed_mult: s.projectile_speed_mult,
+            duration_multiplier: s.duration_multiplier,
+            pickup_radius: s.pickup_radius,
+            gem_attraction_speed: s.gem_attraction_speed,
+            gem_absorption_radius: s.gem_absorption_radius,
+            area_multiplier: s.area_multiplier,
+            extra_projectiles: s.extra_projectiles,
+            luck: s.luck,
+            hp_regen: s.hp_regen,
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
