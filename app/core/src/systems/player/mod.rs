@@ -20,7 +20,7 @@ impl Plugin for PlayerPlugin {
                 Update,
                 (
                     player_movement,
-                    regen_hp,
+                    regen_hp.after(apply_damage_to_player),
                     tick_invincibility.before(enemy_player_collision),
                     enemy_player_collision.after(update_spatial_grid),
                     apply_damage_to_player.after(enemy_player_collision),
@@ -520,5 +520,32 @@ mod tests {
         let entity = q.single(app.world()).expect("player should exist");
         let hp = app.world().get::<PlayerStats>(entity).unwrap().current_hp;
         assert_eq!(hp, 50.0, "HP should not change when hp_regen is 0");
+    }
+
+    /// `regen_hp` is a no-op when hp_regen is negative.
+    #[test]
+    fn regen_hp_negative_rate_does_nothing() {
+        use std::time::Duration;
+
+        let mut app = build_playing_app();
+
+        let mut stats = PlayerStats::default();
+        stats.current_hp = 50.0;
+        stats.max_hp = 100.0;
+        stats.hp_regen = -5.0;
+
+        app.world_mut().spawn((Player, stats));
+
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_secs(1));
+        app.world_mut()
+            .run_system_once(regen_hp)
+            .expect("regen_hp should run");
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).expect("player should exist");
+        let hp = app.world().get::<PlayerStats>(entity).unwrap().current_hp;
+        assert_eq!(hp, 50.0, "HP should not change when hp_regen is negative");
     }
 }
