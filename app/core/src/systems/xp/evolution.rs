@@ -69,15 +69,19 @@ pub fn get_evolved_weapon(weapon: WeaponType) -> WeaponType {
 /// inventory.
 ///
 /// Returns `Some(evolved_type)` when both conditions are met:
-/// - `weapon_state.level == 8` and `!weapon_state.evolved`
+/// - `weapon_state.level == required_level` and `!weapon_state.evolved`
 /// - the required passive item is owned (at any level)
+///
+/// `required_level` is typically `GameConfig::max_weapon_level` (default 8).
+/// Passing it as a parameter keeps the function pure and config-driven.
 ///
 /// Returns `None` otherwise.
 pub fn can_evolve_weapon(
     weapon_state: &WeaponState,
     passive_inventory: &PassiveInventory,
+    required_level: u8,
 ) -> Option<WeaponType> {
-    if weapon_state.level < 8 || weapon_state.evolved {
+    if weapon_state.level != required_level || weapon_state.evolved {
         return None;
     }
     let required = get_evolution_requirement(weapon_state.weapon_type)?;
@@ -100,11 +104,12 @@ pub fn can_evolve_weapon(
 pub fn find_evolution(
     weapon_inv: &WeaponInventory,
     passive_inv: &PassiveInventory,
+    required_level: u8,
 ) -> Option<WeaponType> {
     weapon_inv
         .weapons
         .iter()
-        .find_map(|ws| can_evolve_weapon(ws, passive_inv))
+        .find_map(|ws| can_evolve_weapon(ws, passive_inv, required_level))
 }
 
 // ---------------------------------------------------------------------------
@@ -234,7 +239,10 @@ mod tests {
     fn can_evolve_returns_evolved_type_when_conditions_met() {
         let ws = lv8(WeaponType::Whip);
         let inv = make_passive_inv(&[PassiveItemType::HollowHeart]);
-        assert_eq!(can_evolve_weapon(&ws, &inv), Some(WeaponType::BloodyTear));
+        assert_eq!(
+            can_evolve_weapon(&ws, &inv, 8),
+            Some(WeaponType::BloodyTear)
+        );
     }
 
     #[test]
@@ -242,7 +250,7 @@ mod tests {
         let mut ws = lv8(WeaponType::Whip);
         ws.level = 7;
         let inv = make_passive_inv(&[PassiveItemType::HollowHeart]);
-        assert_eq!(can_evolve_weapon(&ws, &inv), None);
+        assert_eq!(can_evolve_weapon(&ws, &inv, 8), None);
     }
 
     #[test]
@@ -250,21 +258,21 @@ mod tests {
         let mut ws = lv8(WeaponType::Whip);
         ws.evolved = true;
         let inv = make_passive_inv(&[PassiveItemType::HollowHeart]);
-        assert_eq!(can_evolve_weapon(&ws, &inv), None);
+        assert_eq!(can_evolve_weapon(&ws, &inv, 8), None);
     }
 
     #[test]
     fn can_evolve_returns_none_when_passive_missing() {
         let ws = lv8(WeaponType::Whip);
         let inv = make_passive_inv(&[]); // no passives
-        assert_eq!(can_evolve_weapon(&ws, &inv), None);
+        assert_eq!(can_evolve_weapon(&ws, &inv, 8), None);
     }
 
     #[test]
     fn can_evolve_returns_none_when_wrong_passive_owned() {
         let ws = lv8(WeaponType::Whip);
         let inv = make_passive_inv(&[PassiveItemType::EmptyTome]); // wrong passive
-        assert_eq!(can_evolve_weapon(&ws, &inv), None);
+        assert_eq!(can_evolve_weapon(&ws, &inv, 8), None);
     }
 
     #[test]
@@ -278,7 +286,7 @@ mod tests {
             PassiveItemType::Spellbinder,
             PassiveItemType::Duplicator,
         ]); // all passives present, still no evolution
-        assert_eq!(can_evolve_weapon(&ws, &inv), None);
+        assert_eq!(can_evolve_weapon(&ws, &inv, 8), None);
     }
 
     // --- find_evolution ---
@@ -288,7 +296,10 @@ mod tests {
         let inv = make_weapon_inv(vec![lv8(WeaponType::Whip), lv8(WeaponType::Knife)]);
         let passive = make_passive_inv(&[PassiveItemType::HollowHeart, PassiveItemType::Bracer]);
         // Whip is first in the list and eligible → returns BloodyTear
-        assert_eq!(find_evolution(&inv, &passive), Some(WeaponType::BloodyTear));
+        assert_eq!(
+            find_evolution(&inv, &passive, 8),
+            Some(WeaponType::BloodyTear)
+        );
     }
 
     #[test]
@@ -297,20 +308,23 @@ mod tests {
         ws_knife.level = 7; // not yet max level
         let inv = make_weapon_inv(vec![ws_knife, lv8(WeaponType::MagicWand)]);
         let passive = make_passive_inv(&[PassiveItemType::EmptyTome]);
-        assert_eq!(find_evolution(&inv, &passive), Some(WeaponType::HolyWand));
+        assert_eq!(
+            find_evolution(&inv, &passive, 8),
+            Some(WeaponType::HolyWand)
+        );
     }
 
     #[test]
     fn find_evolution_returns_none_when_nothing_qualifies() {
         let inv = make_weapon_inv(vec![lv8(WeaponType::Whip)]);
         let passive = make_passive_inv(&[]); // no passive
-        assert_eq!(find_evolution(&inv, &passive), None);
+        assert_eq!(find_evolution(&inv, &passive, 8), None);
     }
 
     #[test]
     fn find_evolution_returns_none_for_empty_inventory() {
         let inv = make_weapon_inv(vec![]);
         let passive = make_passive_inv(&[PassiveItemType::HollowHeart]);
-        assert_eq!(find_evolution(&inv, &passive), None);
+        assert_eq!(find_evolution(&inv, &passive, 8), None);
     }
 }

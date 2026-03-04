@@ -26,6 +26,10 @@ pub struct GameConfig {
     // Game rules
     pub boss_spawn_time: f32,
     pub treasure_spawn_interval: f32,
+    /// Collision radius of treasure chests in pixels.
+    pub treasure_radius: f32,
+    /// Gold awarded when a chest contains no evolvable weapon.
+    pub treasure_gold_reward: u32,
     // XP / levelling
     pub xp_level_base: u32,
     pub xp_level_multiplier: f32,
@@ -114,6 +118,8 @@ GameConfig(
     max_passive_level: 5,
     boss_spawn_time: 1800.0,
     treasure_spawn_interval: 180.0,
+    treasure_radius: 20.0,
+    treasure_gold_reward: 50,
     xp_level_base: 20,
     xp_level_multiplier: 1.2,
     level_up_choice_count: 3,
@@ -132,6 +138,8 @@ GameConfig(
         assert_eq!(config.max_passive_level, 5);
         assert_eq!(config.boss_spawn_time, 1800.0);
         assert_eq!(config.treasure_spawn_interval, 180.0);
+        assert_eq!(config.treasure_radius, 20.0);
+        assert_eq!(config.treasure_gold_reward, 50);
         assert_eq!(config.xp_level_base, 20);
         assert_eq!(config.level_up_choice_count, 3);
         assert_eq!(config.spatial_grid_cell_size, 64.0);

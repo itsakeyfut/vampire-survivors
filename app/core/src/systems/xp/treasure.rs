@@ -3,10 +3,16 @@
 //! When the player touches a treasure chest ([`Treasure`] component), the
 //! chest is despawned and a reward is applied:
 //!
-//! 1. **If any weapon can evolve** (level 8 + required passive owned),
+//! 1. **If any weapon can evolve** (at max level + required passive owned),
 //!    the first eligible weapon evolves immediately.
-//! 2. Otherwise a fixed gold reward (`DEFAULT_TREASURE_GOLD`) is added to
-//!    [`GameData`].
+//! 2. Otherwise the gold reward from config (`GameConfig::treasure_gold_reward`)
+//!    is added to [`GameData`].
+//!
+//! At most **one chest is collected per frame** to keep inventory state
+//! consistent: `apply_evolution` runs deferred via a trigger, so collecting a
+//! second chest in the same frame would see a stale (pre-evolution) inventory.
+//! In practice, simultaneous chest overlaps are extremely rare and this
+//! restriction has no gameplay impact.
 
 use bevy::prelude::*;
 
@@ -14,6 +20,7 @@ use crate::{
     components::{
         CircleCollider, GameSessionEntity, PassiveInventory, Player, Treasure, WeaponInventory,
     },
+    config::GameParams,
     resources::GameData,
     types::WeaponType,
 };
@@ -21,11 +28,12 @@ use crate::{
 use super::evolution::find_evolution;
 
 // ---------------------------------------------------------------------------
-// Fallback constant (used before game.ron has finished loading)
+// Fallback constants (used before game.ron has finished loading)
 // ---------------------------------------------------------------------------
 
 const DEFAULT_TREASURE_GOLD: u32 = 50;
 const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
+const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
 
 // ---------------------------------------------------------------------------
 // System
@@ -35,13 +43,21 @@ const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
 /// chest.
 ///
 /// Evolution takes priority: if at least one weapon in the player's inventory
-/// is at level 8 **and** the player owns the required passive, that weapon
-/// is replaced by its evolved form and `evolved` is set to `true`.
+/// is at `max_weapon_level` **and** the player owns the required passive, that
+/// weapon is replaced by its evolved form and `evolved` is set to `true`.
+///
+/// At most one chest is processed per frame (see module-level note).
+///
+/// Proximity check: `player.radius + treasure_radius`.  Treasure chests are
+/// sparse (a handful at most), so an O(n) scan is acceptable here — the same
+/// pattern used for un-attracted XP gems.  A SpatialGrid optimisation can be
+/// added if chest counts ever become significant.
 ///
 /// Runs every frame while in `AppState::Playing`.
 pub fn open_treasure_chests(
     mut commands: Commands,
     mut game_data: ResMut<GameData>,
+    game_cfg: GameParams,
     player_q: Query<
         (
             &Transform,
@@ -57,13 +73,18 @@ pub fn open_treasure_chests(
         return;
     };
 
+    let cfg = game_cfg.get();
+    let treasure_radius = cfg.map_or(DEFAULT_TREASURE_RADIUS, |c| c.treasure_radius);
+    let gold_reward = cfg.map_or(DEFAULT_TREASURE_GOLD, |c| c.treasure_gold_reward);
+    let max_weapon_level = cfg.map_or(DEFAULT_MAX_WEAPON_LEVEL, |c| c.max_weapon_level);
+
     for (treasure_entity, treasure_tf) in &treasure_q {
         let dist = player_tf
             .translation
             .truncate()
             .distance(treasure_tf.translation.truncate());
 
-        let threshold = player_col.radius + DEFAULT_TREASURE_RADIUS;
+        let threshold = player_col.radius + treasure_radius;
         if dist > threshold {
             continue;
         }
@@ -72,24 +93,19 @@ pub fn open_treasure_chests(
         commands.entity(treasure_entity).despawn();
 
         // Apply reward: evolution takes priority over gold.
-        if let Some(_evolved) = find_evolution(weapon_inv, passive_inv) {
-            // Evolution is applied via a separate command queue through events.
-            // Here we just mark it; the actual WeaponInventory mutation is done
-            // in apply_evolution (below) which reads WeaponEvolvedEvent.
-            //
-            // For now, the chest open is acknowledged; evolution application
-            // requires mutable access to WeaponInventory which conflicts with
-            // the immutable borrow above.  A follow-up system (or event) can
-            // finalize the swap.  This design keeps this system read-only on
-            // the inventory so it remains composable.
-            //
-            // Emit the evolved type so apply_evolution can act on it.
+        if let Some(evolved) = find_evolution(weapon_inv, passive_inv, max_weapon_level) {
+            // Mutation happens in apply_evolution (an observer) which runs
+            // after this system.  Emitting a trigger keeps this system
+            // read-only on the inventory, avoiding borrow conflicts.
             commands.trigger(WeaponEvolvedTrigger {
-                evolved_type: _evolved,
+                evolved_type: evolved,
             });
         } else {
-            game_data.gold_earned += DEFAULT_TREASURE_GOLD;
+            game_data.gold_earned += gold_reward;
         }
+
+        // Process at most one chest per frame to avoid stale-inventory decisions.
+        break;
     }
 }
 
