@@ -36,7 +36,7 @@ use crate::{
     components::{Player, PlayerFacingDirection, PlayerStats},
     config::weapon::knife::KnifeParams,
     events::WeaponFiredEvent,
-    systems::projectile::spawn_projectile,
+    systems::projectiles::spawn_projectile,
     types::WeaponType,
 };
 
@@ -221,7 +221,7 @@ mod tests {
     }
 
     fn tick_and_fire(app: &mut App) {
-        use crate::systems::weapon_cooldown::tick_weapon_cooldowns;
+        use crate::systems::weapons::cooldown::tick_weapon_cooldowns;
         advance(app);
         app.world_mut()
             .run_system_once(tick_weapon_cooldowns)

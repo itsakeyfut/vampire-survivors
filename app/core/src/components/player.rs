@@ -26,7 +26,7 @@ pub struct Player;
 /// Tracks which side the Whip last struck.
 ///
 /// Attached to the player entity and flipped by
-/// [`crate::systems::weapon_whip::fire_whip`] after each activation so that
+/// [`crate::systems::weapons::whip::fire_whip`] after each activation so that
 /// consecutive swings alternate left and right.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PlayerWhipSide(pub WhipSide);

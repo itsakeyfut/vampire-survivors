@@ -240,7 +240,7 @@ mod tests {
     /// `fire_whip` can use `get_nearby` for enemy candidate selection.
     fn tick_and_fire(app: &mut App) {
         use crate::systems::{
-            spatial::update_spatial_grid, weapon_cooldown::tick_weapon_cooldowns,
+            spatial::update_spatial_grid, weapons::cooldown::tick_weapon_cooldowns,
         };
         advance(app, 1.0 / 60.0);
         app.world_mut()

@@ -1,3 +1,5 @@
+pub mod collision;
+
 use bevy::prelude::*;
 
 use crate::{

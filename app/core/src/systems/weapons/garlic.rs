@@ -306,7 +306,7 @@ mod tests {
 
     fn tick_and_fire(app: &mut App) {
         use crate::systems::{
-            spatial::update_spatial_grid, weapon_cooldown::tick_weapon_cooldowns,
+            spatial::update_spatial_grid, weapons::cooldown::tick_weapon_cooldowns,
         };
         advance(app);
         app.world_mut()

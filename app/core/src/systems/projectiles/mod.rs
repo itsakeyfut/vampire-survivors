@@ -11,6 +11,8 @@
 //! weapon-specific fire systems (tasks 4.4 / 4.5) to spawn a fully
 //! equipped projectile entity without duplicating component boilerplate.
 
+pub mod collision;
+
 use bevy::prelude::*;
 
 use crate::{

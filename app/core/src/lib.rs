@@ -17,37 +17,37 @@ use resources::{
     SpatialGrid, TreasureSpawner,
 };
 use states::AppState;
-use systems::apply_upgrade::apply_selected_upgrade;
 use systems::damage::apply_damage_to_enemies;
-use systems::difficulty::update_difficulty;
-use systems::enemy_ai::move_enemies;
-use systems::enemy_cull::cull_distant_enemies;
-use systems::enemy_spawn::spawn_enemies;
+use systems::enemies::ai::move_enemies;
+use systems::enemies::cull::cull_distant_enemies;
+use systems::enemies::difficulty::update_difficulty;
+use systems::enemies::spawn::spawn_enemies;
 use systems::game_over::check_player_death;
 use systems::game_timer::update_game_timer;
-use systems::gem_attraction::{attract_gems_to_player, move_attracted_gems};
-use systems::gem_drop::spawn_xp_gems;
-use systems::level_up::check_level_up;
-use systems::level_up_choices::generate_level_up_choices;
-use systems::player::{despawn_game_session, player_movement, spawn_player};
-use systems::player_collision::{
+use systems::player::collision::{
     apply_damage_to_player, enemy_player_collision, tick_invincibility,
 };
-use systems::projectile::{despawn_expired_projectiles, move_projectiles};
-use systems::projectile_collision::projectile_enemy_collision;
+use systems::player::{despawn_game_session, player_movement, spawn_player};
+use systems::projectiles::collision::projectile_enemy_collision;
+use systems::projectiles::{despawn_expired_projectiles, move_projectiles};
 use systems::spatial::update_spatial_grid;
-use systems::weapon_bible::{fire_bible, orbit_bible, spawn_bible_visual};
-use systems::weapon_cooldown::tick_weapon_cooldowns;
-use systems::weapon_cross::{fire_cross, update_cross};
-use systems::weapon_fire_wand::{
+use systems::weapons::bible::{fire_bible, orbit_bible, spawn_bible_visual};
+use systems::weapons::cooldown::tick_weapon_cooldowns;
+use systems::weapons::cross::{fire_cross, update_cross};
+use systems::weapons::fire_wand::{
     despawn_expired_fireballs, despawn_explosion_effects, fire_fire_wand, fireball_enemy_collision,
     move_fireballs,
 };
-use systems::weapon_garlic::{fire_garlic, spawn_garlic_visual, update_garlic_visual};
-use systems::weapon_knife::fire_knife;
-use systems::weapon_magic_wand::fire_magic_wand;
-use systems::weapon_thunder_ring::{despawn_thunder_effects, fire_thunder_ring};
-use systems::weapon_whip::{despawn_whip_effects, fire_whip};
+use systems::weapons::garlic::{fire_garlic, spawn_garlic_visual, update_garlic_visual};
+use systems::weapons::knife::fire_knife;
+use systems::weapons::magic_wand::fire_magic_wand;
+use systems::weapons::thunder_ring::{despawn_thunder_effects, fire_thunder_ring};
+use systems::weapons::whip::{despawn_whip_effects, fire_whip};
+use systems::xp::apply::apply_selected_upgrade;
+use systems::xp::attraction::{attract_gems_to_player, move_attracted_gems};
+use systems::xp::choices::generate_level_up_choices;
+use systems::xp::drop::spawn_xp_gems;
+use systems::xp::level_up::check_level_up;
 
 /// Core game plugin. Registers states, inserts default resources, and wires up
 /// all gameplay systems.
