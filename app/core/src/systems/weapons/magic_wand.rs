@@ -23,7 +23,7 @@ use crate::{
     components::{Enemy, Player, PlayerStats},
     config::weapon::magic_wand::MagicWandParams,
     events::WeaponFiredEvent,
-    systems::projectile::spawn_projectile,
+    systems::projectiles::spawn_projectile,
     types::WeaponType,
 };
 
@@ -186,7 +186,7 @@ mod tests {
 
     /// Runs tick_weapon_cooldowns then fire_magic_wand for one frame.
     fn tick_and_fire(app: &mut App) {
-        use crate::systems::weapon_cooldown::tick_weapon_cooldowns;
+        use crate::systems::weapons::cooldown::tick_weapon_cooldowns;
         advance(app, 1.0 / 60.0);
         app.world_mut()
             .run_system_once(tick_weapon_cooldowns)

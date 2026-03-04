@@ -5,7 +5,7 @@ use bevy::prelude::*;
 ///
 /// Set by the UI layer when a card button is clicked
 /// (`ButtonAction::SelectUpgrade(index)`), consumed and cleared by
-/// [`crate::systems::apply_upgrade::apply_selected_upgrade`] on re-entry to
+/// [`crate::systems::xp::apply::apply_selected_upgrade`] on re-entry to
 /// [`crate::states::AppState::Playing`].
 ///
 /// A value of `None` means no upgrade is pending (e.g. normal game start).

@@ -12,7 +12,7 @@
 
 use bevy::prelude::*;
 use vs_core::states::AppState;
-use vs_core::systems::level_up_choices::generate_level_up_choices;
+use vs_core::systems::xp::choices::generate_level_up_choices;
 
 pub mod camera;
 pub mod components;

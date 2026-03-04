@@ -28,7 +28,7 @@
 //! at that moment so enemies near the reversal point can be struck again on the
 //! return pass.
 //!
-//! [`move_projectiles`]: crate::systems::projectile::move_projectiles
+//! [`move_projectiles`]: crate::systems::projectiles::move_projectiles
 
 use bevy::prelude::*;
 
@@ -36,7 +36,7 @@ use crate::{
     components::{Player, PlayerFacingDirection, PlayerStats, Projectile, ProjectileVelocity},
     config::weapon::cross::CrossParams,
     events::WeaponFiredEvent,
-    systems::projectile::spawn_projectile,
+    systems::projectiles::spawn_projectile,
     types::WeaponType,
 };
 
@@ -188,7 +188,7 @@ pub fn fire_cross(
 /// This system must run **after** [`move_projectiles`] so it acts on the
 /// position that was just written this frame.
 ///
-/// [`move_projectiles`]: crate::systems::projectile::move_projectiles
+/// [`move_projectiles`]: crate::systems::projectiles::move_projectiles
 pub fn update_cross(
     mut cross_q: Query<(
         &Transform,
@@ -269,7 +269,7 @@ mod tests {
     }
 
     fn tick_and_fire(app: &mut App) {
-        use crate::systems::weapon_cooldown::tick_weapon_cooldowns;
+        use crate::systems::weapons::cooldown::tick_weapon_cooldowns;
         advance(app);
         app.world_mut()
             .run_system_once(tick_weapon_cooldowns)
