@@ -15,7 +15,7 @@ impl Plugin for XpPlugin {
         use crate::systems::damage::apply_damage_to_enemies;
         use crate::systems::player::player_movement;
         use crate::systems::player::spawn_player;
-        use crate::systems::xp::apply::apply_selected_upgrade;
+        use crate::systems::xp::apply::{apply_selected_upgrade, recalculate_player_stats};
         use crate::systems::xp::attraction::{attract_gems_to_player, move_attracted_gems};
         use crate::systems::xp::choices::generate_level_up_choices;
         use crate::systems::xp::drop::spawn_xp_gems;
@@ -28,6 +28,7 @@ impl Plugin for XpPlugin {
         .add_systems(
             Update,
             (
+                recalculate_player_stats,
                 spawn_xp_gems.after(apply_damage_to_enemies),
                 attract_gems_to_player.after(player_movement),
                 move_attracted_gems.after(attract_gems_to_player),
