@@ -209,7 +209,7 @@ pub fn regen_hp(time: Res<Time>, mut query: Query<&mut PlayerStats, With<Player>
     let Ok(mut stats) = query.single_mut() else {
         return;
     };
-    if stats.hp_regen <= 0.0 {
+    if stats.current_hp <= 0.0 || stats.hp_regen <= 0.0 {
         return;
     }
     stats.current_hp = (stats.current_hp + stats.hp_regen * time.delta_secs()).min(stats.max_hp);
@@ -547,5 +547,32 @@ mod tests {
         let entity = q.single(app.world()).expect("player should exist");
         let hp = app.world().get::<PlayerStats>(entity).unwrap().current_hp;
         assert_eq!(hp, 50.0, "HP should not change when hp_regen is negative");
+    }
+
+    /// `regen_hp` must not heal a dead player (current_hp <= 0).
+    #[test]
+    fn regen_hp_does_not_heal_dead_player() {
+        use std::time::Duration;
+
+        let mut app = build_playing_app();
+
+        let mut stats = PlayerStats::default();
+        stats.current_hp = 0.0;
+        stats.max_hp = 100.0;
+        stats.hp_regen = 10.0;
+
+        app.world_mut().spawn((Player, stats));
+
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_secs(1));
+        app.world_mut()
+            .run_system_once(regen_hp)
+            .expect("regen_hp should run");
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).expect("player should exist");
+        let hp = app.world().get::<PlayerStats>(entity).unwrap().current_hp;
+        assert_eq!(hp, 0.0, "dead player must not be healed by regen");
     }
 }
