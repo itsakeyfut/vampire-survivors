@@ -10,11 +10,11 @@ use serde::Deserialize;
 #[derive(Asset, TypePath, Deserialize, Debug, Clone)]
 pub struct FireWandConfig {
     /// Direct-hit damage at each weapon level (index 0 = level 1).
-    pub damage_by_level: Vec<f32>,
+    pub damage_by_level: [f32; 8],
     /// Area-of-effect explosion damage at each weapon level.
-    pub aoe_damage_by_level: Vec<f32>,
+    pub aoe_damage_by_level: [f32; 8],
     /// Explosion radius in pixels at each weapon level.
-    pub aoe_radius_by_level: Vec<f32>,
+    pub aoe_radius_by_level: [f32; 8],
     /// Fireball travel speed in pixels/second (constant across levels).
     pub speed: f32,
     /// Fireball lifetime in seconds (despawned if it never hits anything).
@@ -63,9 +63,9 @@ mod tests {
     fn full_ron() -> &'static str {
         r#"
 FireWandConfig(
-    damage_by_level:    [80.0, 100.0, 120.0, 150.0, 180.0, 220.0, 270.0, 330.0],
-    aoe_damage_by_level:[40.0, 50.0,  60.0,  75.0,  90.0,  110.0, 135.0, 165.0],
-    aoe_radius_by_level:[80.0, 90.0,  100.0, 110.0, 120.0, 130.0, 140.0, 150.0],
+    damage_by_level:    (80.0, 100.0, 120.0, 150.0, 180.0, 220.0, 270.0, 330.0),
+    aoe_damage_by_level:(40.0, 50.0,  60.0,  75.0,  90.0,  110.0, 135.0, 165.0),
+    aoe_radius_by_level:(80.0, 90.0,  100.0, 110.0, 120.0, 130.0, 140.0, 150.0),
     speed:              250.0,
     lifetime:           3.0,
     collider_radius:    12.0,

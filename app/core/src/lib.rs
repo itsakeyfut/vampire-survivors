@@ -171,6 +171,15 @@ impl Plugin for GameCorePlugin {
                         .after(move_attracted_gems)
                         .before(check_player_death),
                     check_player_death.after(apply_damage_to_player),
+                )
+                    .run_if(in_state(AppState::Playing)),
+            )
+            // Playing state — per-frame gameplay systems (part 2b: fireball
+            // movement and collision; separate block to stay within the
+            // 20-item system-tuple limit)
+            .add_systems(
+                Update,
+                (
                     move_fireballs,
                     fireball_enemy_collision
                         .after(move_fireballs)

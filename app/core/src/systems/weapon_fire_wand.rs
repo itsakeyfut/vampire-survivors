@@ -78,11 +78,6 @@ const DEFAULT_FIRE_WAND_EXPLOSION_Z: f32 = 7.0;
 /// Fireball sprite z-depth.
 const FIRE_WAND_PROJECTILE_Z: f32 = 5.5;
 
-/// Conservative upper bound on any enemy's collider radius (pixels).
-///
-/// Passed to [`SpatialGrid::get_nearby`] to avoid missing large enemies.
-const MAX_ENEMY_COLLIDER_RADIUS: f32 = 32.0;
-
 // ---------------------------------------------------------------------------
 // Components
 // ---------------------------------------------------------------------------
@@ -260,9 +255,16 @@ pub fn fireball_enemy_collision(
         .map(|c| c.explosion_z)
         .unwrap_or(DEFAULT_FIRE_WAND_EXPLOSION_Z);
 
+    // Compute the maximum enemy collider radius from live data so the spatial
+    // query never under-shoots for unusually large enemies.
+    let max_enemy_r = enemy_q
+        .iter()
+        .map(|(_, c)| c.radius)
+        .fold(0.0_f32, f32::max);
+
     for (entity, tf, collider, projectile) in fireball_q.iter() {
         let pos = tf.translation.truncate();
-        let query_radius = collider.radius + MAX_ENEMY_COLLIDER_RADIUS;
+        let query_radius = collider.radius + max_enemy_r;
         let candidates = spatial_grid.get_nearby(pos, query_radius);
 
         // Find the first enemy the fireball overlaps.
@@ -290,7 +292,7 @@ pub fn fireball_enemy_collision(
         });
 
         // AoE: damage all other enemies within the explosion radius.
-        let aoe_query_radius = projectile.aoe_radius + MAX_ENEMY_COLLIDER_RADIUS;
+        let aoe_query_radius = projectile.aoe_radius + max_enemy_r;
         let aoe_candidates = spatial_grid.get_nearby(explosion_center, aoe_query_radius);
         for candidate in aoe_candidates {
             if candidate == hit_entity {
