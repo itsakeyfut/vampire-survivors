@@ -1,5 +1,37 @@
 use serde::{Deserialize, Serialize};
 
+// ---------------------------------------------------------------------------
+// Fallback constants for base_damage() and base_count()
+//
+// These mirror the values in assets/config/weapons/*.ron and serve as
+// fallbacks when the RON assets have not yet finished loading.
+// ---------------------------------------------------------------------------
+
+// --- Whip / MagicWand (linear: base + per_level × (level − 1)) ---
+const DEFAULT_WHIP_BASE_DAMAGE: f32 = 20.0;
+const DEFAULT_WHIP_DAMAGE_PER_LEVEL: f32 = 10.0;
+const DEFAULT_MAGIC_WAND_BASE_DAMAGE: f32 = 20.0;
+const DEFAULT_MAGIC_WAND_DAMAGE_PER_LEVEL: f32 = 10.0;
+
+// --- Knife (step formula: base + step × floor((level−1) / 2)) ---
+const DEFAULT_KNIFE_BASE_DAMAGE: f32 = 15.0;
+const DEFAULT_KNIFE_DAMAGE_PER_TWO_LEVELS: f32 = 5.0;
+const DEFAULT_KNIFE_COUNT_BY_LEVEL: [u32; 8] = [1, 1, 2, 2, 3, 3, 4, 5];
+
+// --- Fixed per-level damage tables (Lv1..Lv8) ---
+const DEFAULT_GARLIC_DAMAGE_BY_LEVEL: [f32; 8] = [5.0, 5.0, 8.0, 8.0, 10.0, 12.0, 15.0, 20.0];
+const DEFAULT_BIBLE_DAMAGE_BY_LEVEL: [f32; 8] = [20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0, 80.0];
+const DEFAULT_THUNDER_RING_DAMAGE_BY_LEVEL: [f32; 8] =
+    [40.0, 50.0, 60.0, 60.0, 70.0, 80.0, 90.0, 100.0];
+const DEFAULT_CROSS_DAMAGE_BY_LEVEL: [f32; 8] = [50.0, 60.0, 70.0, 80.0, 90.0, 110.0, 130.0, 160.0];
+const DEFAULT_FIRE_WAND_DAMAGE_BY_LEVEL: [f32; 8] =
+    [80.0, 100.0, 120.0, 150.0, 180.0, 220.0, 270.0, 330.0];
+
+// --- Fixed per-level count tables (Lv1..Lv8) ---
+const DEFAULT_BIBLE_COUNT_BY_LEVEL: [u32; 8] = [1, 1, 2, 2, 3, 3, 3, 3];
+const DEFAULT_THUNDER_RING_COUNT_BY_LEVEL: [u32; 8] = [1, 1, 2, 2, 3, 3, 3, 4];
+const DEFAULT_CROSS_COUNT_BY_LEVEL: [u32; 8] = [1, 1, 1, 1, 2, 2, 2, 2];
+
 /// All weapon types, including evolved forms.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum WeaponType {
@@ -128,6 +160,93 @@ impl WeaponState {
             WeaponType::SoulEater => 0.50,
             WeaponType::UnholyVespers => 0.80,
             WeaponType::LightningRing => 0.70,
+        }
+    }
+
+    /// Base damage dealt per activation at the current weapon level.
+    ///
+    /// These values mirror the per-level tables in the RON config files and
+    /// the formulas used by each weapon's fire system.  Multiplying by
+    /// [`PlayerStats::damage_multiplier`] gives the effective damage dealt.
+    ///
+    /// | Weapon      | Lv1 | Lv2 | Lv3 | Lv4 | Lv5 | Lv6 | Lv7 | Lv8  |
+    /// |-------------|-----|-----|-----|-----|-----|-----|-----|------|
+    /// | Whip        | 20  | 30  | 40  | 50  | 60  | 70  | 80  | 90   |
+    /// | MagicWand   | 20  | 30  | 40  | 50  | 60  | 70  | 80  | 90   |
+    /// | Knife       | 15  | 15  | 20  | 20  | 25  | 25  | 30  | 30   |
+    /// | Garlic      | 5   | 5   | 8   | 8   | 10  | 12  | 15  | 20   |
+    /// | Bible       | 20  | 25  | 30  | 35  | 40  | 50  | 60  | 80   |
+    /// | ThunderRing | 40  | 50  | 60  | 60  | 70  | 80  | 90  | 100  |
+    /// | Cross       | 50  | 60  | 70  | 80  | 90  | 110 | 130 | 160  |
+    /// | FireWand    | 80  | 100 | 120 | 150 | 180 | 220 | 270 | 330  |
+    pub fn base_damage(&self) -> f32 {
+        let level = self.level.clamp(1, 8) as usize;
+        match self.weapon_type {
+            // Linear scaling: base + per_level × (level − 1).
+            WeaponType::Whip => {
+                DEFAULT_WHIP_BASE_DAMAGE + DEFAULT_WHIP_DAMAGE_PER_LEVEL * (level as f32 - 1.0)
+            }
+            WeaponType::MagicWand => {
+                DEFAULT_MAGIC_WAND_BASE_DAMAGE
+                    + DEFAULT_MAGIC_WAND_DAMAGE_PER_LEVEL * (level as f32 - 1.0)
+            }
+            // Step formula: base + step × floor((level−1) / 2).
+            WeaponType::Knife => {
+                DEFAULT_KNIFE_BASE_DAMAGE
+                    + DEFAULT_KNIFE_DAMAGE_PER_TWO_LEVELS * ((level - 1) / 2) as f32
+            }
+            // Fixed tables — values mirror the RON config files.
+            WeaponType::Garlic => DEFAULT_GARLIC_DAMAGE_BY_LEVEL[level - 1],
+            WeaponType::Bible => DEFAULT_BIBLE_DAMAGE_BY_LEVEL[level - 1],
+            WeaponType::ThunderRing => DEFAULT_THUNDER_RING_DAMAGE_BY_LEVEL[level - 1],
+            WeaponType::Cross => DEFAULT_CROSS_DAMAGE_BY_LEVEL[level - 1],
+            WeaponType::FireWand => DEFAULT_FIRE_WAND_DAMAGE_BY_LEVEL[level - 1],
+            // Evolved weapons are fixed at their max-level power.
+            WeaponType::BloodyTear => 90.0,
+            WeaponType::HolyWand => 90.0,
+            WeaponType::ThousandEdge => 30.0,
+            WeaponType::SoulEater => 20.0,
+            WeaponType::UnholyVespers => 80.0,
+            WeaponType::LightningRing => 100.0,
+        }
+    }
+
+    /// Number of projectiles (or activations) fired per cooldown cycle at the
+    /// current weapon level.
+    ///
+    /// Does not include the bonus from [`PlayerStats::extra_projectiles`]; add
+    /// that on top to get the effective count.
+    ///
+    /// | Weapon      | Lv1 | Lv2 | Lv3 | Lv4 | Lv5 | Lv6 | Lv7 | Lv8 |
+    /// |-------------|-----|-----|-----|-----|-----|-----|-----|-----|
+    /// | Whip        | 1   | 1   | 1   | 1   | 1   | 1   | 1   | 1   |
+    /// | MagicWand   | 1   | 1   | 1   | 1   | 1   | 1   | 1   | 1   |
+    /// | Knife       | 1   | 1   | 2   | 2   | 3   | 3   | 4   | 5   |
+    /// | Garlic      | 1   | 1   | 1   | 1   | 1   | 1   | 1   | 1   |
+    /// | Bible       | 1   | 1   | 2   | 2   | 3   | 3   | 3   | 3   |
+    /// | ThunderRing | 1   | 1   | 2   | 2   | 3   | 3   | 3   | 4   |
+    /// | Cross       | 1   | 1   | 1   | 1   | 2   | 2   | 2   | 2   |
+    /// | FireWand    | 1   | 1   | 1   | 1   | 1   | 1   | 1   | 1   |
+    pub fn base_count(&self) -> u32 {
+        let level = self.level.clamp(1, 8) as usize;
+        match self.weapon_type {
+            // Single-projectile weapons.
+            WeaponType::Whip
+            | WeaponType::MagicWand
+            | WeaponType::Garlic
+            | WeaponType::FireWand => 1,
+            // Per-level count tables — values mirror the RON config files.
+            WeaponType::Knife => DEFAULT_KNIFE_COUNT_BY_LEVEL[level - 1],
+            WeaponType::Bible => DEFAULT_BIBLE_COUNT_BY_LEVEL[level - 1],
+            WeaponType::ThunderRing => DEFAULT_THUNDER_RING_COUNT_BY_LEVEL[level - 1],
+            WeaponType::Cross => DEFAULT_CROSS_COUNT_BY_LEVEL[level - 1],
+            // Evolved weapons — fixed at max-level count of their base.
+            WeaponType::BloodyTear | WeaponType::HolyWand | WeaponType::SoulEater => 1,
+            // ThousandEdge: weapon_knife.rs fires count * 2 for the evolved form,
+            // so the effective count at Lv8 (base count 5 × 2) is 10.
+            WeaponType::ThousandEdge => 10,
+            WeaponType::UnholyVespers => 3,
+            WeaponType::LightningRing => 4,
         }
     }
 
@@ -264,5 +383,311 @@ mod tests {
             level_one_cd,
             "level 0 should be clamped to level 1"
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // base_damage tests
+    // -----------------------------------------------------------------------
+
+    // The parity tests below load and deserialize the live RON config files at
+    // compile time via `include_str!`, so any drift between the DEFAULT_*
+    // fallback constants and `assets/config/weapons/*.ron` is caught at
+    // compile/test time rather than at runtime.
+
+    /// Whip base_damage() matches the RON config formula for all 8 levels.
+    #[test]
+    fn base_damage_whip_matches_ron_config() {
+        use crate::config::weapon::WhipConfig;
+        let cfg: WhipConfig = ron::de::from_str(include_str!(
+            "../../../vampire-survivors/assets/config/weapons/whip.ron"
+        ))
+        .expect("whip.ron should parse");
+        let mut state = WeaponState::new(WeaponType::Whip);
+        for level in 1..=8u8 {
+            state.level = level;
+            let expected = cfg.base_damage + cfg.damage_per_level * (level as f32 - 1.0);
+            assert_eq!(
+                state.base_damage(),
+                expected,
+                "Whip lv{level}: expected {expected}"
+            );
+        }
+    }
+
+    /// MagicWand base_damage() matches the RON config formula for all 8 levels.
+    #[test]
+    fn base_damage_magic_wand_matches_ron_config() {
+        use crate::config::weapon::MagicWandConfig;
+        let cfg: MagicWandConfig = ron::de::from_str(include_str!(
+            "../../../vampire-survivors/assets/config/weapons/magic_wand.ron"
+        ))
+        .expect("magic_wand.ron should parse");
+        let mut state = WeaponState::new(WeaponType::MagicWand);
+        for level in 1..=8u8 {
+            state.level = level;
+            let expected = cfg.base_damage + cfg.damage_per_level * (level as f32 - 1.0);
+            assert_eq!(
+                state.base_damage(),
+                expected,
+                "MagicWand lv{level}: expected {expected}"
+            );
+        }
+    }
+
+    /// Knife base_damage() matches the RON config step formula for all 8 levels.
+    #[test]
+    fn base_damage_knife_matches_ron_config() {
+        use crate::config::weapon::KnifeConfig;
+        let cfg: KnifeConfig = ron::de::from_str(include_str!(
+            "../../../vampire-survivors/assets/config/weapons/knife.ron"
+        ))
+        .expect("knife.ron should parse");
+        let mut state = WeaponState::new(WeaponType::Knife);
+        for level in 1..=8u8 {
+            state.level = level;
+            let step = ((level as usize - 1) / 2) as f32;
+            let expected = cfg.base_damage + cfg.damage_per_two_levels * step;
+            assert_eq!(
+                state.base_damage(),
+                expected,
+                "Knife lv{level}: expected {expected}"
+            );
+        }
+    }
+
+    /// Garlic base_damage() matches the per-level table in garlic.ron.
+    #[test]
+    fn base_damage_garlic_matches_ron_config() {
+        use crate::config::weapon::GarlicConfig;
+        let cfg: GarlicConfig = ron::de::from_str(include_str!(
+            "../../../vampire-survivors/assets/config/weapons/garlic.ron"
+        ))
+        .expect("garlic.ron should parse");
+        let mut state = WeaponState::new(WeaponType::Garlic);
+        for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
+            state.level = (i + 1) as u8;
+            assert_eq!(state.base_damage(), expected, "Garlic lv{}", i + 1);
+        }
+    }
+
+    /// Bible base_damage() matches the per-level table in bible.ron.
+    #[test]
+    fn base_damage_bible_matches_ron_config() {
+        use crate::config::weapon::BibleConfig;
+        let cfg: BibleConfig = ron::de::from_str(include_str!(
+            "../../../vampire-survivors/assets/config/weapons/bible.ron"
+        ))
+        .expect("bible.ron should parse");
+        let mut state = WeaponState::new(WeaponType::Bible);
+        for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
+            state.level = (i + 1) as u8;
+            assert_eq!(state.base_damage(), expected, "Bible lv{}", i + 1);
+        }
+    }
+
+    /// ThunderRing base_damage() matches the per-level table in thunder_ring.ron.
+    #[test]
+    fn base_damage_thunder_ring_matches_ron_config() {
+        use crate::config::weapon::ThunderRingConfig;
+        let cfg: ThunderRingConfig = ron::de::from_str(include_str!(
+            "../../../vampire-survivors/assets/config/weapons/thunder_ring.ron"
+        ))
+        .expect("thunder_ring.ron should parse");
+        let mut state = WeaponState::new(WeaponType::ThunderRing);
+        for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
+            state.level = (i + 1) as u8;
+            assert_eq!(state.base_damage(), expected, "ThunderRing lv{}", i + 1);
+        }
+    }
+
+    /// Cross base_damage() matches the per-level table in cross.ron.
+    #[test]
+    fn base_damage_cross_matches_ron_config() {
+        use crate::config::weapon::CrossConfig;
+        let cfg: CrossConfig = ron::de::from_str(include_str!(
+            "../../../vampire-survivors/assets/config/weapons/cross.ron"
+        ))
+        .expect("cross.ron should parse");
+        let mut state = WeaponState::new(WeaponType::Cross);
+        for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
+            state.level = (i + 1) as u8;
+            assert_eq!(state.base_damage(), expected, "Cross lv{}", i + 1);
+        }
+    }
+
+    /// FireWand base_damage() matches the per-level table in fire_wand.ron.
+    #[test]
+    fn base_damage_fire_wand_matches_ron_config() {
+        use crate::config::weapon::FireWandConfig;
+        let cfg: FireWandConfig = ron::de::from_str(include_str!(
+            "../../../vampire-survivors/assets/config/weapons/fire_wand.ron"
+        ))
+        .expect("fire_wand.ron should parse");
+        let mut state = WeaponState::new(WeaponType::FireWand);
+        for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
+            state.level = (i + 1) as u8;
+            assert_eq!(state.base_damage(), expected, "FireWand lv{}", i + 1);
+        }
+    }
+
+    /// Damage increases (or stays equal) with each level for every base weapon.
+    #[test]
+    fn base_damage_never_decreases_with_level() {
+        let base_weapons = [
+            WeaponType::Whip,
+            WeaponType::MagicWand,
+            WeaponType::Knife,
+            WeaponType::Garlic,
+            WeaponType::Bible,
+            WeaponType::ThunderRing,
+            WeaponType::Cross,
+            WeaponType::FireWand,
+        ];
+        for weapon_type in base_weapons {
+            let mut state = WeaponState::new(weapon_type);
+            let mut prev = state.base_damage();
+            for level in 2..=8u8 {
+                state.level = level;
+                let curr = state.base_damage();
+                assert!(
+                    curr >= prev,
+                    "{weapon_type:?} lv{level} ({curr}) < lv{} ({prev})",
+                    level - 1
+                );
+                prev = curr;
+            }
+        }
+    }
+
+    /// base_damage clamps level 0 to level 1.
+    #[test]
+    fn base_damage_clamps_level_zero() {
+        let mut state = WeaponState::new(WeaponType::Whip);
+        let lv1 = state.base_damage();
+        state.level = 0;
+        assert_eq!(state.base_damage(), lv1, "level 0 should clamp to level 1");
+    }
+
+    // -----------------------------------------------------------------------
+    // base_count tests
+    // -----------------------------------------------------------------------
+
+    /// Single-projectile weapons always return 1.
+    #[test]
+    fn base_count_single_projectile_weapons() {
+        for weapon_type in [
+            WeaponType::Whip,
+            WeaponType::MagicWand,
+            WeaponType::Garlic,
+            WeaponType::FireWand,
+        ] {
+            let mut state = WeaponState::new(weapon_type);
+            for level in 1..=8u8 {
+                state.level = level;
+                assert_eq!(
+                    state.base_count(),
+                    1,
+                    "{weapon_type:?} lv{level} should always be 1"
+                );
+            }
+        }
+    }
+
+    /// Knife base_count() matches the per-level table in knife.ron.
+    #[test]
+    fn base_count_knife_matches_ron_config() {
+        use crate::config::weapon::KnifeConfig;
+        let cfg: KnifeConfig = ron::de::from_str(include_str!(
+            "../../../vampire-survivors/assets/config/weapons/knife.ron"
+        ))
+        .expect("knife.ron should parse");
+        let mut state = WeaponState::new(WeaponType::Knife);
+        for (i, &expected) in cfg.count_by_level.iter().enumerate() {
+            state.level = (i + 1) as u8;
+            assert_eq!(state.base_count(), expected, "Knife lv{}", i + 1);
+        }
+    }
+
+    /// Bible base_count() matches the per-level table in bible.ron.
+    #[test]
+    fn base_count_bible_matches_ron_config() {
+        use crate::config::weapon::BibleConfig;
+        let cfg: BibleConfig = ron::de::from_str(include_str!(
+            "../../../vampire-survivors/assets/config/weapons/bible.ron"
+        ))
+        .expect("bible.ron should parse");
+        let mut state = WeaponState::new(WeaponType::Bible);
+        for (i, &expected) in cfg.count_by_level.iter().enumerate() {
+            state.level = (i + 1) as u8;
+            assert_eq!(state.base_count(), expected, "Bible lv{}", i + 1);
+        }
+    }
+
+    /// ThunderRing base_count() matches the per-level table in thunder_ring.ron.
+    #[test]
+    fn base_count_thunder_ring_matches_ron_config() {
+        use crate::config::weapon::ThunderRingConfig;
+        let cfg: ThunderRingConfig = ron::de::from_str(include_str!(
+            "../../../vampire-survivors/assets/config/weapons/thunder_ring.ron"
+        ))
+        .expect("thunder_ring.ron should parse");
+        let mut state = WeaponState::new(WeaponType::ThunderRing);
+        for (i, &expected) in cfg.count_by_level.iter().enumerate() {
+            state.level = (i + 1) as u8;
+            assert_eq!(state.base_count(), expected, "ThunderRing lv{}", i + 1);
+        }
+    }
+
+    /// Cross base_count() matches the per-level table in cross.ron.
+    #[test]
+    fn base_count_cross_matches_ron_config() {
+        use crate::config::weapon::CrossConfig;
+        let cfg: CrossConfig = ron::de::from_str(include_str!(
+            "../../../vampire-survivors/assets/config/weapons/cross.ron"
+        ))
+        .expect("cross.ron should parse");
+        let mut state = WeaponState::new(WeaponType::Cross);
+        for (i, &expected) in cfg.count_by_level.iter().enumerate() {
+            state.level = (i + 1) as u8;
+            assert_eq!(state.base_count(), expected, "Cross lv{}", i + 1);
+        }
+    }
+
+    /// Count never decreases with level for any base weapon.
+    #[test]
+    fn base_count_never_decreases_with_level() {
+        let base_weapons = [
+            WeaponType::Whip,
+            WeaponType::MagicWand,
+            WeaponType::Knife,
+            WeaponType::Garlic,
+            WeaponType::Bible,
+            WeaponType::ThunderRing,
+            WeaponType::Cross,
+            WeaponType::FireWand,
+        ];
+        for weapon_type in base_weapons {
+            let mut state = WeaponState::new(weapon_type);
+            let mut prev = state.base_count();
+            for level in 2..=8u8 {
+                state.level = level;
+                let curr = state.base_count();
+                assert!(
+                    curr >= prev,
+                    "{weapon_type:?} lv{level} count ({curr}) < lv{} ({prev})",
+                    level - 1
+                );
+                prev = curr;
+            }
+        }
+    }
+
+    /// base_count clamps level 0 to level 1.
+    #[test]
+    fn base_count_clamps_level_zero() {
+        let mut state = WeaponState::new(WeaponType::Knife);
+        let lv1 = state.base_count();
+        state.level = 0;
+        assert_eq!(state.base_count(), lv1, "level 0 should clamp to level 1");
     }
 }
