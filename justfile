@@ -8,7 +8,7 @@
 
 # Update local main branch
 new:
-    git checkout main && git fetch && git pull origin main
+    git switch main && git pull --ff-only
 
 # === Build Commands ===
 
