@@ -2,6 +2,33 @@ pub mod collision;
 
 use bevy::prelude::*;
 
+use crate::states::AppState;
+
+pub struct PlayerPlugin;
+
+impl Plugin for PlayerPlugin {
+    fn build(&self, app: &mut App) {
+        use crate::systems::player::collision::{
+            apply_damage_to_player, enemy_player_collision, tick_invincibility,
+        };
+        use crate::systems::spatial::update_spatial_grid;
+        app.add_systems(OnEnter(AppState::Playing), spawn_player)
+            .add_systems(OnEnter(AppState::GameOver), despawn_game_session)
+            .add_systems(OnEnter(AppState::Victory), despawn_game_session)
+            .add_systems(OnEnter(AppState::Title), despawn_game_session)
+            .add_systems(
+                Update,
+                (
+                    player_movement,
+                    tick_invincibility.before(enemy_player_collision),
+                    enemy_player_collision.after(update_spatial_grid),
+                    apply_damage_to_player.after(enemy_player_collision),
+                )
+                    .run_if(in_state(AppState::Playing)),
+            );
+    }
+}
+
 use crate::{
     components::{
         CircleCollider, GameSessionEntity, PassiveInventory, Player, PlayerFacingDirection,

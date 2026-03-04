@@ -17,8 +17,32 @@ use bevy::prelude::*;
 
 use crate::{
     components::{CircleCollider, GameSessionEntity, Projectile, ProjectileVelocity},
+    states::AppState,
     types::WeaponType,
 };
+
+pub struct ProjectilesPlugin;
+
+impl Plugin for ProjectilesPlugin {
+    fn build(&self, app: &mut App) {
+        use crate::systems::projectiles::collision::projectile_enemy_collision;
+        use crate::systems::spatial::update_spatial_grid;
+        use crate::systems::weapons::cross::update_cross;
+        app.add_systems(
+            Update,
+            (
+                move_projectiles,
+                update_cross.after(move_projectiles),
+                projectile_enemy_collision
+                    .after(update_spatial_grid)
+                    .after(move_projectiles)
+                    .after(update_cross),
+                despawn_expired_projectiles,
+            )
+                .run_if(in_state(AppState::Playing)),
+        );
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Systems

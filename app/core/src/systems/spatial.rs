@@ -7,7 +7,21 @@
 
 use bevy::prelude::*;
 
-use crate::{components::Enemy, resources::SpatialGrid};
+use crate::{components::Enemy, resources::SpatialGrid, states::AppState};
+
+pub struct SpatialPlugin;
+
+impl Plugin for SpatialPlugin {
+    fn build(&self, app: &mut App) {
+        use crate::systems::enemies::ai::move_enemies;
+        app.add_systems(
+            Update,
+            update_spatial_grid
+                .after(move_enemies)
+                .run_if(in_state(AppState::Playing)),
+        );
+    }
+}
 
 // ---------------------------------------------------------------------------
 // System

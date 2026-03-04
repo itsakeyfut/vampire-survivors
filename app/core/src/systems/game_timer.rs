@@ -5,7 +5,18 @@
 
 use bevy::prelude::*;
 
-use crate::resources::GameData;
+use crate::{resources::GameData, states::AppState};
+
+pub struct TimerPlugin;
+
+impl Plugin for TimerPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            update_game_timer.run_if(in_state(AppState::Playing)),
+        );
+    }
+}
 
 /// Advances the run timer every frame.
 ///
