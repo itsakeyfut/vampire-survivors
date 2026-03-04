@@ -12,9 +12,11 @@
 //! | `config/weapons/bible.ron`          | [`BibleConfig`]       | Bible / UnholyVespers        |
 //! | `config/weapons/thunder_ring.ron`   | [`ThunderRingConfig`] | Thunder Ring / LightningRing |
 //! | `config/weapons/cross.ron`          | [`CrossConfig`]       | Cross                        |
+//! | `config/weapons/fire_wand.ron`      | [`FireWandConfig`]    | Fire Wand                    |
 
 pub mod bible;
 pub mod cross;
+pub mod fire_wand;
 pub mod garlic;
 pub mod knife;
 pub mod magic_wand;
@@ -23,6 +25,7 @@ pub mod whip;
 
 pub use bible::{BibleConfig, BibleConfigHandle, BibleParams};
 pub use cross::{CrossConfig, CrossConfigHandle, CrossParams};
+pub use fire_wand::{FireWandConfig, FireWandConfigHandle, FireWandParams};
 pub use garlic::{GarlicConfig, GarlicConfigHandle, GarlicParams};
 pub use knife::{KnifeConfig, KnifeConfigHandle, KnifeParams};
 pub use magic_wand::{MagicWandConfig, MagicWandConfigHandle, MagicWandParams};

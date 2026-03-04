@@ -24,6 +24,7 @@ pub mod spatial;
 pub mod weapon_bible;
 pub mod weapon_cooldown;
 pub mod weapon_cross;
+pub mod weapon_fire_wand;
 pub mod weapon_garlic;
 pub mod weapon_knife;
 pub mod weapon_magic_wand;
