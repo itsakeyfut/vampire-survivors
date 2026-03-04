@@ -10,6 +10,8 @@
 // - max_passive_level:          Maximum upgrade level for passive items
 // - boss_spawn_time:            Time (seconds) at which the boss spawns
 // - treasure_spawn_interval:    Time (seconds) between treasure chest spawns
+// - treasure_radius:            Collision radius of a chest in pixels
+// - treasure_gold_reward:       Gold awarded when opening a chest that cannot evolve a weapon
 // - xp_level_base:              XP required to reach level 2 (scales each level)
 // - xp_level_multiplier:        Multiplier applied to XP threshold each level
 // - level_up_choice_count:      Number of upgrade cards shown on level-up
@@ -30,6 +32,8 @@ GameConfig(
     // Game rules
     boss_spawn_time:          1800.0,  // 30 minutes in seconds
     treasure_spawn_interval:  180.0,   // 3 minutes in seconds
+    treasure_radius:          20.0,    // collision radius of a chest in pixels
+    treasure_gold_reward:     50,      // gold awarded when no weapon can evolve
     // XP / levelling
     xp_level_base:            20,
     xp_level_multiplier:      1.2,
