@@ -12,12 +12,13 @@
 //! | Bat      | 0 min     |
 //! | Skeleton | 0 min     |
 //! | Zombie   | 5 min     |
+//! | Ghost    | 10 min    |
 
 use bevy::prelude::*;
 use rand::RngExt;
 
 use crate::{
-    components::{CircleCollider, Enemy, EnemyAI, GameSessionEntity},
+    components::{CircleCollider, Enemy, EnemyAI, GameSessionEntity, PhaseThrough},
     config::{EnemyParams, GameParams},
     resources::{EnemySpawner, GameData},
     types::{AIType, EnemyType},
@@ -35,8 +36,12 @@ const DEFAULT_COLLIDER_BAT: f32 = 8.0;
 const DEFAULT_COLLIDER_SKELETON: f32 = 12.0;
 /// Collider radius for Zombie enemies (pixels).
 const DEFAULT_COLLIDER_ZOMBIE: f32 = 14.0;
+/// Collider radius for Ghost enemies (pixels).
+const DEFAULT_COLLIDER_GHOST: f32 = 10.0;
 /// Elapsed seconds before Zombie is added to the spawn table (5 minutes).
 const DEFAULT_ZOMBIE_UNLOCK_SECS: f32 = 300.0;
+/// Elapsed seconds before Ghost is added to the spawn table (10 minutes).
+const DEFAULT_GHOST_UNLOCK_SECS: f32 = 600.0;
 /// Window width used to compute off-screen spawn bounds (pixels).
 const DEFAULT_WINDOW_WIDTH: u32 = 1280;
 /// Window height used to compute off-screen spawn bounds (pixels).
@@ -115,29 +120,34 @@ pub fn spawn_enemies(
     let spawn_pos = random_off_screen_position(cam_pos, half_w, half_h);
 
     // Build the active spawn table based on elapsed time.
+    let elapsed = game_data.elapsed_time;
     let zombie_unlock = enemy_cfg
         .get()
         .map(|c| c.zombie_unlock_secs)
         .unwrap_or(DEFAULT_ZOMBIE_UNLOCK_SECS)
         .max(0.0);
-    let zombie_unlocked = game_data.elapsed_time >= zombie_unlock;
+    let ghost_unlock = enemy_cfg
+        .get()
+        .map(|c| c.ghost_unlock_secs)
+        .unwrap_or(DEFAULT_GHOST_UNLOCK_SECS)
+        .max(0.0);
+
+    let zombie_unlocked = elapsed >= zombie_unlock;
+    let ghost_unlocked = elapsed >= ghost_unlock;
+
+    // Build the spawn table from independent unlock flags so each enemy type
+    // respects only its own threshold, regardless of ordering in the config.
+    let mut table: Vec<EnemyType> = vec![EnemyType::Bat, EnemyType::Skeleton];
+    if zombie_unlocked {
+        table.push(EnemyType::Zombie);
+    }
+    if ghost_unlocked {
+        table.push(EnemyType::Ghost);
+    }
 
     let mut rng = rand::rng();
-    let enemy_type = if zombie_unlocked {
-        // Equal weight among Bat, Skeleton, Zombie.
-        match rng.random_range(0..3u8) {
-            0 => EnemyType::Bat,
-            1 => EnemyType::Skeleton,
-            _ => EnemyType::Zombie,
-        }
-    } else {
-        // Only Bat and Skeleton before 5 min.
-        if rng.random_bool(0.5) {
-            EnemyType::Bat
-        } else {
-            EnemyType::Skeleton
-        }
-    };
+    let idx = rng.random_range(0..table.len() as u8) as usize;
+    let enemy_type = table[idx];
 
     // Derive collider radius from config, falling back to constants.
     let collider_radius = enemy_cfg
@@ -196,6 +206,8 @@ fn enemy_color(enemy_type: EnemyType) -> Color {
         EnemyType::Bat => Color::srgb(0.5, 0.1, 0.8),
         EnemyType::Skeleton => Color::srgb(0.9, 0.9, 0.8),
         EnemyType::Zombie => Color::srgb(0.35, 0.55, 0.25),
+        // Semi-transparent white/blue for Ghost.
+        EnemyType::Ghost => Color::srgba(0.8, 0.9, 1.0, 0.55),
         // Fallback for future types added before they get explicit visuals.
         _ => Color::srgb(0.7, 0.3, 0.3),
     }
@@ -207,6 +219,7 @@ fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
         EnemyType::Bat => DEFAULT_COLLIDER_BAT,
         EnemyType::Skeleton => DEFAULT_COLLIDER_SKELETON,
         EnemyType::Zombie => DEFAULT_COLLIDER_ZOMBIE,
+        EnemyType::Ghost => DEFAULT_COLLIDER_GHOST,
         _ => 10.0,
     }
 }
@@ -215,7 +228,7 @@ fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
 ///
 /// Derives stats via [`Enemy::from_type`], attaches a placeholder
 /// `Sprite` circle, and tags the entity with [`GameSessionEntity`] for
-/// end-of-run cleanup.
+/// end-of-run cleanup.  Ghost enemies additionally receive [`PhaseThrough`].
 fn spawn_enemy(
     commands: &mut Commands,
     enemy_type: EnemyType,
@@ -224,8 +237,7 @@ fn spawn_enemy(
     collider_radius: f32,
 ) {
     let color = enemy_color(enemy_type);
-
-    commands.spawn((
+    let mut entity = commands.spawn((
         Enemy::from_type(enemy_type, difficulty),
         EnemyAI {
             ai_type: AIType::ChasePlayer,
@@ -243,6 +255,10 @@ fn spawn_enemy(
         Transform::from_translation(position.extend(5.0)),
         GameSessionEntity,
     ));
+
+    if enemy_type == EnemyType::Ghost {
+        entity.insert(PhaseThrough);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -347,6 +363,125 @@ mod tests {
             0,
             "timer has not elapsed — no enemy should be spawned yet"
         );
+    }
+
+    /// Ghost stats match the issue spec (HP 25, speed 100, damage 10).
+    #[test]
+    fn ghost_has_correct_base_stats() {
+        use crate::components::Enemy;
+        let e = Enemy::from_type(EnemyType::Ghost, 1.0);
+        assert_eq!(e.max_hp, 25.0, "Ghost base HP must be 25");
+        assert_eq!(e.move_speed, 100.0, "Ghost speed must be 100");
+        assert_eq!(e.damage, 10.0, "Ghost damage must be 10");
+    }
+
+    /// Before 10 min, Ghost must not appear in the spawn table.
+    #[test]
+    fn ghost_does_not_spawn_before_ten_minutes() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        let mut ghost_count = 0usize;
+        for _ in 0..200 {
+            let mut app = build_playing_app();
+            // Set elapsed just below ghost unlock (9 min 59 s).
+            app.world_mut().resource_mut::<GameData>().elapsed_time =
+                DEFAULT_GHOST_UNLOCK_SECS - 1.0;
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+
+            let mut q = app.world_mut().query::<&Enemy>();
+            for e in q.iter(app.world()) {
+                if e.enemy_type == EnemyType::Ghost {
+                    ghost_count += 1;
+                }
+            }
+        }
+        assert_eq!(
+            ghost_count, 0,
+            "Ghost must not spawn before 10 min, but spawned {ghost_count} times in 200 attempts"
+        );
+    }
+
+    /// After 10 min, Ghost should appear in the spawn table.
+    #[test]
+    fn ghost_can_spawn_after_ten_minutes() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        let mut ghost_count = 0usize;
+        for _ in 0..500 {
+            let mut app = build_playing_app();
+            app.world_mut().resource_mut::<GameData>().elapsed_time =
+                DEFAULT_GHOST_UNLOCK_SECS + 1.0;
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+
+            let mut q = app.world_mut().query::<&Enemy>();
+            for e in q.iter(app.world()) {
+                if e.enemy_type == EnemyType::Ghost {
+                    ghost_count += 1;
+                }
+            }
+        }
+        assert!(
+            ghost_count > 0,
+            "Ghost must appear after 10 min (0 spawns in 500 attempts)"
+        );
+    }
+
+    /// Ghost spawned after 10 min must carry the PhaseThrough component.
+    #[test]
+    fn ghost_has_phase_through_component() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        // Run until a Ghost spawns.
+        for _ in 0..500 {
+            let mut app = build_playing_app();
+            app.world_mut().resource_mut::<GameData>().elapsed_time =
+                DEFAULT_GHOST_UNLOCK_SECS + 1.0;
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+            app.world_mut().flush();
+
+            let mut q = app
+                .world_mut()
+                .query_filtered::<Entity, With<PhaseThrough>>();
+            let phase_through_count = q.iter(app.world()).count();
+            let mut eq = app.world_mut().query::<&Enemy>();
+            let ghost_count = eq
+                .iter(app.world())
+                .filter(|e| e.enemy_type == EnemyType::Ghost)
+                .count();
+
+            if ghost_count > 0 {
+                assert_eq!(
+                    phase_through_count, ghost_count,
+                    "every Ghost must carry PhaseThrough"
+                );
+                return;
+            }
+        }
+        panic!("expected at least one Ghost spawn in 500 attempts to verify PhaseThrough");
     }
 
     /// Zombie stats match the issue spec (HP 60, speed 60, damage 12).
