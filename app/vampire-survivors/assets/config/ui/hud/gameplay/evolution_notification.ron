@@ -1,0 +1,17 @@
+// Evolution notification overlay — tunable parameters.
+// Hot-reload enabled: edit while the game is running to tweak timing and style.
+//
+// Parameters:
+// - display_duration: Total lifetime of the notification in seconds before despawn
+// - fade_start:       Time after spawn at which the alpha fade-out begins (seconds)
+// - font_size:        Font size of the notification text in points
+// - top_percent:      Vertical position as a percentage of the screen height
+// - text_color:       RGB text color (values in [0.0, 1.0])
+
+EvolutionNotificationHudConfig(
+    display_duration: 3.0,
+    fade_start:       1.5,
+    font_size:        40.0,
+    top_percent:      38.0,
+    text_color:       (r: 1.0, g: 0.85, b: 0.2),
+)

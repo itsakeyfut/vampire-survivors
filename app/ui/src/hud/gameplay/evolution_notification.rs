@@ -24,6 +24,8 @@ use vs_core::states::AppState;
 use vs_core::systems::xp::treasure::WeaponEvolvedTrigger;
 use vs_core::types::WeaponType;
 
+use crate::config::EvolutionNotificationHudParams;
+
 // ---------------------------------------------------------------------------
 // Fallback constants
 // ---------------------------------------------------------------------------
@@ -93,7 +95,18 @@ pub fn weapon_display_name(weapon: WeaponType) -> &'static str {
 /// Registered as a global observer so it reacts to every trigger regardless
 /// of which entity fires it.  The notification is positioned in the top-center
 /// of the screen via an absolute-positioned flex [`Node`].
-pub fn on_weapon_evolved(trigger: On<WeaponEvolvedTrigger>, mut commands: Commands) {
+pub fn on_weapon_evolved(
+    trigger: On<WeaponEvolvedTrigger>,
+    mut commands: Commands,
+    cfg: EvolutionNotificationHudParams,
+) {
+    let cfg = cfg.get();
+    let duration = cfg.map_or(DEFAULT_DISPLAY_DURATION, |c| c.display_duration);
+    let fade_start = cfg.map_or(DEFAULT_FADE_START, |c| c.fade_start);
+    let font_size = cfg.map_or(DEFAULT_FONT_SIZE, |c| c.font_size);
+    let top_percent = cfg.map_or(DEFAULT_TOP_PERCENT, |c| c.top_percent);
+    let text_color = cfg.map_or(DEFAULT_TEXT_COLOR, |c| Color::from(&c.text_color));
+
     let name = weapon_display_name(trigger.event().evolved_type);
     let text = format!("{name}\nEvolved!");
 
@@ -103,10 +116,10 @@ pub fn on_weapon_evolved(trigger: On<WeaponEvolvedTrigger>, mut commands: Comman
         .spawn((
             Text::new(text),
             TextFont {
-                font_size: DEFAULT_FONT_SIZE,
+                font_size,
                 ..default()
             },
-            TextColor(DEFAULT_TEXT_COLOR),
+            TextColor(text_color),
             TextLayout::new_with_justify(Justify::Center),
         ))
         .id();
@@ -116,15 +129,15 @@ pub fn on_weapon_evolved(trigger: On<WeaponEvolvedTrigger>, mut commands: Comman
             Node {
                 position_type: PositionType::Absolute,
                 width: Val::Percent(100.0),
-                top: Val::Percent(DEFAULT_TOP_PERCENT),
+                top: Val::Percent(top_percent),
                 display: Display::Flex,
                 justify_content: JustifyContent::Center,
                 ..default()
             },
             EvolutionNotification {
                 elapsed: 0.0,
-                duration: DEFAULT_DISPLAY_DURATION,
-                fade_start: DEFAULT_FADE_START,
+                duration,
+                fade_start,
                 text_entity,
             },
             DespawnOnExit(AppState::Playing),
