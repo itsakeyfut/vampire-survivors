@@ -60,6 +60,8 @@ pub struct EvolutionNotification {
     pub fade_start: f32,
     /// Entity holding [`TextColor`]; its alpha is updated each frame.
     pub text_entity: Entity,
+    /// Base text color (fully opaque); alpha is overridden during fade-out.
+    pub text_color: Color,
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +141,7 @@ pub fn on_weapon_evolved(
                 duration,
                 fade_start,
                 text_entity,
+                text_color,
             },
             DespawnOnExit(AppState::Playing),
         ))
@@ -179,7 +182,7 @@ pub fn update_evolution_notification(
         };
 
         if let Ok(mut text_color) = text_q.get_mut(notif.text_entity) {
-            text_color.0 = DEFAULT_TEXT_COLOR.with_alpha(alpha);
+            text_color.0 = notif.text_color.with_alpha(alpha);
         }
     }
 }
@@ -267,6 +270,7 @@ mod tests {
                 duration: DEFAULT_DISPLAY_DURATION,
                 fade_start: DEFAULT_FADE_START,
                 text_entity,
+                text_color: DEFAULT_TEXT_COLOR,
             })
             .id()
     }
