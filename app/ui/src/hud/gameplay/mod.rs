@@ -13,13 +13,15 @@
 //! └─────────────────────────────────────────────────┘
 //! ```
 //!
-//! | Module      | Widget         | Spawn fn          | Update system           |
-//! |-------------|----------------|-------------------|-------------------------|
-//! | [`hp_bar`]  | HP bar         | `spawn_hp_bar`    | `update_hp_bar`         |
-//! | [`xp_bar`]  | XP bar         | `spawn_xp_bar`    | `update_xp_bar`         |
-//! | [`timer`]   | Elapsed timer  | `spawn_timer`     | `update_timer`          |
-//! | [`level`]   | Level label    | `spawn_level`     | `update_level_text`     |
+//! | Module                    | Widget                  | Spawn / Observer              | Update system                     |
+//! |---------------------------|-------------------------|-------------------------------|-----------------------------------|
+//! | [`hp_bar`]                | HP bar                  | `spawn_hp_bar`                | `update_hp_bar`                   |
+//! | [`xp_bar`]                | XP bar                  | `spawn_xp_bar`                | `update_xp_bar`                   |
+//! | [`timer`]                 | Elapsed timer           | `spawn_timer`                 | `update_timer`                    |
+//! | [`level`]                 | Level label             | `spawn_level`                 | `update_level_text`               |
+//! | [`evolution_notification`]| Evolution toast         | `on_weapon_evolved` (observer)| `update_evolution_notification`   |
 
+pub mod evolution_notification;
 pub mod hp_bar;
 pub mod level;
 pub mod timer;

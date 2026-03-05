@@ -24,12 +24,14 @@ pub mod level_up;
 pub mod styles;
 
 pub use hud::{
-    GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle, GameplayHudLayoutParams,
-    HpBarHudConfig, HpBarHudConfigHandle, HpBarHudParams, LevelHudConfig, LevelHudConfigHandle,
-    LevelHudParams, MenuButtonHudConfig, MenuButtonHudConfigHandle, MenuButtonHudParams,
-    ScreenHeadingHudConfig, ScreenHeadingHudConfigHandle, ScreenHeadingHudParams, TimerHudConfig,
-    TimerHudConfigHandle, TimerHudParams, UpgradeCardHudConfig, UpgradeCardHudConfigHandle,
-    UpgradeCardHudParams, XpBarHudConfig, XpBarHudConfigHandle, XpBarHudParams,
+    EvolutionNotificationHudConfig, EvolutionNotificationHudConfigHandle,
+    EvolutionNotificationHudParams, GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle,
+    GameplayHudLayoutParams, HpBarHudConfig, HpBarHudConfigHandle, HpBarHudParams, LevelHudConfig,
+    LevelHudConfigHandle, LevelHudParams, MenuButtonHudConfig, MenuButtonHudConfigHandle,
+    MenuButtonHudParams, ScreenHeadingHudConfig, ScreenHeadingHudConfigHandle,
+    ScreenHeadingHudParams, TimerHudConfig, TimerHudConfigHandle, TimerHudParams,
+    UpgradeCardHudConfig, UpgradeCardHudConfigHandle, UpgradeCardHudParams, XpBarHudConfig,
+    XpBarHudConfigHandle, XpBarHudParams,
 };
 pub use level_up::{
     LevelUpScreenConfig, LevelUpScreenConfigHandle, LevelUpScreenParams, hot_reload_level_up_screen,
@@ -95,6 +97,10 @@ ron_asset_loader!(XpBarHudConfigLoader, XpBarHudConfig);
 ron_asset_loader!(TimerHudConfigLoader, TimerHudConfig);
 ron_asset_loader!(LevelHudConfigLoader, LevelHudConfig);
 ron_asset_loader!(GameplayHudLayoutConfigLoader, GameplayHudLayoutConfig);
+ron_asset_loader!(
+    EvolutionNotificationHudConfigLoader,
+    EvolutionNotificationHudConfig
+);
 
 // ---------------------------------------------------------------------------
 // Plugin
@@ -132,7 +138,9 @@ impl Plugin for UiConfigPlugin {
             .init_asset::<LevelHudConfig>()
             .register_asset_loader(LevelHudConfigLoader)
             .init_asset::<GameplayHudLayoutConfig>()
-            .register_asset_loader(GameplayHudLayoutConfigLoader);
+            .register_asset_loader(GameplayHudLayoutConfigLoader)
+            .init_asset::<EvolutionNotificationHudConfig>()
+            .register_asset_loader(EvolutionNotificationHudConfigLoader);
 
         let asset_server = app.world_mut().resource::<AssetServer>();
 
@@ -160,6 +168,8 @@ impl Plugin for UiConfigPlugin {
             asset_server.load("config/ui/hud/gameplay/level.ron");
         let layout_handle: Handle<GameplayHudLayoutConfig> =
             asset_server.load("config/ui/hud/gameplay/layout.ron");
+        let evolution_notif_handle: Handle<EvolutionNotificationHudConfig> =
+            asset_server.load("config/ui/hud/gameplay/evolution_notification.ron");
 
         app.insert_resource(UiStyleConfigHandle(style_handle))
             .insert_resource(LevelUpScreenConfigHandle(level_up_handle))
@@ -170,7 +180,8 @@ impl Plugin for UiConfigPlugin {
             .insert_resource(XpBarHudConfigHandle(xp_bar_handle))
             .insert_resource(TimerHudConfigHandle(timer_handle))
             .insert_resource(LevelHudConfigHandle(level_handle))
-            .insert_resource(GameplayHudLayoutConfigHandle(layout_handle));
+            .insert_resource(GameplayHudLayoutConfigHandle(layout_handle))
+            .insert_resource(EvolutionNotificationHudConfigHandle(evolution_notif_handle));
 
         app.add_systems(Update, hot_reload_ui_style)
             .add_systems(Update, hot_reload_level_up_screen)

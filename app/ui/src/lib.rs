@@ -69,9 +69,12 @@ impl Plugin for GameUIPlugin {
                     hud::gameplay::xp_bar::update_xp_bar,
                     hud::gameplay::timer::update_timer,
                     hud::gameplay::level::update_level_text,
+                    hud::gameplay::evolution_notification::update_evolution_notification,
                 )
                     .run_if(in_state(AppState::Playing)),
             )
+            // Evolution notification observer — spawns a toast when a weapon evolves.
+            .add_observer(hud::gameplay::evolution_notification::on_weapon_evolved)
             // Smooth player-follow only runs during active gameplay.
             .add_systems(
                 Update,
