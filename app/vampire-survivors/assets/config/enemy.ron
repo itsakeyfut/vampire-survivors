@@ -36,8 +36,8 @@ EnemyConfig(
         collider_radius: 12.0,
     ),
     zombie: (
-        base_hp:         80.0,
-        speed:           40.0,
+        base_hp:         60.0,
+        speed:           60.0,
         damage:          12.0,
         xp_value:        8,
         gold_chance:     0.10,
@@ -89,4 +89,5 @@ EnemyConfig(
     cull_distance:       2000.0,
     difficulty_max:      10.0,
     spawn_margin:        60.0,
+    zombie_unlock_secs:  300.0,
 )
