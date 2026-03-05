@@ -43,8 +43,8 @@ const DEFAULT_MAGIC_WAND_DAMAGE_PER_LEVEL: f32 = 10.0;
 const DEFAULT_MAGIC_WAND_LIFETIME: f32 = 5.0;
 /// HolyWand fires in this many evenly-spaced directions (full circle).
 const DEFAULT_HOLY_WAND_DIRECTION_COUNT: u32 = 8;
-/// HolyWand projectiles pierce all enemies (effectively infinite).
-const HOLY_WAND_PIERCING: u32 = u32::MAX;
+/// HolyWand projectiles pierce all enemies (`u32::MAX` = effectively infinite).
+const DEFAULT_HOLY_WAND_PIERCING: u32 = u32::MAX;
 /// Circle collider radius for hit detection (pixels).
 const DEFAULT_MAGIC_WAND_COLLIDER_RADIUS: f32 = 8.0;
 
@@ -78,6 +78,12 @@ pub fn fire_magic_wand(
     let collider_r = cfg
         .map(|c| c.collider_radius)
         .unwrap_or(DEFAULT_MAGIC_WAND_COLLIDER_RADIUS);
+    let holy_direction_count = cfg
+        .map(|c| c.holy_wand_direction_count)
+        .unwrap_or(DEFAULT_HOLY_WAND_DIRECTION_COUNT);
+    let holy_piercing = cfg
+        .map(|c| c.holy_wand_piercing)
+        .unwrap_or(DEFAULT_HOLY_WAND_PIERCING);
 
     for event in fired_events.read() {
         if event.weapon_type != WeaponType::MagicWand && event.weapon_type != WeaponType::HolyWand {
@@ -94,9 +100,8 @@ pub fn fire_magic_wand(
 
         if event.weapon_type == WeaponType::HolyWand {
             // HolyWand fires in all directions simultaneously with infinite pierce.
-            let dir_count = DEFAULT_HOLY_WAND_DIRECTION_COUNT;
-            for i in 0..dir_count {
-                let angle = TAU * i as f32 / dir_count as f32;
+            for i in 0..holy_direction_count {
+                let angle = TAU * i as f32 / holy_direction_count as f32;
                 let dir = Vec2::new(angle.cos(), angle.sin());
                 spawn_projectile(
                     &mut commands,
@@ -104,7 +109,7 @@ pub fn fire_magic_wand(
                     dir * speed,
                     damage,
                     lifetime,
-                    HOLY_WAND_PIERCING,
+                    holy_piercing,
                     collider_r,
                     event.weapon_type,
                 );
