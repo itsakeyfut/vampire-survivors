@@ -7,6 +7,29 @@ use serde::Deserialize;
 use crate::types::EnemyType;
 
 // ---------------------------------------------------------------------------
+// Medusa AI behavior config
+// ---------------------------------------------------------------------------
+
+/// Behavior parameters for the Medusa ranged enemy, deserialized from RON.
+#[derive(Deserialize, Debug, Clone)]
+pub struct MedusaBehaviorConfig {
+    /// Minimum keep distance from the player (pixels).  Medusa moves away
+    /// from the player when closer than this value.
+    pub keep_min_dist: f32,
+    /// Maximum keep distance from the player (pixels).  Medusa moves toward
+    /// the player when farther than this value.
+    pub keep_max_dist: f32,
+    /// Seconds between petrification-projectile shots.
+    pub attack_interval: f32,
+    /// Speed of the fired projectile (pixels/second).
+    pub projectile_speed: f32,
+    /// Lifetime of the projectile before it despawns (seconds).
+    pub projectile_lifetime: f32,
+    /// Collider radius of the projectile (pixels).
+    pub projectile_radius: f32,
+}
+
+// ---------------------------------------------------------------------------
 // Per-enemy stats entry
 // ---------------------------------------------------------------------------
 
@@ -53,6 +76,10 @@ pub struct EnemyConfig {
     pub ghost_unlock_secs: f32,
     /// Seconds into the run before Demons are added to the spawn table.
     pub demon_unlock_secs: f32,
+    /// Seconds into the run before Medusas are added to the spawn table.
+    pub medusa_unlock_secs: f32,
+    /// Medusa-specific AI and projectile behavior parameters.
+    pub medusa_behavior: MedusaBehaviorConfig,
 }
 
 impl EnemyConfig {
@@ -154,6 +181,15 @@ EnemyConfig(
     zombie_unlock_secs: 300.0,
     ghost_unlock_secs: 600.0,
     demon_unlock_secs: 900.0,
+    medusa_unlock_secs: 1200.0,
+    medusa_behavior: (
+        keep_min_dist: 150.0,
+        keep_max_dist: 250.0,
+        attack_interval: 2.0,
+        projectile_speed: 180.0,
+        projectile_lifetime: 5.0,
+        projectile_radius: 5.0,
+    ),
 )
 "#;
         let config: EnemyConfig = ron::de::from_str(ron_data).unwrap();
@@ -171,6 +207,10 @@ EnemyConfig(
         assert_eq!(config.zombie_unlock_secs, 300.0);
         assert_eq!(config.ghost_unlock_secs, 600.0);
         assert_eq!(config.demon_unlock_secs, 900.0);
+        assert_eq!(config.medusa_unlock_secs, 1200.0);
+        assert_eq!(config.medusa_behavior.keep_min_dist, 150.0);
+        assert_eq!(config.medusa_behavior.keep_max_dist, 250.0);
+        assert_eq!(config.medusa_behavior.attack_interval, 2.0);
     }
 
     #[test]
@@ -193,6 +233,15 @@ EnemyConfig(
     zombie_unlock_secs: 300.0,
     ghost_unlock_secs: 600.0,
     demon_unlock_secs: 900.0,
+    medusa_unlock_secs: 1200.0,
+    medusa_behavior: (
+        keep_min_dist: 150.0,
+        keep_max_dist: 250.0,
+        attack_interval: 2.0,
+        projectile_speed: 180.0,
+        projectile_lifetime: 5.0,
+        projectile_radius: 5.0,
+    ),
 )
 "#;
         let config: EnemyConfig = ron::de::from_str(ron_data).unwrap();

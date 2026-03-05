@@ -115,6 +115,21 @@ pub struct DamageFlash {
     pub timer: f32,
 }
 
+/// Petrification projectile fired by the Medusa enemy.
+///
+/// Moves in a straight line toward the player's position at fire time.
+/// Despawns when [`lifetime`](MedusaProjectile::lifetime) reaches zero or
+/// when it hits the player.
+#[derive(Component, Debug)]
+pub struct MedusaProjectile {
+    /// Contact damage dealt to the player on hit.
+    pub damage: f32,
+    /// Velocity vector (pixels/second).
+    pub velocity: Vec2,
+    /// Remaining lifetime before the projectile despawns (seconds).
+    pub lifetime: f32,
+}
+
 /// Marker component: this enemy phases through other enemy entities.
 ///
 /// Currently informational — no enemy-to-enemy collision is implemented.
