@@ -13,6 +13,7 @@
 //! | Skeleton | 0 min     |
 //! | Zombie   | 5 min     |
 //! | Ghost    | 10 min    |
+//! | Demon    | 15 min    |
 
 use bevy::prelude::*;
 use rand::RngExt;
@@ -42,6 +43,10 @@ const DEFAULT_COLLIDER_GHOST: f32 = 10.0;
 const DEFAULT_ZOMBIE_UNLOCK_SECS: f32 = 300.0;
 /// Elapsed seconds before Ghost is added to the spawn table (10 minutes).
 const DEFAULT_GHOST_UNLOCK_SECS: f32 = 600.0;
+/// Collider radius for Demon enemies (pixels).
+const DEFAULT_COLLIDER_DEMON: f32 = 14.0;
+/// Elapsed seconds before Demon is added to the spawn table (15 minutes).
+const DEFAULT_DEMON_UNLOCK_SECS: f32 = 900.0;
 /// Window width used to compute off-screen spawn bounds (pixels).
 const DEFAULT_WINDOW_WIDTH: u32 = 1280;
 /// Window height used to compute off-screen spawn bounds (pixels).
@@ -131,18 +136,23 @@ pub fn spawn_enemies(
         .map(|c| c.ghost_unlock_secs)
         .unwrap_or(DEFAULT_GHOST_UNLOCK_SECS)
         .max(0.0);
-
-    let zombie_unlocked = elapsed >= zombie_unlock;
-    let ghost_unlocked = elapsed >= ghost_unlock;
+    let demon_unlock = enemy_cfg
+        .get()
+        .map(|c| c.demon_unlock_secs)
+        .unwrap_or(DEFAULT_DEMON_UNLOCK_SECS)
+        .max(0.0);
 
     // Build the spawn table from independent unlock flags so each enemy type
     // respects only its own threshold, regardless of ordering in the config.
     let mut table: Vec<EnemyType> = vec![EnemyType::Bat, EnemyType::Skeleton];
-    if zombie_unlocked {
+    if elapsed >= zombie_unlock {
         table.push(EnemyType::Zombie);
     }
-    if ghost_unlocked {
+    if elapsed >= ghost_unlock {
         table.push(EnemyType::Ghost);
+    }
+    if elapsed >= demon_unlock {
+        table.push(EnemyType::Demon);
     }
 
     let mut rng = rand::rng();
@@ -208,6 +218,8 @@ fn enemy_color(enemy_type: EnemyType) -> Color {
         EnemyType::Zombie => Color::srgb(0.35, 0.55, 0.25),
         // Semi-transparent white/blue for Ghost.
         EnemyType::Ghost => Color::srgba(0.8, 0.9, 1.0, 0.55),
+        // Deep red/fiery for Demon.
+        EnemyType::Demon => Color::srgb(0.8, 0.1, 0.05),
         // Fallback for future types added before they get explicit visuals.
         _ => Color::srgb(0.7, 0.3, 0.3),
     }
@@ -220,6 +232,7 @@ fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
         EnemyType::Skeleton => DEFAULT_COLLIDER_SKELETON,
         EnemyType::Zombie => DEFAULT_COLLIDER_ZOMBIE,
         EnemyType::Ghost => DEFAULT_COLLIDER_GHOST,
+        EnemyType::Demon => DEFAULT_COLLIDER_DEMON,
         _ => 10.0,
     }
 }
@@ -570,6 +583,94 @@ mod tests {
         assert!(
             zombie_count > 0,
             "Zombie must appear after 5 min (0 spawns in 500 attempts)"
+        );
+    }
+
+    /// Demon stats match the issue spec (HP 80, speed 130, damage 15).
+    #[test]
+    fn demon_has_correct_base_stats() {
+        use crate::components::Enemy;
+        let e = Enemy::from_type(EnemyType::Demon, 1.0);
+        assert_eq!(e.max_hp, 80.0, "Demon base HP must be 80");
+        assert_eq!(e.move_speed, 130.0, "Demon speed must be 130");
+        assert_eq!(e.damage, 15.0, "Demon damage must be 15");
+    }
+
+    /// Demon HP scales with the difficulty multiplier.
+    #[test]
+    fn demon_hp_scales_with_difficulty() {
+        use crate::components::Enemy;
+        let base = Enemy::from_type(EnemyType::Demon, 1.0);
+        let hard = Enemy::from_type(EnemyType::Demon, 2.0);
+        assert!(
+            (hard.max_hp - base.max_hp * 2.0).abs() < 1e-4,
+            "Demon HP should double at difficulty 2"
+        );
+    }
+
+    /// Before 15 min, Demon must not appear in the spawn table.
+    #[test]
+    fn demon_does_not_spawn_before_fifteen_minutes() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        let mut demon_count = 0usize;
+        for _ in 0..200 {
+            let mut app = build_playing_app();
+            app.world_mut().resource_mut::<GameData>().elapsed_time =
+                DEFAULT_DEMON_UNLOCK_SECS - 1.0;
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+
+            let mut q = app.world_mut().query::<&Enemy>();
+            for e in q.iter(app.world()) {
+                if e.enemy_type == EnemyType::Demon {
+                    demon_count += 1;
+                }
+            }
+        }
+        assert_eq!(
+            demon_count, 0,
+            "Demon must not spawn before 15 min, but spawned {demon_count} times in 200 attempts"
+        );
+    }
+
+    /// After 15 min, Demon should appear in the spawn table.
+    #[test]
+    fn demon_can_spawn_after_fifteen_minutes() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        let mut demon_count = 0usize;
+        for _ in 0..500 {
+            let mut app = build_playing_app();
+            app.world_mut().resource_mut::<GameData>().elapsed_time =
+                DEFAULT_DEMON_UNLOCK_SECS + 1.0;
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+
+            let mut q = app.world_mut().query::<&Enemy>();
+            for e in q.iter(app.world()) {
+                if e.enemy_type == EnemyType::Demon {
+                    demon_count += 1;
+                }
+            }
+        }
+        assert!(
+            demon_count > 0,
+            "Demon must appear after 15 min (0 spawns in 500 attempts)"
         );
     }
 
