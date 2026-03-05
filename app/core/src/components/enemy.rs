@@ -9,7 +9,7 @@ use crate::types::{AIType, EnemyType};
 
 const DEFAULT_ENEMY_STATS_BAT: (f32, f32, f32, u32, f32) = (10.0, 150.0, 5.0, 3, 0.05);
 const DEFAULT_ENEMY_STATS_SKELETON: (f32, f32, f32, u32, f32) = (30.0, 80.0, 8.0, 5, 0.08);
-const DEFAULT_ENEMY_STATS_ZOMBIE: (f32, f32, f32, u32, f32) = (80.0, 40.0, 12.0, 8, 0.10);
+const DEFAULT_ENEMY_STATS_ZOMBIE: (f32, f32, f32, u32, f32) = (60.0, 60.0, 12.0, 8, 0.10);
 const DEFAULT_ENEMY_STATS_GHOST: (f32, f32, f32, u32, f32) = (40.0, 70.0, 10.0, 6, 0.08);
 const DEFAULT_ENEMY_STATS_DEMON: (f32, f32, f32, u32, f32) = (100.0, 120.0, 15.0, 10, 0.12);
 const DEFAULT_ENEMY_STATS_MEDUSA: (f32, f32, f32, u32, f32) = (60.0, 60.0, 12.0, 8, 0.10);

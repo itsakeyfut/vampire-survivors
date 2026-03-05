@@ -3,8 +3,15 @@
 //! Each frame [`spawn_enemies`] reads the current [`EnemySpawner`] state
 //! (set by [`super::difficulty::update_difficulty`]) and, once the effective
 //! spawn interval elapses, picks a random position just outside the visible
-//! viewport and spawns either a [`EnemyType::Bat`] or [`EnemyType::Skeleton`]
-//! (50 / 50).
+//! viewport and spawns an enemy chosen from the active spawn table.
+//!
+//! ## Spawn table (time-gated)
+//!
+//! | Enemy    | Unlocks at |
+//! |----------|-----------|
+//! | Bat      | 0 min     |
+//! | Skeleton | 0 min     |
+//! | Zombie   | 5 min     |
 
 use bevy::prelude::*;
 use rand::RngExt;
@@ -12,7 +19,7 @@ use rand::RngExt;
 use crate::{
     components::{CircleCollider, Enemy, EnemyAI, GameSessionEntity},
     config::{EnemyParams, GameParams},
-    resources::EnemySpawner,
+    resources::{EnemySpawner, GameData},
     types::{AIType, EnemyType},
 };
 
@@ -26,6 +33,10 @@ const DEFAULT_ENEMY_MAX_COUNT: usize = 500;
 const DEFAULT_COLLIDER_BAT: f32 = 8.0;
 /// Collider radius for Skeleton enemies (pixels).
 const DEFAULT_COLLIDER_SKELETON: f32 = 12.0;
+/// Collider radius for Zombie enemies (pixels).
+const DEFAULT_COLLIDER_ZOMBIE: f32 = 14.0;
+/// Elapsed seconds before Zombie is added to the spawn table (5 minutes).
+const DEFAULT_ZOMBIE_UNLOCK_SECS: f32 = 300.0;
 /// Window width used to compute off-screen spawn bounds (pixels).
 const DEFAULT_WINDOW_WIDTH: u32 = 1280;
 /// Window height used to compute off-screen spawn bounds (pixels).
@@ -53,6 +64,7 @@ const DEFAULT_ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
 /// 2. Throttles when the current enemy count reaches [`ENEMY_MAX_COUNT`].
 /// 3. Accumulates delta time; spawns once the effective interval elapses.
 /// 4. Picks a random off-screen edge position and a random enemy type.
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_enemies(
     mut commands: Commands,
     mut spawner: ResMut<EnemySpawner>,
@@ -61,6 +73,7 @@ pub fn spawn_enemies(
     enemy_q: Query<(), With<Enemy>>,
     enemy_cfg: EnemyParams,
     game_cfg: GameParams,
+    game_data: Res<GameData>,
 ) {
     if !spawner.active {
         return;
@@ -101,12 +114,28 @@ pub fn spawn_enemies(
         .unwrap_or(Vec2::ZERO);
     let spawn_pos = random_off_screen_position(cam_pos, half_w, half_h);
 
-    // 50 / 50 between Bat and Skeleton.
+    // Build the active spawn table based on elapsed time.
+    let zombie_unlock = enemy_cfg
+        .get()
+        .map(|c| c.zombie_unlock_secs)
+        .unwrap_or(DEFAULT_ZOMBIE_UNLOCK_SECS);
+    let zombie_unlocked = game_data.elapsed_time >= zombie_unlock;
+
     let mut rng = rand::rng();
-    let enemy_type = if rng.random_bool(0.5) {
-        EnemyType::Bat
+    let enemy_type = if zombie_unlocked {
+        // Equal weight among Bat, Skeleton, Zombie.
+        match rng.random_range(0..3u8) {
+            0 => EnemyType::Bat,
+            1 => EnemyType::Skeleton,
+            _ => EnemyType::Zombie,
+        }
     } else {
-        EnemyType::Skeleton
+        // Only Bat and Skeleton before 5 min.
+        if rng.random_bool(0.5) {
+            EnemyType::Bat
+        } else {
+            EnemyType::Skeleton
+        }
     };
 
     // Derive collider radius from config, falling back to constants.
@@ -165,6 +194,7 @@ fn enemy_color(enemy_type: EnemyType) -> Color {
     match enemy_type {
         EnemyType::Bat => Color::srgb(0.5, 0.1, 0.8),
         EnemyType::Skeleton => Color::srgb(0.9, 0.9, 0.8),
+        EnemyType::Zombie => Color::srgb(0.35, 0.55, 0.25),
         // Fallback for future types added before they get explicit visuals.
         _ => Color::srgb(0.7, 0.3, 0.3),
     }
@@ -175,6 +205,7 @@ fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
     match enemy_type {
         EnemyType::Bat => DEFAULT_COLLIDER_BAT,
         EnemyType::Skeleton => DEFAULT_COLLIDER_SKELETON,
+        EnemyType::Zombie => DEFAULT_COLLIDER_ZOMBIE,
         _ => 10.0,
     }
 }
@@ -222,6 +253,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
+    use crate::resources::GameData;
     use crate::states::AppState;
 
     // -----------------------------------------------------------------------
@@ -233,6 +265,7 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin));
         app.init_state::<AppState>();
         app.insert_resource(EnemySpawner::default());
+        app.insert_resource(GameData::default());
         app
     }
 
@@ -312,6 +345,95 @@ mod tests {
             q.iter(app.world()).count(),
             0,
             "timer has not elapsed — no enemy should be spawned yet"
+        );
+    }
+
+    /// Zombie stats match the issue spec (HP 60, speed 60, damage 12).
+    #[test]
+    fn zombie_has_correct_base_stats() {
+        use crate::components::Enemy;
+        let e = Enemy::from_type(EnemyType::Zombie, 1.0);
+        assert_eq!(e.max_hp, 60.0, "Zombie base HP must be 60");
+        assert_eq!(e.move_speed, 60.0, "Zombie speed must be 60");
+        assert_eq!(e.damage, 12.0, "Zombie damage must be 12");
+    }
+
+    /// Zombie HP scales with the difficulty multiplier.
+    #[test]
+    fn zombie_hp_scales_with_difficulty() {
+        use crate::components::Enemy;
+        let base = Enemy::from_type(EnemyType::Zombie, 1.0);
+        let hard = Enemy::from_type(EnemyType::Zombie, 2.0);
+        assert!(
+            (hard.max_hp - base.max_hp * 2.0).abs() < 1e-4,
+            "Zombie HP should double at difficulty 2"
+        );
+    }
+
+    /// Before 5 min, only Bat and Skeleton should spawn (never Zombie).
+    #[test]
+    fn zombie_does_not_spawn_before_five_minutes() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        // Run 200 spawn attempts to get a statistically reliable sample.
+        let mut zombie_count = 0usize;
+        for _ in 0..200 {
+            let mut app = build_playing_app();
+            // elapsed_time stays at 0 (before zombie unlock).
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+
+            let mut q = app.world_mut().query::<&Enemy>();
+            for e in q.iter(app.world()) {
+                if e.enemy_type == EnemyType::Zombie {
+                    zombie_count += 1;
+                }
+            }
+        }
+        assert_eq!(
+            zombie_count, 0,
+            "Zombie must not spawn before 5 min, but spawned {zombie_count} times in 200 attempts"
+        );
+    }
+
+    /// After 5 min, Zombie should appear in the spawn table.
+    #[test]
+    fn zombie_can_spawn_after_five_minutes() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        let mut zombie_count = 0usize;
+        for _ in 0..500 {
+            let mut app = build_playing_app();
+            // Set elapsed time to 5 min + 1 s.
+            app.world_mut().resource_mut::<GameData>().elapsed_time =
+                DEFAULT_ZOMBIE_UNLOCK_SECS + 1.0;
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+
+            let mut q = app.world_mut().query::<&Enemy>();
+            for e in q.iter(app.world()) {
+                if e.enemy_type == EnemyType::Zombie {
+                    zombie_count += 1;
+                }
+            }
+        }
+        assert!(
+            zombie_count > 0,
+            "Zombie must appear after 5 min (0 spawns in 500 attempts)"
         );
     }
 
