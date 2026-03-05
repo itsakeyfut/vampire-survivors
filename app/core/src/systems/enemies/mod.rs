@@ -1,6 +1,7 @@
 pub mod ai;
 pub mod cull;
 pub mod difficulty;
+pub mod dragon;
 pub mod medusa;
 pub mod spawn;
 
@@ -15,6 +16,9 @@ impl Plugin for EnemiesPlugin {
         use crate::systems::enemies::ai::move_enemies;
         use crate::systems::enemies::cull::cull_distant_enemies;
         use crate::systems::enemies::difficulty::update_difficulty;
+        use crate::systems::enemies::dragon::{
+            dragon_fireball_player_collision, move_dragon_fireballs, tick_dragon_attack,
+        };
         use crate::systems::enemies::medusa::{
             medusa_projectile_player_collision, move_medusa_projectiles, tick_medusa_attack,
         };
@@ -31,6 +35,11 @@ impl Plugin for EnemiesPlugin {
                 cull_distant_enemies
                     .after(move_enemies)
                     .after(spawn_enemies),
+                tick_dragon_attack.after(move_enemies),
+                move_dragon_fireballs,
+                dragon_fireball_player_collision
+                    .after(move_dragon_fireballs)
+                    .after(enemy_player_collision),
                 tick_medusa_attack.after(move_enemies),
                 move_medusa_projectiles,
                 // Run after enemy_player_collision so that if melee damage fires
