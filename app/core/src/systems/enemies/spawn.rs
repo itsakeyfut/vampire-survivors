@@ -20,7 +20,7 @@ use rand::RngExt;
 
 use crate::{
     components::{CircleCollider, Enemy, EnemyAI, GameSessionEntity, PhaseThrough},
-    config::{EnemyParams, GameParams},
+    config::{EnemyParams, EnemyStatsEntry, GameParams},
     resources::{EnemySpawner, GameData},
     types::{AIType, EnemyType},
 };
@@ -159,10 +159,11 @@ pub fn spawn_enemies(
     let idx = rng.random_range(0..table.len() as u8) as usize;
     let enemy_type = table[idx];
 
-    // Derive collider radius from config, falling back to constants.
-    let collider_radius = enemy_cfg
-        .get()
-        .map(|c| c.stats_for(enemy_type).collider_radius)
+    // Derive all enemy stats from config when available, falling back to constants.
+    let cfg_stats = enemy_cfg.get().map(|c| c.stats_for(enemy_type).clone());
+    let collider_radius = cfg_stats
+        .as_ref()
+        .map(|s| s.collider_radius)
         .unwrap_or_else(|| fallback_collider_radius(enemy_type));
 
     spawn_enemy(
@@ -171,6 +172,7 @@ pub fn spawn_enemies(
         spawn_pos,
         spawner.difficulty_multiplier,
         collider_radius,
+        cfg_stats.as_ref(),
     );
 }
 
@@ -239,19 +241,25 @@ fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
 
 /// Spawn a single enemy entity at `position`.
 ///
-/// Derives stats via [`Enemy::from_type`], attaches a placeholder
-/// `Sprite` circle, and tags the entity with [`GameSessionEntity`] for
-/// end-of-run cleanup.  Ghost enemies additionally receive [`PhaseThrough`].
+/// Uses `cfg_stats` to build the [`Enemy`] component when available so that
+/// all stats (HP, speed, damage, XP, gold) reflect the loaded RON config.
+/// Falls back to compile-time `DEFAULT_ENEMY_STATS_*` constants otherwise.
+/// Ghost enemies additionally receive [`PhaseThrough`].
 fn spawn_enemy(
     commands: &mut Commands,
     enemy_type: EnemyType,
     position: Vec2,
     difficulty: f32,
     collider_radius: f32,
+    cfg_stats: Option<&EnemyStatsEntry>,
 ) {
     let color = enemy_color(enemy_type);
+    let enemy_component = match cfg_stats {
+        Some(stats) => Enemy::from_config(enemy_type, stats, difficulty),
+        None => Enemy::from_type(enemy_type, difficulty),
+    };
     let mut entity = commands.spawn((
-        Enemy::from_type(enemy_type, difficulty),
+        enemy_component,
         EnemyAI {
             ai_type: AIType::ChasePlayer,
             attack_timer: 0.0,

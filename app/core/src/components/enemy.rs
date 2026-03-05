@@ -33,8 +33,31 @@ pub struct Enemy {
 }
 
 impl Enemy {
-    /// Construct an `Enemy` from its type and the current difficulty multiplier.
+    /// Construct an `Enemy` from a loaded [`EnemyStatsEntry`] and difficulty.
     ///
+    /// Prefer this over [`from_type`] when `EnemyConfig` is available so stats
+    /// reflect the current RON file rather than compile-time constants.
+    /// HP is scaled by `difficulty`; all other stats remain at base values.
+    pub fn from_config(
+        enemy_type: EnemyType,
+        stats: &crate::config::EnemyStatsEntry,
+        difficulty: f32,
+    ) -> Self {
+        let max_hp = stats.base_hp * difficulty.max(1.0);
+        Self {
+            enemy_type,
+            max_hp,
+            current_hp: max_hp,
+            move_speed: stats.speed,
+            damage: stats.damage,
+            xp_value: stats.xp_value,
+            gold_chance: stats.gold_chance,
+        }
+    }
+
+    /// Construct an `Enemy` using compile-time fallback constants.
+    ///
+    /// Used when `EnemyConfig` is not yet loaded (e.g. first frames or tests).
     /// HP is scaled by `difficulty`; all other stats remain at their base values.
     /// `difficulty` should be ≥ 1.0 (1.0 = start of run, no scaling).
     pub fn from_type(enemy_type: EnemyType, difficulty: f32) -> Self {
