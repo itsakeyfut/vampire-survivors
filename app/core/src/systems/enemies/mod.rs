@@ -20,6 +20,7 @@ impl Plugin for EnemiesPlugin {
         };
         use crate::systems::enemies::spawn::spawn_enemies;
         use crate::systems::game_timer::update_game_timer;
+        use crate::systems::player::collision::enemy_player_collision;
         use crate::systems::player::player_movement;
         app.add_systems(
             Update,
@@ -32,7 +33,15 @@ impl Plugin for EnemiesPlugin {
                     .after(spawn_enemies),
                 tick_medusa_attack.after(move_enemies),
                 move_medusa_projectiles,
-                medusa_projectile_player_collision.after(move_medusa_projectiles),
+                // Run after enemy_player_collision so that if melee damage fires
+                // first this system is ordered after it.  Note: both systems use
+                // deferred Commands, so the InvincibilityTimer inserted by one is
+                // not yet visible to the other within the same frame — same-frame
+                // double-hit remains theoretically possible but is ordered
+                // deterministically.
+                medusa_projectile_player_collision
+                    .after(move_medusa_projectiles)
+                    .after(enemy_player_collision),
             )
                 .run_if(in_state(AppState::Playing)),
         );
