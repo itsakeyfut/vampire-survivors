@@ -92,4 +92,13 @@ EnemyConfig(
     zombie_unlock_secs:  300.0,
     ghost_unlock_secs:   600.0,
     demon_unlock_secs:   900.0,
+    medusa_unlock_secs:  1200.0,
+    medusa_behavior: (
+        keep_min_dist:       150.0,
+        keep_max_dist:       250.0,
+        attack_interval:     2.0,
+        projectile_speed:    180.0,
+        projectile_lifetime: 5.0,
+        projectile_radius:   5.0,
+    ),
 )

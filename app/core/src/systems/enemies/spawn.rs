@@ -14,6 +14,7 @@
 //! | Zombie   | 5 min     |
 //! | Ghost    | 10 min    |
 //! | Demon    | 15 min    |
+//! | Medusa   | 20 min    |
 
 use bevy::prelude::*;
 use rand::RngExt;
@@ -47,6 +48,10 @@ const DEFAULT_GHOST_UNLOCK_SECS: f32 = 600.0;
 const DEFAULT_COLLIDER_DEMON: f32 = 14.0;
 /// Elapsed seconds before Demon is added to the spawn table (15 minutes).
 const DEFAULT_DEMON_UNLOCK_SECS: f32 = 900.0;
+/// Collider radius for Medusa enemies (pixels).
+const DEFAULT_COLLIDER_MEDUSA: f32 = 12.0;
+/// Elapsed seconds before Medusa is added to the spawn table (20 minutes).
+const DEFAULT_MEDUSA_UNLOCK_SECS: f32 = 1200.0;
 /// Window width used to compute off-screen spawn bounds (pixels).
 const DEFAULT_WINDOW_WIDTH: u32 = 1280;
 /// Window height used to compute off-screen spawn bounds (pixels).
@@ -141,6 +146,11 @@ pub fn spawn_enemies(
         .map(|c| c.demon_unlock_secs)
         .unwrap_or(DEFAULT_DEMON_UNLOCK_SECS)
         .max(0.0);
+    let medusa_unlock = enemy_cfg
+        .get()
+        .map(|c| c.medusa_unlock_secs)
+        .unwrap_or(DEFAULT_MEDUSA_UNLOCK_SECS)
+        .max(0.0);
 
     // Build the spawn table from independent unlock flags so each enemy type
     // respects only its own threshold, regardless of ordering in the config.
@@ -153,6 +163,9 @@ pub fn spawn_enemies(
     }
     if elapsed >= demon_unlock {
         table.push(EnemyType::Demon);
+    }
+    if elapsed >= medusa_unlock {
+        table.push(EnemyType::Medusa);
     }
 
     let mut rng = rand::rng();
@@ -222,6 +235,8 @@ fn enemy_color(enemy_type: EnemyType) -> Color {
         EnemyType::Ghost => Color::srgba(0.8, 0.9, 1.0, 0.55),
         // Deep red/fiery for Demon.
         EnemyType::Demon => Color::srgb(0.8, 0.1, 0.05),
+        // Stone/snake gray for Medusa.
+        EnemyType::Medusa => Color::srgb(0.6, 0.6, 0.5),
         // Fallback for future types added before they get explicit visuals.
         _ => Color::srgb(0.7, 0.3, 0.3),
     }
@@ -235,6 +250,7 @@ fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
         EnemyType::Zombie => DEFAULT_COLLIDER_ZOMBIE,
         EnemyType::Ghost => DEFAULT_COLLIDER_GHOST,
         EnemyType::Demon => DEFAULT_COLLIDER_DEMON,
+        EnemyType::Medusa => DEFAULT_COLLIDER_MEDUSA,
         _ => 10.0,
     }
 }
@@ -245,6 +261,7 @@ fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
 /// all stats (HP, speed, damage, XP, gold) reflect the loaded RON config.
 /// Falls back to compile-time `DEFAULT_ENEMY_STATS_*` constants otherwise.
 /// Ghost enemies additionally receive [`PhaseThrough`].
+/// Medusa enemies use [`AIType::KeepDistance`] instead of `ChasePlayer`.
 fn spawn_enemy(
     commands: &mut Commands,
     enemy_type: EnemyType,
@@ -258,13 +275,22 @@ fn spawn_enemy(
         Some(stats) => Enemy::from_config(enemy_type, stats, difficulty),
         None => Enemy::from_type(enemy_type, difficulty),
     };
-    let mut entity = commands.spawn((
-        enemy_component,
+    let ai = if enemy_type == EnemyType::Medusa {
+        EnemyAI {
+            ai_type: AIType::KeepDistance,
+            attack_timer: 0.0,
+            attack_range: 250.0,
+        }
+    } else {
         EnemyAI {
             ai_type: AIType::ChasePlayer,
             attack_timer: 0.0,
             attack_range: 20.0,
-        },
+        }
+    };
+    let mut entity = commands.spawn((
+        enemy_component,
+        ai,
         CircleCollider {
             radius: collider_radius,
         },
@@ -680,6 +706,122 @@ mod tests {
             demon_count > 0,
             "Demon must appear after 15 min (0 spawns in 500 attempts)"
         );
+    }
+
+    /// Medusa stats match the issue spec (HP 60, speed 60, damage 12).
+    #[test]
+    fn medusa_has_correct_base_stats() {
+        use crate::components::Enemy;
+        let e = Enemy::from_type(EnemyType::Medusa, 1.0);
+        assert_eq!(e.max_hp, 60.0, "Medusa base HP must be 60");
+        assert_eq!(e.move_speed, 60.0, "Medusa speed must be 60");
+        assert_eq!(e.damage, 12.0, "Medusa damage must be 12");
+    }
+
+    /// Before 20 min, Medusa must not appear in the spawn table.
+    #[test]
+    fn medusa_does_not_spawn_before_twenty_minutes() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        let mut medusa_count = 0usize;
+        for _ in 0..200 {
+            let mut app = build_playing_app();
+            app.world_mut().resource_mut::<GameData>().elapsed_time =
+                DEFAULT_MEDUSA_UNLOCK_SECS - 1.0;
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+
+            let mut q = app.world_mut().query::<&Enemy>();
+            for e in q.iter(app.world()) {
+                if e.enemy_type == EnemyType::Medusa {
+                    medusa_count += 1;
+                }
+            }
+        }
+        assert_eq!(
+            medusa_count, 0,
+            "Medusa must not spawn before 20 min, but spawned {medusa_count} times in 200 attempts"
+        );
+    }
+
+    /// After 20 min, Medusa should appear in the spawn table.
+    #[test]
+    fn medusa_can_spawn_after_twenty_minutes() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        let mut medusa_count = 0usize;
+        for _ in 0..500 {
+            let mut app = build_playing_app();
+            app.world_mut().resource_mut::<GameData>().elapsed_time =
+                DEFAULT_MEDUSA_UNLOCK_SECS + 1.0;
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+
+            let mut q = app.world_mut().query::<&Enemy>();
+            for e in q.iter(app.world()) {
+                if e.enemy_type == EnemyType::Medusa {
+                    medusa_count += 1;
+                }
+            }
+        }
+        assert!(
+            medusa_count > 0,
+            "Medusa must appear after 20 min (0 spawns in 500 attempts)"
+        );
+    }
+
+    /// Medusa spawned after 20 min must use KeepDistance AI.
+    #[test]
+    fn medusa_spawns_with_keep_distance_ai() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        for _ in 0..500 {
+            let mut app = build_playing_app();
+            app.world_mut().resource_mut::<GameData>().elapsed_time =
+                DEFAULT_MEDUSA_UNLOCK_SECS + 1.0;
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+            app.world_mut().flush();
+
+            let mut eq = app.world_mut().query::<(&Enemy, &EnemyAI)>();
+            let medusa: Vec<_> = eq
+                .iter(app.world())
+                .filter(|(e, _)| e.enemy_type == EnemyType::Medusa)
+                .collect();
+
+            if !medusa.is_empty() {
+                for (_, ai) in &medusa {
+                    assert_eq!(
+                        ai.ai_type,
+                        AIType::KeepDistance,
+                        "Medusa must use KeepDistance AI"
+                    );
+                }
+                return;
+            }
+        }
+        panic!("expected at least one Medusa spawn in 500 attempts to verify KeepDistance AI");
     }
 
     /// Spawned enemy must carry `Enemy`, `EnemyAI`, and `CircleCollider`.

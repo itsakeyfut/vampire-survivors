@@ -1,44 +1,92 @@
-//! Enemy AI movement system — ChasePlayer behavior.
+//! Enemy AI movement system — ChasePlayer and KeepDistance behaviors.
 //!
 //! [`move_enemies`] runs every frame while in [`AppState::Playing`] and
-//! translates each enemy entity toward the player using frame-rate-independent
-//! speed scaled by [`Enemy::move_speed`].
+//! translates each enemy entity using frame-rate-independent movement:
+//!
+//! - `ChasePlayer`: moves directly toward the player each frame.
+//! - `KeepDistance`: moves away when closer than `keep_min`, toward when
+//!   farther than `keep_max`, stationary in between.
+//!
+//! Keep-distance thresholds are read from [`crate::config::EnemyParams`]
+//! (`medusa_behavior.keep_min_dist` / `keep_max_dist`), falling back to
+//! compile-time constants while the asset loads.
 
 use bevy::prelude::*;
 
 use crate::{
     components::{Enemy, EnemyAI, Player},
+    config::EnemyParams,
     types::AIType,
 };
+
+// ---------------------------------------------------------------------------
+// Fallback constants (used when RON config is not yet loaded)
+// ---------------------------------------------------------------------------
+
+/// Minimum keep-distance (px): Medusa moves away below this threshold.
+const DEFAULT_KEEP_MIN_DIST: f32 = 150.0;
+/// Maximum keep-distance (px): Medusa moves toward player above this threshold.
+const DEFAULT_KEEP_MAX_DIST: f32 = 250.0;
 
 // ---------------------------------------------------------------------------
 // System
 // ---------------------------------------------------------------------------
 
-/// Moves every [`Enemy`] toward the player each frame.
+/// Moves every [`Enemy`] each frame according to its [`AIType`].
 ///
-/// - Reads the single [`Player`] transform to get the target position.
-/// - For each enemy with [`AIType::ChasePlayer`], computes the normalised
-///   direction and advances the transform by `move_speed × Δt` pixels.
+/// - `ChasePlayer`: moves directly toward the player.
+/// - `KeepDistance`: moves away when too close, toward when too far, still
+///   when within the band.  Thresholds are sourced from [`EnemyParams`] with
+///   compile-time constant fallbacks.
+/// - All other AI types: stationary (handled by dedicated systems).
 /// - `normalize_or_zero` prevents NaN when an enemy is exactly on the player.
-/// - Enemies without a player to chase remain stationary.
+/// - Enemies without a player remain stationary.
 pub fn move_enemies(
     time: Res<Time>,
     player_q: Query<&Transform, With<Player>>,
     mut enemy_q: Query<(&Enemy, &EnemyAI, &mut Transform), Without<Player>>,
+    enemy_cfg: EnemyParams,
 ) {
     let Ok(player_tf) = player_q.single() else {
         return;
     };
     let player_pos = player_tf.translation.truncate();
 
+    let keep_min = enemy_cfg
+        .get()
+        .map(|c| c.medusa_behavior.keep_min_dist)
+        .unwrap_or(DEFAULT_KEEP_MIN_DIST);
+    let keep_max = enemy_cfg
+        .get()
+        .map(|c| c.medusa_behavior.keep_max_dist)
+        .unwrap_or(DEFAULT_KEEP_MAX_DIST);
+
+    let dt = time.delta_secs();
+
     for (enemy, ai, mut tf) in enemy_q.iter_mut() {
-        if ai.ai_type != AIType::ChasePlayer {
-            continue;
-        }
         let enemy_pos = tf.translation.truncate();
-        let direction = (player_pos - enemy_pos).normalize_or_zero();
-        tf.translation += (direction * enemy.move_speed * time.delta_secs()).extend(0.0);
+        match ai.ai_type {
+            AIType::ChasePlayer => {
+                let direction = (player_pos - enemy_pos).normalize_or_zero();
+                tf.translation += (direction * enemy.move_speed * dt).extend(0.0);
+            }
+            AIType::KeepDistance => {
+                let to_player = player_pos - enemy_pos;
+                let distance = to_player.length();
+                let direction = if distance < keep_min {
+                    // Too close — retreat.
+                    -to_player.normalize_or_zero()
+                } else if distance > keep_max {
+                    // Too far — close in.
+                    to_player.normalize_or_zero()
+                } else {
+                    // In the comfort band — hold position.
+                    Vec2::ZERO
+                };
+                tf.translation += (direction * enemy.move_speed * dt).extend(0.0);
+            }
+            _ => {} // other AI types handled by dedicated systems
+        }
     }
 }
 
@@ -186,11 +234,13 @@ mod tests {
         );
     }
 
-    /// Enemies with non-ChasePlayer AI must not move.
+    /// A KeepDistance enemy inside the comfort band (150–250 px) must not move.
     #[test]
-    fn non_chase_enemy_stays_still() {
+    fn keep_distance_enemy_stays_still_in_comfort_band() {
         let mut app = build_app();
-        spawn_player_at(&mut app, Vec2::new(100.0, 0.0));
+        // Place player at x=200 and enemy at origin — distance 200, inside
+        // the default keep band [150, 250]. The enemy should not move.
+        spawn_player_at(&mut app, Vec2::new(200.0, 0.0));
 
         let enemy = app
             .world_mut()
@@ -199,7 +249,7 @@ mod tests {
                 EnemyAI {
                     ai_type: AIType::KeepDistance,
                     attack_timer: 0.0,
-                    attack_range: 150.0,
+                    attack_range: 250.0,
                 },
                 Transform::from_xyz(0.0, 0.0, 5.0),
             ))
@@ -208,6 +258,6 @@ mod tests {
         advance_and_run(&mut app);
 
         let t = app.world().get::<Transform>(enemy).unwrap().translation;
-        assert_eq!(t.x, 0.0, "KeepDistance enemy must not chase");
+        assert_eq!(t.x, 0.0, "KeepDistance enemy must stay still inside the comfort band");
     }
 }
