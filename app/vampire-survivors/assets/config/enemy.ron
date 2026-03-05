@@ -44,8 +44,8 @@ EnemyConfig(
         collider_radius: 14.0,
     ),
     ghost: (
-        base_hp:         40.0,
-        speed:           70.0,
+        base_hp:         25.0,
+        speed:           100.0,
         damage:          10.0,
         xp_value:        6,
         gold_chance:     0.08,
@@ -90,4 +90,5 @@ EnemyConfig(
     difficulty_max:      10.0,
     spawn_margin:        60.0,
     zombie_unlock_secs:  300.0,
+    ghost_unlock_secs:   600.0,
 )

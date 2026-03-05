@@ -49,6 +49,8 @@ pub struct EnemyConfig {
     pub spawn_margin: f32,
     /// Seconds into the run before Zombies are added to the spawn table.
     pub zombie_unlock_secs: f32,
+    /// Seconds into the run before Ghosts are added to the spawn table.
+    pub ghost_unlock_secs: f32,
 }
 
 impl EnemyConfig {
@@ -137,7 +139,7 @@ EnemyConfig(
     bat: (base_hp: 10.0, speed: 150.0, damage: 5.0, xp_value: 3, gold_chance: 0.05, collider_radius: 8.0),
     skeleton: (base_hp: 30.0, speed: 80.0, damage: 8.0, xp_value: 5, gold_chance: 0.08, collider_radius: 12.0),
     zombie: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 14.0),
-    ghost: (base_hp: 40.0, speed: 70.0, damage: 10.0, xp_value: 6, gold_chance: 0.08, collider_radius: 10.0),
+    ghost: (base_hp: 25.0, speed: 100.0, damage: 10.0, xp_value: 6, gold_chance: 0.08, collider_radius: 10.0),
     demon: (base_hp: 100.0, speed: 120.0, damage: 15.0, xp_value: 10, gold_chance: 0.12, collider_radius: 14.0),
     medusa: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 12.0),
     dragon: (base_hp: 200.0, speed: 80.0, damage: 20.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0),
@@ -148,6 +150,7 @@ EnemyConfig(
     difficulty_max: 10.0,
     spawn_margin: 60.0,
     zombie_unlock_secs: 300.0,
+    ghost_unlock_secs: 600.0,
 )
 "#;
         let config: EnemyConfig = ron::de::from_str(ron_data).unwrap();
@@ -163,6 +166,7 @@ EnemyConfig(
         assert_eq!(config.difficulty_max, 10.0);
         assert_eq!(config.spawn_margin, 60.0);
         assert_eq!(config.zombie_unlock_secs, 300.0);
+        assert_eq!(config.ghost_unlock_secs, 600.0);
     }
 
     #[test]
@@ -172,7 +176,7 @@ EnemyConfig(
     bat: (base_hp: 10.0, speed: 150.0, damage: 5.0, xp_value: 3, gold_chance: 0.05, collider_radius: 8.0),
     skeleton: (base_hp: 30.0, speed: 80.0, damage: 8.0, xp_value: 5, gold_chance: 0.08, collider_radius: 12.0),
     zombie: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 14.0),
-    ghost: (base_hp: 40.0, speed: 70.0, damage: 10.0, xp_value: 6, gold_chance: 0.08, collider_radius: 10.0),
+    ghost: (base_hp: 25.0, speed: 100.0, damage: 10.0, xp_value: 6, gold_chance: 0.08, collider_radius: 10.0),
     demon: (base_hp: 100.0, speed: 120.0, damage: 15.0, xp_value: 10, gold_chance: 0.12, collider_radius: 14.0),
     medusa: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 12.0),
     dragon: (base_hp: 200.0, speed: 80.0, damage: 20.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0),
@@ -183,6 +187,7 @@ EnemyConfig(
     difficulty_max: 10.0,
     spawn_margin: 60.0,
     zombie_unlock_secs: 300.0,
+    ghost_unlock_secs: 600.0,
 )
 "#;
         let config: EnemyConfig = ron::de::from_str(ron_data).unwrap();
