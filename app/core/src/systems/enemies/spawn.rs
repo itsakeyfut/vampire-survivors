@@ -135,30 +135,19 @@ pub fn spawn_enemies(
     let zombie_unlocked = elapsed >= zombie_unlock;
     let ghost_unlocked = elapsed >= ghost_unlock;
 
+    // Build the spawn table from independent unlock flags so each enemy type
+    // respects only its own threshold, regardless of ordering in the config.
+    let mut table: Vec<EnemyType> = vec![EnemyType::Bat, EnemyType::Skeleton];
+    if zombie_unlocked {
+        table.push(EnemyType::Zombie);
+    }
+    if ghost_unlocked {
+        table.push(EnemyType::Ghost);
+    }
+
     let mut rng = rand::rng();
-    let enemy_type = if ghost_unlocked {
-        // Equal weight among Bat, Skeleton, Zombie, Ghost.
-        match rng.random_range(0..4u8) {
-            0 => EnemyType::Bat,
-            1 => EnemyType::Skeleton,
-            2 => EnemyType::Zombie,
-            _ => EnemyType::Ghost,
-        }
-    } else if zombie_unlocked {
-        // Equal weight among Bat, Skeleton, Zombie.
-        match rng.random_range(0..3u8) {
-            0 => EnemyType::Bat,
-            1 => EnemyType::Skeleton,
-            _ => EnemyType::Zombie,
-        }
-    } else {
-        // Only Bat and Skeleton before 5 min.
-        if rng.random_bool(0.5) {
-            EnemyType::Bat
-        } else {
-            EnemyType::Skeleton
-        }
-    };
+    let idx = rng.random_range(0..table.len() as u8) as usize;
+    let enemy_type = table[idx];
 
     // Derive collider radius from config, falling back to constants.
     let collider_radius = enemy_cfg
