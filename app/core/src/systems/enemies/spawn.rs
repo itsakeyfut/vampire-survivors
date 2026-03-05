@@ -481,7 +481,7 @@ mod tests {
                 return;
             }
         }
-        // If no ghost spawned in 500 tries the earlier test would already fail.
+        panic!("expected at least one Ghost spawn in 500 attempts to verify PhaseThrough");
     }
 
     /// Zombie stats match the issue spec (HP 60, speed 60, damage 12).
