@@ -21,6 +21,9 @@ pub struct ThunderRingConfig {
     pub visual_color: (f32, f32, f32, f32),
     /// Z-depth of the strike sprite (higher = drawn on top).
     pub strike_z: f32,
+    /// Maximum distance from the player (pixels) within which enemies can be targeted.
+    /// Approximates the visible screen radius; enemies culled beyond this range are not struck.
+    pub target_range: f32,
 }
 
 /// Resource holding the handle to the loaded [`ThunderRingConfig`].
@@ -63,6 +66,7 @@ ThunderRingConfig(
     visual_size: 24.0,
     visual_color: (0.9, 1.0, 0.2, 0.85),
     strike_z: 6.0,
+    target_range: 800.0,
 )
 "#
     }
@@ -77,6 +81,7 @@ ThunderRingConfig(
         assert_eq!(cfg.visual_size, 24.0);
         assert_eq!(cfg.visual_color, (0.9, 1.0, 0.2, 0.85));
         assert_eq!(cfg.strike_z, 6.0);
+        assert_eq!(cfg.target_range, 800.0);
     }
 
     #[test]

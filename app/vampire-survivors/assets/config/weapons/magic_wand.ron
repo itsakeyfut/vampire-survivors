@@ -2,16 +2,20 @@
 // Hot-reload enabled: edit while the game is running to balance in real time.
 //
 // Parameters:
-// - speed:            Projectile travel speed in pixels per second
-// - base_damage:      Damage dealt at level 1
-// - damage_per_level: Extra damage added per level beyond 1
-// - lifetime:         Projectile lifetime in seconds
-// - collider_radius:  Projectile collider radius in pixels
+// - speed:                    Projectile travel speed in pixels per second
+// - base_damage:              Damage dealt at level 1
+// - damage_per_level:         Extra damage added per level beyond 1
+// - lifetime:                 Projectile lifetime in seconds
+// - collider_radius:          Projectile collider radius in pixels
+// - holy_wand_direction_count: Number of directions HolyWand fires (full circle)
+// - holy_wand_piercing:       Piercing count for HolyWand (4294967295 = infinite)
 
 MagicWandConfig(
-    speed:            600.0,
-    base_damage:      20.0,
-    damage_per_level: 10.0,
-    lifetime:         5.0,
-    collider_radius:  8.0,
+    speed:                     600.0,
+    base_damage:               20.0,
+    damage_per_level:          10.0,
+    lifetime:                  5.0,
+    collider_radius:           8.0,
+    holy_wand_direction_count: 8,
+    holy_wand_piercing:        4294967295,
 )

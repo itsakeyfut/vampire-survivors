@@ -42,6 +42,10 @@ const DEFAULT_WHIP_DAMAGE_PER_LEVEL: f32 = 10.0;
 const DEFAULT_WHIP_EFFECT_DURATION: f32 = 0.15;
 /// Vertical spread factor: enemy passes when `rel.y.abs() < range * factor`.
 const DEFAULT_WHIP_SPREAD_FACTOR: f32 = 0.6;
+/// BloodyTear range multiplier relative to base Whip range (2× larger hitbox).
+const DEFAULT_BLOODY_TEAR_RANGE_MULT: f32 = 2.0;
+/// HP restored to the player per enemy hit by BloodyTear.
+const DEFAULT_BLOODY_TEAR_HP_DRAIN: f32 = 5.0;
 
 // ---------------------------------------------------------------------------
 // Whip swing effect component
@@ -75,7 +79,7 @@ pub struct WhipSwingEffect {
 pub fn fire_whip(
     mut fired_events: MessageReader<WeaponFiredEvent>,
     mut damage_events: MessageWriter<DamageEnemyEvent>,
-    mut player_q: Query<(&Transform, &PlayerStats, &mut PlayerWhipSide), With<Player>>,
+    mut player_q: Query<(&Transform, &mut PlayerStats, &mut PlayerWhipSide), With<Player>>,
     enemy_q: Query<&Transform, With<Enemy>>,
     spatial_grid: Res<SpatialGrid>,
     whip_cfg: WhipParams,
@@ -101,12 +105,19 @@ pub fn fire_whip(
             continue;
         }
 
-        let Ok((player_tf, stats, mut whip_side)) = player_q.get_mut(event.player) else {
+        let Ok((player_tf, mut stats, mut whip_side)) = player_q.get_mut(event.player) else {
             continue;
         };
 
+        let is_bloody_tear = event.weapon_type == WeaponType::BloodyTear;
         let player_pos = player_tf.translation.truncate();
-        let range = range_base * stats.area_multiplier;
+        // BloodyTear doubles the hitbox range.
+        let range_mult = if is_bloody_tear {
+            DEFAULT_BLOODY_TEAR_RANGE_MULT
+        } else {
+            1.0
+        };
+        let range = range_base * stats.area_multiplier * range_mult;
         let level = event.level.clamp(1, 8) as f32;
         let damage = (base_damage + dmg_per_level * (level - 1.0)) * stats.damage_multiplier;
         let direction = if whip_side.0 == WhipSide::Right {
@@ -116,6 +127,7 @@ pub fn fire_whip(
         };
 
         // Use SpatialGrid to narrow candidates, then apply exact fan check.
+        let mut hits = 0u32;
         for enemy_entity in spatial_grid.get_nearby(player_pos, range) {
             let Ok(enemy_tf) = enemy_q.get(enemy_entity) else {
                 continue;
@@ -127,7 +139,14 @@ pub fn fire_whip(
                     damage,
                     weapon_type: event.weapon_type,
                 });
+                hits += 1;
             }
+        }
+
+        // BloodyTear: restore HP for each enemy hit (life drain).
+        if is_bloody_tear && hits > 0 {
+            let drain = DEFAULT_BLOODY_TEAR_HP_DRAIN * hits as f32;
+            stats.current_hp = (stats.current_hp + drain).min(stats.max_hp);
         }
 
         // Spawn a short-lived colored rectangle as visual feedback.
@@ -437,6 +456,109 @@ mod tests {
             q2.iter(app.world()).count(),
             0,
             "swing effect should be despawned after lifetime"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // BloodyTear (Whip evolution) tests
+    // -----------------------------------------------------------------------
+
+    /// Helper: directly fire a BloodyTear (or any weapon type) event without
+    /// going through the cooldown system, for precise BloodyTear-specific tests.
+    fn fire_bloody_tear(app: &mut App, player: Entity) {
+        use crate::systems::spatial::update_spatial_grid;
+        app.world_mut().write_message(WeaponFiredEvent {
+            player,
+            weapon_type: WeaponType::BloodyTear,
+            level: 1,
+        });
+        app.world_mut()
+            .run_system_once(update_spatial_grid)
+            .expect("update_spatial_grid should run");
+        app.world_mut()
+            .run_system_once(fire_whip)
+            .expect("fire_whip should run");
+    }
+
+    /// BloodyTear reaches enemies just beyond the base Whip range.
+    ///
+    /// The default Whip range is 160 px; BloodyTear doubles it to 320 px.
+    /// An enemy at 250 px is outside base range but inside BloodyTear range.
+    #[test]
+    fn bloody_tear_range_is_doubled() {
+        let mut app = build_app();
+        let player = spawn_player(&mut app, WhipSide::Right);
+        // 250 px > DEFAULT_WHIP_RANGE (160) but < 160 × 2 (320).
+        spawn_enemy(&mut app, Vec2::new(250.0, 0.0));
+
+        fire_bloody_tear(&mut app, player);
+
+        let events = damage_events(&app);
+        assert_eq!(
+            events.len(),
+            1,
+            "BloodyTear should reach enemy at 250 px (2× range = 320 px)"
+        );
+        assert_eq!(events[0].weapon_type, WeaponType::BloodyTear);
+    }
+
+    /// Base Whip cannot reach the same enemy that BloodyTear can.
+    ///
+    /// Confirms the 250 px enemy is outside Whip's range to validate the
+    /// `bloody_tear_range_is_doubled` test is testing the right thing.
+    #[test]
+    fn whip_cannot_reach_enemy_that_bloody_tear_can() {
+        let mut app = build_app();
+        spawn_player(&mut app, WhipSide::Right);
+        spawn_enemy(&mut app, Vec2::new(250.0, 0.0));
+
+        tick_and_fire(&mut app);
+
+        assert_eq!(
+            damage_events(&app).len(),
+            0,
+            "base Whip should not reach enemy at 250 px (range = 160 px)"
+        );
+    }
+
+    /// BloodyTear restores HP for each enemy hit.
+    #[test]
+    fn bloody_tear_heals_player_per_hit() {
+        let mut app = build_app();
+        let player = spawn_player(&mut app, WhipSide::Right);
+        // Reduce HP so there is headroom to heal.
+        app.world_mut()
+            .get_mut::<PlayerStats>(player)
+            .unwrap()
+            .current_hp = 50.0;
+        spawn_enemy(&mut app, Vec2::new(80.0, 0.0));
+        spawn_enemy(&mut app, Vec2::new(120.0, 10.0));
+
+        fire_bloody_tear(&mut app, player);
+
+        let hp = app.world().get::<PlayerStats>(player).unwrap().current_hp;
+        // At least 2 hits → heal ≥ 50 + 2 × DEFAULT_BLOODY_TEAR_HP_DRAIN.
+        assert!(
+            hp >= 50.0 + DEFAULT_BLOODY_TEAR_HP_DRAIN * 2.0 - 1e-4,
+            "BloodyTear should heal player per hit; hp = {hp}"
+        );
+    }
+
+    /// BloodyTear does not overheal above max_hp.
+    #[test]
+    fn bloody_tear_does_not_overheal() {
+        let mut app = build_app();
+        let player = spawn_player(&mut app, WhipSide::Right);
+        // Player starts at max HP (100.0 by default).
+        spawn_enemy(&mut app, Vec2::new(80.0, 0.0));
+
+        fire_bloody_tear(&mut app, player);
+
+        let stats = app.world().get::<PlayerStats>(player).unwrap();
+        assert!(
+            stats.current_hp <= stats.max_hp,
+            "BloodyTear must not overheal above max_hp; hp = {}",
+            stats.current_hp
         );
     }
 }

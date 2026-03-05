@@ -72,6 +72,11 @@ const DEFAULT_BIBLE_ORBIT_SPEED_BY_LEVEL: [f32; 8] = [2.0, 2.0, 2.3, 2.3, 2.5, 2
 /// Number of orbiting bodies at each weapon level.
 const DEFAULT_BIBLE_COUNT_BY_LEVEL: [u32; 8] = [1, 1, 2, 2, 3, 3, 3, 3];
 
+/// UnholyVespers orbit speed multiplier relative to Bible base speed (2× faster).
+const DEFAULT_UNHOLY_VESPERS_SPEED_MULT: f32 = 2.0;
+/// UnholyVespers orbit radius multiplier relative to Bible base radius (1.5× wider).
+const DEFAULT_UNHOLY_VESPERS_RADIUS_MULT: f32 = 1.5;
+
 /// Fallback hit cooldown while RON config is still loading.
 const DEFAULT_BIBLE_HIT_COOLDOWN: f32 = 1.5;
 
@@ -155,7 +160,18 @@ pub fn fire_bible(
             .unwrap_or(DEFAULT_BIBLE_COUNT_BY_LEVEL[level - 1]);
 
         let damage = base_damage * stats.damage_multiplier;
-        let radius = base_radius * stats.area_multiplier;
+        let speed_mult = if is_unholy {
+            DEFAULT_UNHOLY_VESPERS_SPEED_MULT
+        } else {
+            1.0
+        };
+        let radius_mult = if is_unholy {
+            DEFAULT_UNHOLY_VESPERS_RADIUS_MULT
+        } else {
+            1.0
+        };
+        let speed = base_speed * speed_mult;
+        let radius = base_radius * stats.area_multiplier * radius_mult;
 
         // --- Collect existing orbs for this player ---
         let existing: Vec<Entity> = orb_q
@@ -173,7 +189,7 @@ pub fn fire_bible(
                 orb.weapon_type = event.weapon_type;
                 orb_weapon.damage = damage;
                 orb_weapon.orbit_radius = radius;
-                orb_weapon.orbit_speed = base_speed;
+                orb_weapon.orbit_speed = speed;
             }
         }
 
@@ -193,7 +209,7 @@ pub fn fire_bible(
                 OrbitWeapon {
                     damage,
                     orbit_radius: radius,
-                    orbit_speed: base_speed,
+                    orbit_speed: speed,
                     orbit_angle: angle,
                     hit_cooldown: HashMap::new(),
                 },
@@ -519,6 +535,50 @@ mod tests {
             count_orbs(&mut app),
             1,
             "UnholyVespers should spawn Bible orbs"
+        );
+    }
+
+    /// UnholyVespers orbit speed is 2× the Bible base speed at the same level.
+    #[test]
+    fn unholy_vespers_orbit_speed_is_doubled() {
+        let mut app = build_app();
+        let player = spawn_player(&mut app);
+
+        fire_once(&mut app, player, WeaponType::UnholyVespers, 1);
+
+        let speed = app
+            .world_mut()
+            .query::<&OrbitWeapon>()
+            .iter(app.world())
+            .next()
+            .expect("orb should exist")
+            .orbit_speed;
+        let expected = DEFAULT_BIBLE_ORBIT_SPEED_BY_LEVEL[0] * DEFAULT_UNHOLY_VESPERS_SPEED_MULT;
+        assert!(
+            (speed - expected).abs() < 1e-5,
+            "UnholyVespers speed should be {expected}, got {speed}"
+        );
+    }
+
+    /// UnholyVespers orbit radius is 1.5× the Bible base radius at the same level.
+    #[test]
+    fn unholy_vespers_orbit_radius_is_scaled() {
+        let mut app = build_app();
+        let player = spawn_player(&mut app);
+
+        fire_once(&mut app, player, WeaponType::UnholyVespers, 1);
+
+        let radius = app
+            .world_mut()
+            .query::<&OrbitWeapon>()
+            .iter(app.world())
+            .next()
+            .expect("orb should exist")
+            .orbit_radius;
+        let expected = DEFAULT_BIBLE_ORBIT_RADIUS_BY_LEVEL[0] * DEFAULT_UNHOLY_VESPERS_RADIUS_MULT;
+        assert!(
+            (radius - expected).abs() < 1e-5,
+            "UnholyVespers radius should be {expected}, got {radius}"
         );
     }
 

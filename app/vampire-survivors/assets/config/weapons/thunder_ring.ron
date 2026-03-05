@@ -10,6 +10,7 @@
 // - visual_size:     Side length of the square flash sprite in pixels
 // - visual_color:    RGBA color of the flash sprite ((R, G, B, A) tuple, values in [0.0, 1.0])
 // - strike_z:        Z-depth of the strike sprite (higher = drawn on top)
+// - target_range:    Max distance from player (px) for enemy targeting; approximates screen radius
 
 ThunderRingConfig(
     damage_by_level: [40.0, 50.0, 60.0, 60.0, 70.0, 80.0, 90.0, 100.0],
@@ -18,4 +19,5 @@ ThunderRingConfig(
     visual_size:     24.0,
     visual_color:    (0.9, 1.0, 0.2, 0.85),
     strike_z:        6.0,
+    target_range:    800.0,
 )

@@ -19,6 +19,10 @@ pub struct MagicWandConfig {
     pub lifetime: f32,
     /// Circle collider radius for hit detection (pixels).
     pub collider_radius: f32,
+    /// Number of projectile directions fired by HolyWand (evenly spread over a full circle).
+    pub holy_wand_direction_count: u32,
+    /// Piercing value for HolyWand projectiles; `u32::MAX` (4294967295) means infinite pierce.
+    pub holy_wand_piercing: u32,
 }
 
 /// Resource holding the handle to the loaded [`MagicWandConfig`].
@@ -61,6 +65,8 @@ MagicWandConfig(
     damage_per_level: 10.0,
     lifetime: 5.0,
     collider_radius: 8.0,
+    holy_wand_direction_count: 8,
+    holy_wand_piercing: 4294967295,
 )
 "#;
         let cfg: MagicWandConfig = ron::de::from_str(ron).unwrap();
@@ -69,5 +75,7 @@ MagicWandConfig(
         assert_eq!(cfg.damage_per_level, 10.0);
         assert_eq!(cfg.lifetime, 5.0);
         assert_eq!(cfg.collider_radius, 8.0);
+        assert_eq!(cfg.holy_wand_direction_count, 8);
+        assert_eq!(cfg.holy_wand_piercing, u32::MAX);
     }
 }

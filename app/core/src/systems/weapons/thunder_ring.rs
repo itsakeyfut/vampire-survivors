@@ -39,6 +39,7 @@ use crate::{
     components::{Enemy, GameSessionEntity, Player, PlayerStats},
     config::weapon::thunder_ring::ThunderRingParams,
     events::{DamageEnemyEvent, WeaponFiredEvent},
+    resources::SpatialGrid,
     types::WeaponType,
 };
 
@@ -64,6 +65,10 @@ const DEFAULT_THUNDER_RING_VISUAL_COLOR: (f32, f32, f32, f32) = (0.9, 1.0, 0.2, 
 
 /// Fallback strike sprite z-depth while RON config is still loading.
 const DEFAULT_THUNDER_RING_STRIKE_Z: f32 = 6.0;
+
+/// Fallback maximum targeting range in pixels while RON config is still loading.
+/// Approximates the visible screen radius so only on-screen enemies are struck.
+const DEFAULT_THUNDER_RING_TARGET_RANGE: f32 = 800.0;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -98,8 +103,9 @@ pub struct ThunderStrikeEffect {
 /// after a frame hitch) each trigger a full activation.
 pub fn fire_thunder_ring(
     mut fired_events: MessageReader<WeaponFiredEvent>,
-    player_q: Query<&PlayerStats, With<Player>>,
-    enemy_q: Query<(Entity, &Transform), With<Enemy>>,
+    player_q: Query<(&Transform, &PlayerStats), With<Player>>,
+    enemy_q: Query<&Transform, With<Enemy>>,
+    spatial_grid: Res<SpatialGrid>,
     thunder_cfg: ThunderRingParams,
     mut damage_events: MessageWriter<DamageEnemyEvent>,
     mut commands: Commands,
@@ -112,10 +118,11 @@ pub fn fire_thunder_ring(
             continue;
         }
 
-        let Ok(stats) = player_q.get(event.player) else {
+        let Ok((player_tf, stats)) = player_q.get(event.player) else {
             continue;
         };
 
+        let player_pos = player_tf.translation.truncate();
         let level = event.level.clamp(1, 8) as usize;
 
         let base_damage = cfg
@@ -139,16 +146,34 @@ pub fn fire_thunder_ring(
 
         let damage = base_damage * stats.damage_multiplier;
         let count = (base_count + stats.extra_projectiles) as usize;
+        let target_range = cfg
+            .map(|c| c.target_range)
+            .unwrap_or(DEFAULT_THUNDER_RING_TARGET_RANGE);
 
-        // Collect all living enemies and their world positions.
-        let mut candidates: Vec<(Entity, Vec2)> = enemy_q
-            .iter()
-            .map(|(e, tf)| (e, tf.translation.truncate()))
-            .collect();
+        // Collect enemies within target_range using SpatialGrid so that only
+        // on-screen (or near-screen) enemies are considered as targets.
+        // Must run after update_spatial_grid.
+        let mut candidates: Vec<(Entity, Vec2)> = Vec::new();
+        let target_range_sq = target_range * target_range;
+        for e in spatial_grid.get_nearby(player_pos, target_range) {
+            if let Ok(tf) = enemy_q.get(e) {
+                let pos = tf.translation.truncate();
+                if pos.distance_squared(player_pos) < target_range_sq {
+                    candidates.push((e, pos));
+                }
+            }
+        }
+
+        // LightningRing (evolved form) hits every enemy on screen; ThunderRing
+        // is capped to `count` targets.
+        let pick_count = if is_lightning_ring {
+            candidates.len()
+        } else {
+            count.min(candidates.len())
+        };
 
         // Fisher-Yates partial shuffle: move `pick_count` random entries to
         // the front of `candidates` so they can be taken as unique targets.
-        let pick_count = count.min(candidates.len());
         let mut rng = rand::rng();
         for i in 0..pick_count {
             let j = i + rng.random_range(0..(candidates.len() - i));
@@ -208,6 +233,7 @@ mod tests {
     use crate::{
         components::WeaponInventory,
         events::WeaponFiredEvent,
+        resources::SpatialGrid,
         types::{WeaponState, WeaponType},
     };
 
@@ -220,6 +246,7 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         app.add_message::<WeaponFiredEvent>();
         app.add_message::<DamageEnemyEvent>();
+        app.insert_resource(SpatialGrid::default());
         app
     }
 
@@ -259,6 +286,9 @@ mod tests {
             weapon_type,
             level,
         });
+        app.world_mut()
+            .run_system_once(crate::systems::spatial::update_spatial_grid)
+            .expect("update_spatial_grid should run");
         app.world_mut()
             .run_system_once(fire_thunder_ring)
             .expect("fire_thunder_ring should run");
@@ -367,18 +397,30 @@ mod tests {
         );
     }
 
-    /// LightningRing (evolution) is handled by the same system.
+    /// LightningRing (evolution) hits ALL enemies regardless of count.
     #[test]
-    fn lightning_ring_fires_thunder_effects() {
+    fn lightning_ring_hits_all_enemies() {
         let mut app = build_app();
         let player = spawn_player(&mut app);
+        // Spawn more enemies than level-1 ThunderRing count (1).
         spawn_enemy(&mut app, Vec2::new(100.0, 0.0));
+        spawn_enemy(&mut app, Vec2::new(-100.0, 0.0));
+        spawn_enemy(&mut app, Vec2::new(0.0, 100.0));
+        spawn_enemy(&mut app, Vec2::new(0.0, -100.0));
+        spawn_enemy(&mut app, Vec2::new(50.0, 50.0));
 
         fire_once(&mut app, player, WeaponType::LightningRing, 1);
 
         let events = damage_events(&app);
-        assert_eq!(events.len(), 1, "LightningRing should deal damage");
-        assert_eq!(events[0].weapon_type, WeaponType::LightningRing);
+        assert_eq!(
+            events.len(),
+            5,
+            "LightningRing should hit all 5 enemies, got {}",
+            events.len()
+        );
+        for e in &events {
+            assert_eq!(e.weapon_type, WeaponType::LightningRing);
+        }
     }
 
     /// `extra_projectiles` increases the number of simultaneous strikes.
@@ -493,6 +535,9 @@ mod tests {
             weapon_type: WeaponType::ThunderRing,
             level: 1,
         });
+        app.world_mut()
+            .run_system_once(crate::systems::spatial::update_spatial_grid)
+            .expect("update_spatial_grid should run");
         app.world_mut()
             .run_system_once(fire_thunder_ring)
             .expect("fire_thunder_ring should run");
