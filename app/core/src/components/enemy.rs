@@ -11,7 +11,7 @@ const DEFAULT_ENEMY_STATS_BAT: (f32, f32, f32, u32, f32) = (10.0, 150.0, 5.0, 3,
 const DEFAULT_ENEMY_STATS_SKELETON: (f32, f32, f32, u32, f32) = (30.0, 80.0, 8.0, 5, 0.08);
 const DEFAULT_ENEMY_STATS_ZOMBIE: (f32, f32, f32, u32, f32) = (60.0, 60.0, 12.0, 8, 0.10);
 const DEFAULT_ENEMY_STATS_GHOST: (f32, f32, f32, u32, f32) = (25.0, 100.0, 10.0, 6, 0.08);
-const DEFAULT_ENEMY_STATS_DEMON: (f32, f32, f32, u32, f32) = (100.0, 120.0, 15.0, 10, 0.12);
+const DEFAULT_ENEMY_STATS_DEMON: (f32, f32, f32, u32, f32) = (80.0, 130.0, 15.0, 10, 0.12);
 const DEFAULT_ENEMY_STATS_MEDUSA: (f32, f32, f32, u32, f32) = (60.0, 60.0, 12.0, 8, 0.10);
 const DEFAULT_ENEMY_STATS_DRAGON: (f32, f32, f32, u32, f32) = (200.0, 80.0, 20.0, 15, 0.15);
 const DEFAULT_ENEMY_STATS_BOSS_DEATH: (f32, f32, f32, u32, f32) = (5000.0, 30.0, 50.0, 500, 1.0);
@@ -33,8 +33,31 @@ pub struct Enemy {
 }
 
 impl Enemy {
-    /// Construct an `Enemy` from its type and the current difficulty multiplier.
+    /// Construct an `Enemy` from a loaded [`EnemyStatsEntry`] and difficulty.
     ///
+    /// Prefer this over [`from_type`] when `EnemyConfig` is available so stats
+    /// reflect the current RON file rather than compile-time constants.
+    /// HP is scaled by `difficulty`; all other stats remain at base values.
+    pub fn from_config(
+        enemy_type: EnemyType,
+        stats: &crate::config::EnemyStatsEntry,
+        difficulty: f32,
+    ) -> Self {
+        let max_hp = stats.base_hp * difficulty.max(1.0);
+        Self {
+            enemy_type,
+            max_hp,
+            current_hp: max_hp,
+            move_speed: stats.speed,
+            damage: stats.damage,
+            xp_value: stats.xp_value,
+            gold_chance: stats.gold_chance,
+        }
+    }
+
+    /// Construct an `Enemy` using compile-time fallback constants.
+    ///
+    /// Used when `EnemyConfig` is not yet loaded (e.g. first frames or tests).
     /// HP is scaled by `difficulty`; all other stats remain at their base values.
     /// `difficulty` should be ≥ 1.0 (1.0 = start of run, no scaling).
     pub fn from_type(enemy_type: EnemyType, difficulty: f32) -> Self {

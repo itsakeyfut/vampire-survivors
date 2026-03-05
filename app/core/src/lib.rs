@@ -16,6 +16,26 @@ use resources::{
     EnemySpawner, GameData, LevelUpChoices, MetaProgress, PendingUpgradeIndex, SelectedCharacter,
     SpatialGrid, TreasureSpawner,
 };
+
+/// Resets all per-run resources to their defaults at the start of each run.
+///
+/// Registered on [`OnEnter`]`(`[`AppState::Playing`]`)` so that returning from
+/// `GameOver` → `Title` → `Playing` always begins with a clean slate.
+/// [`MetaProgress`] and [`SelectedCharacter`] are intentionally excluded
+/// because they persist across runs.
+fn reset_per_run_resources(
+    mut game_data: ResMut<GameData>,
+    mut enemy_spawner: ResMut<EnemySpawner>,
+    mut treasure_spawner: ResMut<TreasureSpawner>,
+    mut level_up_choices: ResMut<LevelUpChoices>,
+    mut pending_upgrade: ResMut<PendingUpgradeIndex>,
+) {
+    *game_data = GameData::default();
+    *enemy_spawner = EnemySpawner::default();
+    *treasure_spawner = TreasureSpawner::default();
+    *level_up_choices = LevelUpChoices::default();
+    *pending_upgrade = PendingUpgradeIndex::default();
+}
 use states::AppState;
 use systems::{
     enemies::EnemiesPlugin, game_over::GameOverPlugin, game_timer::TimerPlugin,
@@ -57,6 +77,10 @@ impl Plugin for GameCorePlugin {
             .add_message::<PlayerDamagedEvent>()
             .add_message::<GameOverEvent>()
             .add_message::<LevelUpEvent>()
+            // ---------------------------------------------------------------
+            // Per-run reset: runs each time the player enters Playing state
+            // ---------------------------------------------------------------
+            .add_systems(OnEnter(AppState::Playing), reset_per_run_resources)
             // ---------------------------------------------------------------
             // Sub-plugins (each owns its domain's systems)
             // ---------------------------------------------------------------

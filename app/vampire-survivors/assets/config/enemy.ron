@@ -52,8 +52,8 @@ EnemyConfig(
         collider_radius: 10.0,
     ),
     demon: (
-        base_hp:         100.0,
-        speed:           120.0,
+        base_hp:         80.0,
+        speed:           130.0,
         damage:          15.0,
         xp_value:        10,
         gold_chance:     0.12,
@@ -91,4 +91,5 @@ EnemyConfig(
     spawn_margin:        60.0,
     zombie_unlock_secs:  300.0,
     ghost_unlock_secs:   600.0,
+    demon_unlock_secs:   900.0,
 )
