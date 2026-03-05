@@ -118,7 +118,8 @@ pub fn spawn_enemies(
     let zombie_unlock = enemy_cfg
         .get()
         .map(|c| c.zombie_unlock_secs)
-        .unwrap_or(DEFAULT_ZOMBIE_UNLOCK_SECS);
+        .unwrap_or(DEFAULT_ZOMBIE_UNLOCK_SECS)
+        .max(0.0);
     let zombie_unlocked = game_data.elapsed_time >= zombie_unlock;
 
     let mut rng = rand::rng();
