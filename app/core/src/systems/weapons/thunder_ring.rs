@@ -154,9 +154,13 @@ pub fn fire_thunder_ring(
         // on-screen (or near-screen) enemies are considered as targets.
         // Must run after update_spatial_grid.
         let mut candidates: Vec<(Entity, Vec2)> = Vec::new();
+        let target_range_sq = target_range * target_range;
         for e in spatial_grid.get_nearby(player_pos, target_range) {
             if let Ok(tf) = enemy_q.get(e) {
-                candidates.push((e, tf.translation.truncate()));
+                let pos = tf.translation.truncate();
+                if pos.distance_squared(player_pos) < target_range_sq {
+                    candidates.push((e, pos));
+                }
             }
         }
 
