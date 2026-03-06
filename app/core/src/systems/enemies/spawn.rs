@@ -232,7 +232,10 @@ pub fn spawn_enemies(
     }
 
     let mut rng = rand::rng();
-    let enemy_type = weighted_random(&mut rng, &table);
+    let Some(enemy_type) = weighted_random(&mut rng, &table) else {
+        // All entries have zero weight — skip this spawn tick.
+        return;
+    };
 
     // Derive all enemy stats from config when available, falling back to constants.
     let cfg_stats = enemy_cfg.get().map(|c| c.stats_for(enemy_type).clone());
@@ -259,22 +262,23 @@ pub fn spawn_enemies(
 ///
 /// Each entry is `(EnemyType, weight)`.  The probability of picking entry
 /// *i* equals `weight_i / total_weight`.  Entries with weight ≤ 0 are
-/// skipped.  Returns the first entry's type as a fallback (table is never
-/// empty at call sites).
-fn weighted_random(rng: &mut impl rand::RngExt, table: &[(EnemyType, f32)]) -> EnemyType {
+/// skipped.  Returns `None` when the total weight is zero (all entries
+/// disabled) so the caller can skip the spawn rather than forcing an
+/// arbitrary selection.
+fn weighted_random(rng: &mut impl rand::RngExt, table: &[(EnemyType, f32)]) -> Option<EnemyType> {
     let total: f32 = table.iter().map(|(_, w)| w).sum();
     if total <= 0.0 {
-        return table[0].0;
+        return None;
     }
     let roll = rng.random_range(0.0..total);
     let mut cumulative = 0.0_f32;
     for &(etype, weight) in table {
         cumulative += weight;
         if roll < cumulative {
-            return etype;
+            return Some(etype);
         }
     }
-    table.last().unwrap().0 // floating-point rounding fallback
+    table.last().map(|&(etype, _)| etype) // floating-point rounding fallback
 }
 
 /// Choose a uniformly random position just outside one of the four viewport
@@ -1031,13 +1035,28 @@ mod tests {
     // Weighted selection unit tests
     // -----------------------------------------------------------------------
 
-    /// `weighted_random` always returns the only entry when the table has one.
+    /// `weighted_random` always returns `Some(entry)` when the table has one
+    /// positive-weight entry.
     #[test]
     fn weighted_random_single_entry() {
         let mut rng = rand::rng();
         let table = [(EnemyType::Bat, 1.0_f32)];
         for _ in 0..20 {
-            assert_eq!(weighted_random(&mut rng, &table), EnemyType::Bat);
+            assert_eq!(weighted_random(&mut rng, &table), Some(EnemyType::Bat));
+        }
+    }
+
+    /// Returns `None` when all weights are zero.
+    #[test]
+    fn weighted_random_all_zero_returns_none() {
+        let mut rng = rand::rng();
+        let table = [(EnemyType::Bat, 0.0_f32), (EnemyType::Skeleton, 0.0)];
+        for _ in 0..20 {
+            assert_eq!(
+                weighted_random(&mut rng, &table),
+                None,
+                "all-zero weight table must return None"
+            );
         }
     }
 
@@ -1050,8 +1069,8 @@ mod tests {
         let mut skeleton = 0usize;
         for _ in 0..500 {
             match weighted_random(&mut rng, &table) {
-                EnemyType::Bat => bat += 1,
-                EnemyType::Skeleton => skeleton += 1,
+                Some(EnemyType::Bat) => bat += 1,
+                Some(EnemyType::Skeleton) => skeleton += 1,
                 _ => {}
             }
         }
@@ -1067,7 +1086,7 @@ mod tests {
         for _ in 0..200 {
             assert_eq!(
                 weighted_random(&mut rng, &table),
-                EnemyType::Bat,
+                Some(EnemyType::Bat),
                 "zero-weight entry must never be selected"
             );
         }
@@ -1083,8 +1102,8 @@ mod tests {
         let mut skeleton = 0usize;
         for _ in 0..1000 {
             match weighted_random(&mut rng, &table) {
-                EnemyType::Bat => bat += 1,
-                EnemyType::Skeleton => skeleton += 1,
+                Some(EnemyType::Bat) => bat += 1,
+                Some(EnemyType::Skeleton) => skeleton += 1,
                 _ => {}
             }
         }
@@ -1136,6 +1155,115 @@ mod tests {
             "Bat (weight 1.0) must appear more often than Dragon (weight 0.3) \
              over 1000 spawns (bat={bat_count}, dragon={dragon_count})"
         );
+    }
+
+    /// When a loaded `EnemyConfig` is present, `spawn_enemies` reads
+    /// `spawn_weight` from it rather than the `DEFAULT_WEIGHT_*` constants.
+    ///
+    /// A skewed config (only Skeleton weight = 1.0, all others = 0.0 plus all
+    /// unlock thresholds zeroed) is inserted; every spawn must produce a
+    /// Skeleton over 200 attempts.
+    #[test]
+    fn spawn_uses_config_spawn_weights() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        use crate::config::{
+            DragonBehaviorConfig, EnemyConfig, EnemyConfigHandle, EnemyStatsEntry,
+            MedusaBehaviorConfig,
+        };
+
+        // Build an app that also registers Assets<EnemyConfig>.
+        // AssetPlugin is required to initialise Assets<T> and AssetServer.
+        let mut app = App::new();
+        app.add_plugins((
+            MinimalPlugins,
+            StatesPlugin,
+            bevy::asset::AssetPlugin::default(),
+        ));
+        app.init_state::<AppState>();
+        app.insert_resource(EnemySpawner::default());
+        app.insert_resource(GameData::default());
+        app.init_asset::<EnemyConfig>();
+
+        // Helper: build a stats entry with the given spawn_weight.
+        let stats = |spawn_weight: f32| EnemyStatsEntry {
+            base_hp: 10.0,
+            speed: 100.0,
+            damage: 5.0,
+            xp_value: 1,
+            gold_chance: 0.0,
+            collider_radius: 8.0,
+            spawn_weight,
+        };
+
+        let config = EnemyConfig {
+            bat: stats(0.0),
+            skeleton: stats(1.0), // only Skeleton eligible
+            zombie: stats(0.0),
+            ghost: stats(0.0),
+            demon: stats(0.0),
+            medusa: stats(0.0),
+            dragon: stats(0.0),
+            boss_death: stats(0.0),
+            spawn_base_interval: 0.5,
+            max_count: 500,
+            cull_distance: 2000.0,
+            difficulty_max: 10.0,
+            spawn_margin: 60.0,
+            // Zero all unlock thresholds so all types are eligible from the start.
+            zombie_unlock_secs: 0.0,
+            ghost_unlock_secs: 0.0,
+            demon_unlock_secs: 0.0,
+            medusa_unlock_secs: 0.0,
+            dragon_unlock_secs: 0.0,
+            medusa_behavior: MedusaBehaviorConfig {
+                keep_min_dist: 150.0,
+                keep_max_dist: 250.0,
+                attack_interval: 2.0,
+                projectile_speed: 180.0,
+                projectile_lifetime: 5.0,
+                projectile_radius: 5.0,
+            },
+            dragon_behavior: DragonBehaviorConfig {
+                attack_interval: 3.0,
+                fireball_speed: 200.0,
+                fireball_lifetime: 6.0,
+                fireball_radius: 7.0,
+            },
+        };
+
+        let handle = {
+            let mut assets = app.world_mut().resource_mut::<Assets<EnemyConfig>>();
+            assets.add(config)
+        };
+        app.world_mut().insert_resource(EnemyConfigHandle(handle));
+
+        for _ in 0..200 {
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+
+            let mut q = app.world_mut().query::<&Enemy>();
+            for e in q.iter(app.world()) {
+                assert_eq!(
+                    e.enemy_type,
+                    EnemyType::Skeleton,
+                    "only Skeleton has non-zero spawn_weight in the skewed config"
+                );
+            }
+            // Despawn all for next iteration.
+            let mut eq = app.world_mut().query_filtered::<Entity, With<Enemy>>();
+            let entities: Vec<_> = eq.iter(app.world()).collect();
+            for entity in entities {
+                app.world_mut().entity_mut(entity).despawn();
+            }
+        }
     }
 
     /// Spawned enemy must carry `Enemy`, `EnemyAI`, and `CircleCollider`.
