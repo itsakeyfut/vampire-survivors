@@ -15,6 +15,8 @@
 //! | `config/ui/hud/gameplay/timer.ron`                | [`TimerHudConfig`]           | Timer font size and color          |
 //! | `config/ui/hud/gameplay/level.ron`                | [`LevelHudConfig`]           | Level label font size and color    |
 //! | `config/ui/hud/gameplay/layout.ron`               | [`GameplayHudLayoutConfig`]  | Widget anchor positions            |
+//! | `config/ui/hud/gameplay/boss_warning.ron`         | [`BossWarningHudConfig`]     | Boss warning overlay settings      |
+//! | `config/ui/hud/gameplay/boss_hp_bar.ron`          | [`BossHpBarHudConfig`]       | Boss HP bar dimensions and colors  |
 //!
 //! All files are watched by Bevy's asset server, so edits take effect while
 //! the game is running (hot-reload).

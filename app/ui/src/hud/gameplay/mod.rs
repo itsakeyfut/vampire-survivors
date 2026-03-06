@@ -43,6 +43,7 @@ use crate::config::hud::gameplay::{
 // ---------------------------------------------------------------------------
 
 const DEFAULT_EDGE_MARGIN: f32 = 12.0;
+const DEFAULT_BOSS_HP_BAR_BOTTOM: f32 = 28.0;
 
 // ---------------------------------------------------------------------------
 // Anchor marker components
@@ -86,6 +87,10 @@ pub fn setup_gameplay_hud(
         .get()
         .map(|c| c.edge_margin)
         .unwrap_or(DEFAULT_EDGE_MARGIN);
+    let boss_hp_bar_bottom = layout_cfg
+        .get()
+        .map(|c| c.boss_hp_bar_bottom)
+        .unwrap_or(DEFAULT_BOSS_HP_BAR_BOTTOM);
 
     commands
         .spawn((
@@ -151,7 +156,7 @@ pub fn setup_gameplay_hud(
             // ------------------------------------------------------------------
             root.spawn((Node {
                 position_type: PositionType::Absolute,
-                bottom: Val::Px(28.0), // sits above the XP bar
+                bottom: Val::Px(boss_hp_bar_bottom),
                 left: Val::Px(0.0),
                 right: Val::Px(0.0),
                 justify_content: JustifyContent::Center,

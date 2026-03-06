@@ -4,8 +4,11 @@
 // Hot-reload enabled: Edit this file while the game is running to see changes instantly!
 //
 // Parameters:
-// - edge_margin:  Distance in pixels from each screen edge to the nearest widget anchor
+// - edge_margin:        Distance in pixels from each screen edge to the nearest widget anchor
+// - boss_hp_bar_bottom: Distance in pixels from the bottom edge to the boss HP bar anchor
+//                       (should be tall enough to sit above the XP bar)
 
 GameplayHudLayoutConfig(
-    edge_margin: 12.0,
+    edge_margin:        12.0,
+    boss_hp_bar_bottom: 28.0,
 )
