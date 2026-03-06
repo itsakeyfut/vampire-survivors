@@ -9,8 +9,8 @@ pub mod types;
 use bevy::prelude::*;
 
 use events::{
-    DamageEnemyEvent, EnemyDiedEvent, GameOverEvent, LevelUpEvent, PlayerDamagedEvent,
-    WeaponFiredEvent,
+    BossSpawnedEvent, DamageEnemyEvent, EnemyDiedEvent, GameOverEvent, LevelUpEvent,
+    PlayerDamagedEvent, WeaponFiredEvent,
 };
 use resources::{
     EnemySpawner, GameData, LevelUpChoices, MetaProgress, PendingUpgradeIndex, SelectedCharacter,
@@ -80,6 +80,7 @@ impl Plugin for GameCorePlugin {
             .add_message::<PlayerDamagedEvent>()
             .add_message::<GameOverEvent>()
             .add_message::<LevelUpEvent>()
+            .add_message::<BossSpawnedEvent>()
             // ---------------------------------------------------------------
             // Per-run reset: fires only when a brand-new run begins.
             // Covers both entry paths — Title → Playing (when CharacterSelect

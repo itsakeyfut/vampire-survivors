@@ -1,4 +1,5 @@
 pub mod ai;
+pub mod boss_spawn;
 pub mod cull;
 pub mod difficulty;
 pub mod dragon;
@@ -14,6 +15,7 @@ pub struct EnemiesPlugin;
 impl Plugin for EnemiesPlugin {
     fn build(&self, app: &mut App) {
         use crate::systems::enemies::ai::move_enemies;
+        use crate::systems::enemies::boss_spawn::check_boss_spawn;
         use crate::systems::enemies::cull::cull_distant_enemies;
         use crate::systems::enemies::difficulty::update_difficulty;
         use crate::systems::enemies::dragon::{
@@ -31,6 +33,11 @@ impl Plugin for EnemiesPlugin {
             (
                 move_enemies.after(player_movement),
                 update_difficulty.after(update_game_timer),
+                // Boss spawn must run before spawn_enemies so that setting
+                // EnemySpawner.active = false takes effect within the same frame.
+                check_boss_spawn
+                    .after(update_game_timer)
+                    .before(spawn_enemies),
                 spawn_enemies.after(update_difficulty),
                 cull_distant_enemies
                     .after(move_enemies)

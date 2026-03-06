@@ -21,6 +21,7 @@
 //! | [`level`]                 | Level label             | `spawn_level`                 | `update_level_text`               |
 //! | [`evolution_notification`]| Evolution toast         | `on_weapon_evolved` (observer)| `update_evolution_notification`   |
 
+pub mod boss_warning;
 pub mod evolution_notification;
 pub mod hp_bar;
 pub mod level;
