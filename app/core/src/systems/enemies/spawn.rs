@@ -5,17 +5,22 @@
 //! spawn interval elapses, picks a random position just outside the visible
 //! viewport and spawns an enemy chosen from the active spawn table.
 //!
-//! ## Spawn table (time-gated)
+//! ## Spawn table (time-gated, weighted)
 //!
-//! | Enemy    | Unlocks at |
-//! |----------|-----------|
-//! | Bat      | 0 min     |
-//! | Skeleton | 0 min     |
-//! | Zombie   | 5 min     |
-//! | Ghost    | 10 min    |
-//! | Demon    | 15 min    |
-//! | Medusa   | 20 min    |
-//! | Dragon   | 25 min    |
+//! Enemies are selected by weighted random — stronger enemies that unlock
+//! later carry lower weights so early enemies remain common throughout
+//! the run.  The weights are loaded from `enemy.ron` (`spawn_weight` field
+//! on each entry) with constant fallbacks listed below.
+//!
+//! | Enemy    | Unlocks at | Default weight |
+//! |----------|-----------|---------------|
+//! | Bat      | 0 min     | 1.0           |
+//! | Skeleton | 0 min     | 1.0           |
+//! | Zombie   | 5 min     | 0.8           |
+//! | Ghost    | 10 min    | 0.6           |
+//! | Demon    | 15 min    | 0.5           |
+//! | Medusa   | 20 min    | 0.4           |
+//! | Dragon   | 25 min    | 0.3           |
 
 use bevy::prelude::*;
 use rand::RngExt;
@@ -57,6 +62,20 @@ const DEFAULT_MEDUSA_UNLOCK_SECS: f32 = 1200.0;
 const DEFAULT_COLLIDER_DRAGON: f32 = 20.0;
 /// Elapsed seconds before Dragon is added to the spawn table (25 minutes).
 const DEFAULT_DRAGON_UNLOCK_SECS: f32 = 1500.0;
+/// Fallback spawn weight for Bat (used when config is not loaded).
+const DEFAULT_WEIGHT_BAT: f32 = 1.0;
+/// Fallback spawn weight for Skeleton.
+const DEFAULT_WEIGHT_SKELETON: f32 = 1.0;
+/// Fallback spawn weight for Zombie.
+const DEFAULT_WEIGHT_ZOMBIE: f32 = 0.8;
+/// Fallback spawn weight for Ghost.
+const DEFAULT_WEIGHT_GHOST: f32 = 0.6;
+/// Fallback spawn weight for Demon.
+const DEFAULT_WEIGHT_DEMON: f32 = 0.5;
+/// Fallback spawn weight for Medusa.
+const DEFAULT_WEIGHT_MEDUSA: f32 = 0.4;
+/// Fallback spawn weight for Dragon.
+const DEFAULT_WEIGHT_DRAGON: f32 = 0.3;
 /// Window width used to compute off-screen spawn bounds (pixels).
 const DEFAULT_WINDOW_WIDTH: u32 = 1280;
 /// Window height used to compute off-screen spawn bounds (pixels).
@@ -162,28 +181,58 @@ pub fn spawn_enemies(
         .unwrap_or(DEFAULT_DRAGON_UNLOCK_SECS)
         .max(0.0);
 
-    // Build the spawn table from independent unlock flags so each enemy type
-    // respects only its own threshold, regardless of ordering in the config.
-    let mut table: Vec<EnemyType> = vec![EnemyType::Bat, EnemyType::Skeleton];
+    // Helper: return the spawn_weight from config or fall back to constant.
+    let weight = |etype: EnemyType, fallback: f32| -> f32 {
+        enemy_cfg
+            .get()
+            .map(|c| c.stats_for(etype).spawn_weight)
+            .unwrap_or(fallback)
+            .max(0.0)
+    };
+
+    // Build the weighted spawn table from independent unlock flags so each
+    // enemy type respects only its own threshold.  Stronger enemies that
+    // unlock later carry lower weights so early enemies remain common.
+    let mut table: Vec<(EnemyType, f32)> = vec![
+        (EnemyType::Bat, weight(EnemyType::Bat, DEFAULT_WEIGHT_BAT)),
+        (
+            EnemyType::Skeleton,
+            weight(EnemyType::Skeleton, DEFAULT_WEIGHT_SKELETON),
+        ),
+    ];
     if elapsed >= zombie_unlock {
-        table.push(EnemyType::Zombie);
+        table.push((
+            EnemyType::Zombie,
+            weight(EnemyType::Zombie, DEFAULT_WEIGHT_ZOMBIE),
+        ));
     }
     if elapsed >= ghost_unlock {
-        table.push(EnemyType::Ghost);
+        table.push((
+            EnemyType::Ghost,
+            weight(EnemyType::Ghost, DEFAULT_WEIGHT_GHOST),
+        ));
     }
     if elapsed >= demon_unlock {
-        table.push(EnemyType::Demon);
+        table.push((
+            EnemyType::Demon,
+            weight(EnemyType::Demon, DEFAULT_WEIGHT_DEMON),
+        ));
     }
     if elapsed >= medusa_unlock {
-        table.push(EnemyType::Medusa);
+        table.push((
+            EnemyType::Medusa,
+            weight(EnemyType::Medusa, DEFAULT_WEIGHT_MEDUSA),
+        ));
     }
     if elapsed >= dragon_unlock {
-        table.push(EnemyType::Dragon);
+        table.push((
+            EnemyType::Dragon,
+            weight(EnemyType::Dragon, DEFAULT_WEIGHT_DRAGON),
+        ));
     }
 
     let mut rng = rand::rng();
-    let idx = rng.random_range(0..table.len() as u8) as usize;
-    let enemy_type = table[idx];
+    let enemy_type = weighted_random(&mut rng, &table);
 
     // Derive all enemy stats from config when available, falling back to constants.
     let cfg_stats = enemy_cfg.get().map(|c| c.stats_for(enemy_type).clone());
@@ -205,6 +254,28 @@ pub fn spawn_enemies(
 // ---------------------------------------------------------------------------
 // Private helpers
 // ---------------------------------------------------------------------------
+
+/// Selects an [`EnemyType`] from a weighted table using a single random roll.
+///
+/// Each entry is `(EnemyType, weight)`.  The probability of picking entry
+/// *i* equals `weight_i / total_weight`.  Entries with weight ≤ 0 are
+/// skipped.  Returns the first entry's type as a fallback (table is never
+/// empty at call sites).
+fn weighted_random(rng: &mut impl rand::RngExt, table: &[(EnemyType, f32)]) -> EnemyType {
+    let total: f32 = table.iter().map(|(_, w)| w).sum();
+    if total <= 0.0 {
+        return table[0].0;
+    }
+    let roll = rng.random_range(0.0..total);
+    let mut cumulative = 0.0_f32;
+    for &(etype, weight) in table {
+        cumulative += weight;
+        if roll < cumulative {
+            return etype;
+        }
+    }
+    table.last().unwrap().0 // floating-point rounding fallback
+}
 
 /// Choose a uniformly random position just outside one of the four viewport
 /// edges, centred on `cam_pos`.
@@ -954,6 +1025,117 @@ mod tests {
             }
         }
         panic!("expected at least one Dragon spawn in 500 attempts to verify ChasePlayer AI");
+    }
+
+    // -----------------------------------------------------------------------
+    // Weighted selection unit tests
+    // -----------------------------------------------------------------------
+
+    /// `weighted_random` always returns the only entry when the table has one.
+    #[test]
+    fn weighted_random_single_entry() {
+        let mut rng = rand::rng();
+        let table = [(EnemyType::Bat, 1.0_f32)];
+        for _ in 0..20 {
+            assert_eq!(weighted_random(&mut rng, &table), EnemyType::Bat);
+        }
+    }
+
+    /// With equal weights, both entries appear over many draws.
+    #[test]
+    fn weighted_random_equal_weights_both_appear() {
+        let mut rng = rand::rng();
+        let table = [(EnemyType::Bat, 1.0_f32), (EnemyType::Skeleton, 1.0)];
+        let mut bat = 0usize;
+        let mut skeleton = 0usize;
+        for _ in 0..500 {
+            match weighted_random(&mut rng, &table) {
+                EnemyType::Bat => bat += 1,
+                EnemyType::Skeleton => skeleton += 1,
+                _ => {}
+            }
+        }
+        assert!(bat > 0, "Bat should appear with equal weight");
+        assert!(skeleton > 0, "Skeleton should appear with equal weight");
+    }
+
+    /// A zero-weight entry is never selected when another entry has weight > 0.
+    #[test]
+    fn weighted_random_zero_weight_never_selected() {
+        let mut rng = rand::rng();
+        let table = [(EnemyType::Bat, 1.0_f32), (EnemyType::Skeleton, 0.0)];
+        for _ in 0..200 {
+            assert_eq!(
+                weighted_random(&mut rng, &table),
+                EnemyType::Bat,
+                "zero-weight entry must never be selected"
+            );
+        }
+    }
+
+    /// A high-weight entry appears significantly more than a low-weight one.
+    #[test]
+    fn weighted_random_higher_weight_appears_more() {
+        let mut rng = rand::rng();
+        // Bat:Skeleton = 4:1 — Bat should win ~80% of the time.
+        let table = [(EnemyType::Bat, 4.0_f32), (EnemyType::Skeleton, 1.0)];
+        let mut bat = 0usize;
+        let mut skeleton = 0usize;
+        for _ in 0..1000 {
+            match weighted_random(&mut rng, &table) {
+                EnemyType::Bat => bat += 1,
+                EnemyType::Skeleton => skeleton += 1,
+                _ => {}
+            }
+        }
+        // With 1000 draws and 80% probability, bat count should comfortably
+        // exceed skeleton count.  A 3-sigma bound puts the minimum at ~714.
+        assert!(
+            bat > skeleton * 2,
+            "higher-weight entry must dominate (bat={bat}, skeleton={skeleton})"
+        );
+    }
+
+    /// Bat is more common than Dragon in a full post-25-min spawn table.
+    #[test]
+    fn bat_more_common_than_dragon_after_all_unlocked() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        let mut bat_count = 0usize;
+        let mut dragon_count = 0usize;
+
+        for _ in 0..1000 {
+            let mut app = build_playing_app();
+            // All enemies unlocked.
+            app.world_mut().resource_mut::<GameData>().elapsed_time =
+                DEFAULT_DRAGON_UNLOCK_SECS + 1.0;
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+
+            let mut q = app.world_mut().query::<&Enemy>();
+            for e in q.iter(app.world()) {
+                match e.enemy_type {
+                    EnemyType::Bat => bat_count += 1,
+                    EnemyType::Dragon => dragon_count += 1,
+                    _ => {}
+                }
+            }
+        }
+
+        assert!(bat_count > 0, "Bat should appear");
+        assert!(dragon_count > 0, "Dragon should appear");
+        assert!(
+            bat_count > dragon_count,
+            "Bat (weight 1.0) must appear more often than Dragon (weight 0.3) \
+             over 1000 spawns (bat={bat_count}, dragon={dragon_count})"
+        );
     }
 
     /// Spawned enemy must carry `Enemy`, `EnemyAI`, and `CircleCollider`.
