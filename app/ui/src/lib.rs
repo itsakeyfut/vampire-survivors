@@ -70,6 +70,8 @@ impl Plugin for GameUIPlugin {
                     hud::gameplay::timer::update_timer,
                     hud::gameplay::level::update_level_text,
                     hud::gameplay::evolution_notification::update_evolution_notification,
+                    hud::gameplay::boss_warning::spawn_boss_warning,
+                    hud::gameplay::boss_warning::update_boss_warning,
                 )
                     .run_if(in_state(AppState::Playing)),
             )

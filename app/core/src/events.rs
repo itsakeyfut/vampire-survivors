@@ -79,6 +79,16 @@ pub struct PlayerDamagedEvent {
 // Game state events
 // ---------------------------------------------------------------------------
 
+/// Fired when Boss Death spawns at the 30-minute mark.
+///
+/// The [`check_boss_spawn`](crate::systems::enemies::boss_spawn::check_boss_spawn)
+/// system emits this event, sets [`GameData::boss_spawned`] to `true`, and
+/// deactivates [`EnemySpawner`](crate::resources::EnemySpawner) so that
+/// normal enemy spawning stops.  UI systems (e.g. the "BOSS APPROACHING"
+/// warning) listen for this event to notify the player.
+#[derive(Message, Debug, Clone)]
+pub struct BossSpawnedEvent;
+
 /// Fired when the player's HP reaches zero.
 ///
 /// The [`check_player_death`](crate::systems::game_over::check_player_death)

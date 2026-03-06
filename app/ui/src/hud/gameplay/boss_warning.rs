@@ -1,0 +1,278 @@
+//! Boss-approaching warning notification.
+//!
+//! Displays a "BOSS APPROACHING" banner at the center of the screen when
+//! [`BossSpawnedEvent`] fires.  The text holds full opacity for
+//! [`DEFAULT_HOLD_SECS`] seconds, then fades to transparent and the entity
+//! is despawned — following the same lifecycle as [`super::evolution_notification`].
+//!
+//! ## Lifecycle
+//!
+//! ```text
+//! BossSpawnedEvent  →  spawn_boss_warning (Update system)  →  spawn Node + Text
+//!                                ↓
+//!                  update_boss_warning (Update system)
+//!                        ticks elapsed, fades alpha, despawns
+//! ```
+
+use bevy::prelude::*;
+use bevy::state::state_scoped::DespawnOnExit;
+use vs_core::events::BossSpawnedEvent;
+use vs_core::states::AppState;
+
+// ---------------------------------------------------------------------------
+// Fallback constants
+// ---------------------------------------------------------------------------
+
+/// Total display duration in seconds (hold + fade).
+const DEFAULT_DISPLAY_DURATION: f32 = 4.0;
+/// Time at which the alpha fade-out begins (seconds).
+const DEFAULT_FADE_START: f32 = 2.0;
+/// Font size for the warning text.
+const DEFAULT_FONT_SIZE: f32 = 52.0;
+/// Vertical position as a percentage of screen height.
+const DEFAULT_TOP_PERCENT: f32 = 35.0;
+/// Warning text color: bright red.
+const DEFAULT_TEXT_COLOR: Color = Color::srgb(1.0, 0.15, 0.15);
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+/// Drives the fade-and-despawn animation of the boss warning overlay.
+///
+/// Placed on the root [`Node`] entity.  [`update_boss_warning`] advances
+/// `elapsed` each frame, updates the text alpha, and despawns the entity once
+/// `elapsed >= duration`.
+#[derive(Component, Debug)]
+pub struct BossWarningNotification {
+    /// Elapsed time since the notification was spawned (seconds).
+    pub elapsed: f32,
+    /// Total lifetime before despawn (seconds).
+    pub duration: f32,
+    /// Time at which the alpha fade-out begins (seconds).
+    pub fade_start: f32,
+    /// Entity holding [`TextColor`]; its alpha is updated each frame.
+    pub text_entity: Entity,
+    /// Base text color (fully opaque); alpha is overridden during fade-out.
+    pub text_color: Color,
+}
+
+// ---------------------------------------------------------------------------
+// Systems
+// ---------------------------------------------------------------------------
+
+/// Spawns a "BOSS APPROACHING" banner when [`BossSpawnedEvent`] fires.
+///
+/// Runs every frame in the `Playing` state; is a no-op until the event
+/// arrives, after which it spawns the overlay entities once.
+pub fn spawn_boss_warning(mut commands: Commands, mut events: MessageReader<BossSpawnedEvent>) {
+    for _ in events.read() {
+        let text_entity = commands
+            .spawn((
+                Text::new("BOSS APPROACHING"),
+                TextFont {
+                    font_size: DEFAULT_FONT_SIZE,
+                    ..default()
+                },
+                TextColor(DEFAULT_TEXT_COLOR),
+                TextLayout::new_with_justify(Justify::Center),
+            ))
+            .id();
+
+        commands
+            .spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    width: Val::Percent(100.0),
+                    top: Val::Percent(DEFAULT_TOP_PERCENT),
+                    display: Display::Flex,
+                    justify_content: JustifyContent::Center,
+                    ..default()
+                },
+                BossWarningNotification {
+                    elapsed: 0.0,
+                    duration: DEFAULT_DISPLAY_DURATION,
+                    fade_start: DEFAULT_FADE_START,
+                    text_entity,
+                    text_color: DEFAULT_TEXT_COLOR,
+                },
+                DespawnOnExit(AppState::Playing),
+            ))
+            .add_child(text_entity);
+    }
+}
+
+/// Advances all active [`BossWarningNotification`] animations each frame.
+///
+/// - Ticks `elapsed` by `Δt`.
+/// - Keeps full opacity while `elapsed < fade_start`.
+/// - Fades alpha linearly from 1.0 → 0.0 over the remaining lifetime.
+/// - Despawns the root entity (and its text child) once `elapsed >= duration`.
+pub fn update_boss_warning(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut notif_q: Query<(Entity, &mut BossWarningNotification)>,
+    mut text_q: Query<&mut TextColor>,
+) {
+    let dt = time.delta_secs();
+    for (entity, mut notif) in notif_q.iter_mut() {
+        notif.elapsed += dt;
+
+        if notif.elapsed >= notif.duration {
+            commands.entity(entity).despawn();
+            continue;
+        }
+
+        let alpha = if notif.elapsed < notif.fade_start {
+            1.0_f32
+        } else {
+            let fade_progress =
+                (notif.elapsed - notif.fade_start) / (notif.duration - notif.fade_start);
+            (1.0 - fade_progress).max(0.0)
+        };
+
+        if let Ok(mut text_color) = text_q.get_mut(notif.text_entity) {
+            text_color.0 = notif.text_color.with_alpha(alpha);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use bevy::ecs::system::RunSystemOnce as _;
+
+    use super::*;
+
+    fn build_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app
+    }
+
+    fn advance(app: &mut App, secs: f32) {
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_secs_f32(secs));
+    }
+
+    fn spawn_notification(app: &mut App, elapsed: f32) -> Entity {
+        let text_entity = app.world_mut().spawn(TextColor(DEFAULT_TEXT_COLOR)).id();
+        app.world_mut()
+            .spawn(BossWarningNotification {
+                elapsed,
+                duration: DEFAULT_DISPLAY_DURATION,
+                fade_start: DEFAULT_FADE_START,
+                text_entity,
+                text_color: DEFAULT_TEXT_COLOR,
+            })
+            .id()
+    }
+
+    /// Notification is despawned once elapsed reaches the duration.
+    #[test]
+    fn notification_despawns_when_elapsed_reaches_duration() {
+        let mut app = build_app();
+        let entity = spawn_notification(&mut app, DEFAULT_DISPLAY_DURATION - 0.001);
+
+        advance(&mut app, 0.1);
+        app.world_mut()
+            .run_system_once(update_boss_warning)
+            .unwrap();
+        app.world_mut().flush();
+
+        assert!(
+            app.world().get_entity(entity).is_err(),
+            "notification should be despawned when elapsed >= duration"
+        );
+    }
+
+    /// Notification survives before its duration is reached.
+    #[test]
+    fn notification_survives_before_duration() {
+        let mut app = build_app();
+        let entity = spawn_notification(&mut app, 0.0);
+
+        advance(&mut app, 0.1);
+        app.world_mut()
+            .run_system_once(update_boss_warning)
+            .unwrap();
+
+        assert!(
+            app.world().get_entity(entity).is_ok(),
+            "notification should survive before its duration"
+        );
+    }
+
+    /// Alpha is 1.0 while elapsed is before fade_start.
+    #[test]
+    fn alpha_is_full_before_fade_start() {
+        let mut app = build_app();
+        let entity = spawn_notification(&mut app, 0.0);
+        let text_entity = app
+            .world()
+            .get::<BossWarningNotification>(entity)
+            .unwrap()
+            .text_entity;
+
+        advance(&mut app, DEFAULT_FADE_START - 0.1);
+        app.world_mut()
+            .run_system_once(update_boss_warning)
+            .unwrap();
+
+        let color = app.world().get::<TextColor>(text_entity).unwrap().0;
+        let alpha = color.to_srgba().alpha;
+        assert!(
+            (alpha - 1.0).abs() < 1e-4,
+            "alpha should be 1.0 before fade_start, got {alpha}"
+        );
+    }
+
+    /// Alpha decreases after fade_start.
+    #[test]
+    fn alpha_decreases_after_fade_start() {
+        let mut app = build_app();
+        let entity = spawn_notification(&mut app, DEFAULT_FADE_START + 0.1);
+        let text_entity = app
+            .world()
+            .get::<BossWarningNotification>(entity)
+            .unwrap()
+            .text_entity;
+
+        advance(&mut app, 0.01);
+        app.world_mut()
+            .run_system_once(update_boss_warning)
+            .unwrap();
+
+        let color = app.world().get::<TextColor>(text_entity).unwrap().0;
+        let alpha = color.to_srgba().alpha;
+        assert!(
+            alpha < 1.0,
+            "alpha should be less than 1.0 after fade_start, got {alpha}"
+        );
+    }
+
+    /// Elapsed advances by the time delta each frame.
+    #[test]
+    fn elapsed_advances_each_frame() {
+        let mut app = build_app();
+        let entity = spawn_notification(&mut app, 0.0);
+
+        advance(&mut app, 0.5);
+        app.world_mut()
+            .run_system_once(update_boss_warning)
+            .unwrap();
+
+        let notif = app.world().get::<BossWarningNotification>(entity).unwrap();
+        assert!(
+            notif.elapsed >= 0.5 - f32::EPSILON,
+            "elapsed should advance by delta_secs; got {}",
+            notif.elapsed
+        );
+    }
+}
