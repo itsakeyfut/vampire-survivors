@@ -21,6 +21,7 @@
 //! | [`level`]                 | Level label             | `spawn_level`                 | `update_level_text`               |
 //! | [`evolution_notification`]| Evolution toast         | `on_weapon_evolved` (observer)| `update_evolution_notification`   |
 
+pub mod boss_hp_bar;
 pub mod boss_warning;
 pub mod evolution_notification;
 pub mod hp_bar;
@@ -143,6 +144,21 @@ pub fn setup_gameplay_hud(
             .with_children(|anchor| {
                 timer::spawn_timer(anchor, timer_cfg.get());
             });
+
+            // ------------------------------------------------------------------
+            // Bottom-center: Boss HP bar (hidden until boss spawns)
+            // ------------------------------------------------------------------
+            root.spawn((Node {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(28.0), // sits above the XP bar
+                left: Val::Px(0.0),
+                right: Val::Px(0.0),
+                justify_content: JustifyContent::Center,
+                ..default()
+            },))
+                .with_children(|anchor| {
+                    boss_hp_bar::spawn_boss_hp_bar(anchor);
+                });
 
             // ------------------------------------------------------------------
             // Bottom: XP bar (full viewport width)
