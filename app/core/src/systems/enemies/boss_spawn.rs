@@ -7,7 +7,9 @@
 //! 1. Sets `GameData.boss_spawned = true` to prevent re-entry.
 //! 2. Sets `EnemySpawner.active = false` to stop normal enemy spawning.
 //! 3. Emits a [`BossSpawnedEvent`] for UI and other listeners.
-//! 4. Spawns the Boss Death entity just off-screen to the right of the player.
+//! 4. Spawns the Boss Death entity just off-screen above the player with
+//!    [`BossPhase::Phase1`], a large red placeholder sprite, and fixed HP
+//!    (no difficulty scaling per design spec).
 
 use bevy::prelude::*;
 
@@ -16,7 +18,7 @@ use crate::{
     config::GameParams,
     events::BossSpawnedEvent,
     resources::{EnemySpawner, GameData},
-    types::{AIType, EnemyType},
+    types::{AIType, BossPhase, EnemyType},
 };
 
 // ---------------------------------------------------------------------------
@@ -25,10 +27,12 @@ use crate::{
 
 /// Boss spawn time in seconds (30 minutes).
 const DEFAULT_BOSS_SPAWN_TIME: f32 = 1800.0;
-/// Collider radius for Boss Death in pixels.
-const DEFAULT_BOSS_COLLIDER: f32 = 40.0;
-/// Horizontal offset from the player when spawning the boss (pixels).
-const BOSS_SPAWN_OFFSET_X: f32 = 700.0;
+/// Collider radius for Boss Death in pixels.  Larger than normal enemies
+/// to convey the boss's imposing presence.
+const DEFAULT_BOSS_COLLIDER: f32 = 60.0;
+/// Vertical offset above the player when spawning the boss (pixels).
+/// Keeps the boss off-screen on entry.
+const BOSS_SPAWN_OFFSET_Y: f32 = 700.0;
 
 // ---------------------------------------------------------------------------
 // System
@@ -65,19 +69,21 @@ pub fn check_boss_spawn(
     enemy_spawner.active = false;
     boss_events.write(BossSpawnedEvent);
 
-    // Spawn just off-screen to the right of the player; fall back to origin.
-    let offset = Vec2::new(BOSS_SPAWN_OFFSET_X, 0.0);
+    // Spawn just off-screen above the player; fall back to origin.
+    // The boss enters from the top so the player has a moment to react.
+    let offset = Vec2::new(0.0, BOSS_SPAWN_OFFSET_Y);
     let spawn_pos = player_q
         .single()
         .map(|t| t.translation.truncate() + offset)
         .unwrap_or(offset);
 
-    let difficulty = enemy_spawner.difficulty_multiplier.max(1.0);
-    let enemy = Enemy::from_type(EnemyType::BossDeath, difficulty);
+    // HP is fixed at the base value — no difficulty scaling per design spec.
+    let enemy = Enemy::from_type(EnemyType::BossDeath, 1.0);
 
     commands.spawn((
         GameSessionEntity,
         enemy,
+        BossPhase::Phase1,
         EnemyAI {
             ai_type: AIType::BossMultiPhase,
             attack_timer: 0.0,
@@ -86,8 +92,9 @@ pub fn check_boss_spawn(
         CircleCollider {
             radius: DEFAULT_BOSS_COLLIDER,
         },
+        // Large red placeholder sprite — final pixel art handled in a later phase.
         Sprite {
-            color: Color::srgb(0.3, 0.0, 0.5),
+            color: Color::srgb(1.0, 0.1, 0.1),
             custom_size: Some(Vec2::splat(DEFAULT_BOSS_COLLIDER * 2.0)),
             ..default()
         },
@@ -101,8 +108,6 @@ pub fn check_boss_spawn(
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
-
     use bevy::ecs::system::RunSystemOnce as _;
     use bevy::state::app::StatesPlugin;
 
@@ -220,6 +225,81 @@ mod tests {
             enemies[0].enemy_type,
             EnemyType::BossDeath,
             "spawned entity must be BossDeath"
+        );
+    }
+
+    /// The boss entity carries BossPhase::Phase1 on spawn.
+    #[test]
+    fn boss_spawns_in_phase1() {
+        let mut app = build_app();
+        app.world_mut().resource_mut::<GameData>().elapsed_time = DEFAULT_BOSS_SPAWN_TIME;
+
+        app.world_mut()
+            .run_system_once(check_boss_spawn)
+            .expect("check_boss_spawn should run");
+        app.world_mut().flush();
+
+        let mut q = app
+            .world_mut()
+            .query_filtered::<&BossPhase, With<GameSessionEntity>>();
+        let phase = q.single(app.world()).expect("BossPhase component missing");
+        assert_eq!(*phase, BossPhase::Phase1, "boss must start in Phase1");
+    }
+
+    /// Boss HP must not be scaled by difficulty (fixed at base stats).
+    #[test]
+    fn boss_hp_is_not_difficulty_scaled() {
+        let mut app = build_app();
+        app.world_mut().resource_mut::<GameData>().elapsed_time = DEFAULT_BOSS_SPAWN_TIME;
+        // Set a high difficulty multiplier to confirm it has no effect on boss HP.
+        app.world_mut()
+            .resource_mut::<EnemySpawner>()
+            .difficulty_multiplier = 5.0;
+
+        app.world_mut()
+            .run_system_once(check_boss_spawn)
+            .expect("check_boss_spawn should run");
+        app.world_mut().flush();
+
+        let mut q = app
+            .world_mut()
+            .query_filtered::<&Enemy, With<GameSessionEntity>>();
+        let enemy = q.single(app.world()).expect("boss entity missing");
+        let expected_hp = Enemy::from_type(EnemyType::BossDeath, 1.0).max_hp;
+        assert_eq!(
+            enemy.max_hp, expected_hp,
+            "boss HP must equal base value regardless of difficulty (got {})",
+            enemy.max_hp
+        );
+    }
+
+    /// Boss spawns above the player (positive Y offset).
+    #[test]
+    fn boss_spawns_above_player() {
+        use crate::components::Player;
+
+        let mut app = build_app();
+        app.world_mut().resource_mut::<GameData>().elapsed_time = DEFAULT_BOSS_SPAWN_TIME;
+
+        // Place a player entity at the origin.
+        app.world_mut()
+            .spawn((Player, Transform::from_xyz(0.0, 0.0, 0.0)));
+
+        app.world_mut()
+            .run_system_once(check_boss_spawn)
+            .expect("check_boss_spawn should run");
+        app.world_mut().flush();
+
+        let mut q = app
+            .world_mut()
+            .query_filtered::<&Transform, With<GameSessionEntity>>();
+        // Filter to boss entity only (player doesn't have GameSessionEntity).
+        let transforms: Vec<_> = q.iter(app.world()).collect();
+        assert_eq!(transforms.len(), 1, "one GameSessionEntity expected");
+        let boss_y = transforms[0].translation.y;
+        assert!(
+            boss_y > 0.0,
+            "boss should spawn above the player (y > 0), got y = {boss_y}"
         );
     }
 
