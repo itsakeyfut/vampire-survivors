@@ -30,6 +30,23 @@ pub struct MedusaBehaviorConfig {
 }
 
 // ---------------------------------------------------------------------------
+// Dragon AI behavior config
+// ---------------------------------------------------------------------------
+
+/// Behavior parameters for the Dragon enemy, deserialized from RON.
+#[derive(Deserialize, Debug, Clone)]
+pub struct DragonBehaviorConfig {
+    /// Seconds between fireball shots.
+    pub attack_interval: f32,
+    /// Speed of the fired fireball (pixels/second).
+    pub fireball_speed: f32,
+    /// Lifetime of the fireball before it despawns (seconds).
+    pub fireball_lifetime: f32,
+    /// Collider radius of the fireball (pixels).
+    pub fireball_radius: f32,
+}
+
+// ---------------------------------------------------------------------------
 // Per-enemy stats entry
 // ---------------------------------------------------------------------------
 
@@ -78,8 +95,12 @@ pub struct EnemyConfig {
     pub demon_unlock_secs: f32,
     /// Seconds into the run before Medusas are added to the spawn table.
     pub medusa_unlock_secs: f32,
+    /// Seconds into the run before Dragons are added to the spawn table.
+    pub dragon_unlock_secs: f32,
     /// Medusa-specific AI and projectile behavior parameters.
     pub medusa_behavior: MedusaBehaviorConfig,
+    /// Dragon-specific fireball behavior parameters.
+    pub dragon_behavior: DragonBehaviorConfig,
 }
 
 impl EnemyConfig {
@@ -171,7 +192,7 @@ EnemyConfig(
     ghost: (base_hp: 25.0, speed: 100.0, damage: 10.0, xp_value: 6, gold_chance: 0.08, collider_radius: 10.0),
     demon: (base_hp: 80.0, speed: 130.0, damage: 15.0, xp_value: 10, gold_chance: 0.12, collider_radius: 14.0),
     medusa: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 12.0),
-    dragon: (base_hp: 200.0, speed: 80.0, damage: 20.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0),
+    dragon: (base_hp: 150.0, speed: 90.0, damage: 25.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0),
     boss_death: (base_hp: 5000.0, speed: 30.0, damage: 50.0, xp_value: 500, gold_chance: 1.0, collider_radius: 30.0),
     spawn_base_interval: 0.5,
     max_count: 500,
@@ -182,6 +203,7 @@ EnemyConfig(
     ghost_unlock_secs: 600.0,
     demon_unlock_secs: 900.0,
     medusa_unlock_secs: 1200.0,
+    dragon_unlock_secs: 1500.0,
     medusa_behavior: (
         keep_min_dist: 150.0,
         keep_max_dist: 250.0,
@@ -189,6 +211,12 @@ EnemyConfig(
         projectile_speed: 180.0,
         projectile_lifetime: 5.0,
         projectile_radius: 5.0,
+    ),
+    dragon_behavior: (
+        attack_interval: 3.0,
+        fireball_speed: 200.0,
+        fireball_lifetime: 6.0,
+        fireball_radius: 7.0,
     ),
 )
 "#;
@@ -208,9 +236,12 @@ EnemyConfig(
         assert_eq!(config.ghost_unlock_secs, 600.0);
         assert_eq!(config.demon_unlock_secs, 900.0);
         assert_eq!(config.medusa_unlock_secs, 1200.0);
+        assert_eq!(config.dragon_unlock_secs, 1500.0);
         assert_eq!(config.medusa_behavior.keep_min_dist, 150.0);
         assert_eq!(config.medusa_behavior.keep_max_dist, 250.0);
         assert_eq!(config.medusa_behavior.attack_interval, 2.0);
+        assert_eq!(config.dragon_behavior.attack_interval, 3.0);
+        assert_eq!(config.dragon_behavior.fireball_speed, 200.0);
     }
 
     #[test]
@@ -223,7 +254,7 @@ EnemyConfig(
     ghost: (base_hp: 25.0, speed: 100.0, damage: 10.0, xp_value: 6, gold_chance: 0.08, collider_radius: 10.0),
     demon: (base_hp: 80.0, speed: 130.0, damage: 15.0, xp_value: 10, gold_chance: 0.12, collider_radius: 14.0),
     medusa: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 12.0),
-    dragon: (base_hp: 200.0, speed: 80.0, damage: 20.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0),
+    dragon: (base_hp: 150.0, speed: 90.0, damage: 25.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0),
     boss_death: (base_hp: 5000.0, speed: 30.0, damage: 50.0, xp_value: 500, gold_chance: 1.0, collider_radius: 30.0),
     spawn_base_interval: 0.5,
     max_count: 500,
@@ -234,6 +265,7 @@ EnemyConfig(
     ghost_unlock_secs: 600.0,
     demon_unlock_secs: 900.0,
     medusa_unlock_secs: 1200.0,
+    dragon_unlock_secs: 1500.0,
     medusa_behavior: (
         keep_min_dist: 150.0,
         keep_max_dist: 250.0,
@@ -241,6 +273,12 @@ EnemyConfig(
         projectile_speed: 180.0,
         projectile_lifetime: 5.0,
         projectile_radius: 5.0,
+    ),
+    dragon_behavior: (
+        attack_interval: 3.0,
+        fireball_speed: 200.0,
+        fireball_lifetime: 6.0,
+        fireball_radius: 7.0,
     ),
 )
 "#;

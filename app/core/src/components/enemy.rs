@@ -13,7 +13,7 @@ const DEFAULT_ENEMY_STATS_ZOMBIE: (f32, f32, f32, u32, f32) = (60.0, 60.0, 12.0,
 const DEFAULT_ENEMY_STATS_GHOST: (f32, f32, f32, u32, f32) = (25.0, 100.0, 10.0, 6, 0.08);
 const DEFAULT_ENEMY_STATS_DEMON: (f32, f32, f32, u32, f32) = (80.0, 130.0, 15.0, 10, 0.12);
 const DEFAULT_ENEMY_STATS_MEDUSA: (f32, f32, f32, u32, f32) = (60.0, 60.0, 12.0, 8, 0.10);
-const DEFAULT_ENEMY_STATS_DRAGON: (f32, f32, f32, u32, f32) = (200.0, 80.0, 20.0, 15, 0.15);
+const DEFAULT_ENEMY_STATS_DRAGON: (f32, f32, f32, u32, f32) = (150.0, 90.0, 25.0, 15, 0.15);
 const DEFAULT_ENEMY_STATS_BOSS_DEATH: (f32, f32, f32, u32, f32) = (5000.0, 30.0, 50.0, 500, 1.0);
 
 /// Core enemy stats. Attached to every enemy entity.
@@ -122,6 +122,21 @@ pub struct DamageFlash {
 /// when it hits the player.
 #[derive(Component, Debug)]
 pub struct MedusaProjectile {
+    /// Contact damage dealt to the player on hit.
+    pub damage: f32,
+    /// Velocity vector (pixels/second).
+    pub velocity: Vec2,
+    /// Remaining lifetime before the projectile despawns (seconds).
+    pub lifetime: f32,
+}
+
+/// Fireball projectile fired by the Dragon enemy.
+///
+/// Moves in a straight line toward the player's position at fire time.
+/// Despawns when [`lifetime`](DragonFireball::lifetime) reaches zero or
+/// when it hits the player.
+#[derive(Component, Debug)]
+pub struct DragonFireball {
     /// Contact damage dealt to the player on hit.
     pub damage: f32,
     /// Velocity vector (pixels/second).

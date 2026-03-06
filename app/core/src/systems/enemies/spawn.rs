@@ -15,6 +15,7 @@
 //! | Ghost    | 10 min    |
 //! | Demon    | 15 min    |
 //! | Medusa   | 20 min    |
+//! | Dragon   | 25 min    |
 
 use bevy::prelude::*;
 use rand::RngExt;
@@ -52,6 +53,10 @@ const DEFAULT_DEMON_UNLOCK_SECS: f32 = 900.0;
 const DEFAULT_COLLIDER_MEDUSA: f32 = 12.0;
 /// Elapsed seconds before Medusa is added to the spawn table (20 minutes).
 const DEFAULT_MEDUSA_UNLOCK_SECS: f32 = 1200.0;
+/// Collider radius for Dragon enemies (pixels).
+const DEFAULT_COLLIDER_DRAGON: f32 = 20.0;
+/// Elapsed seconds before Dragon is added to the spawn table (25 minutes).
+const DEFAULT_DRAGON_UNLOCK_SECS: f32 = 1500.0;
 /// Window width used to compute off-screen spawn bounds (pixels).
 const DEFAULT_WINDOW_WIDTH: u32 = 1280;
 /// Window height used to compute off-screen spawn bounds (pixels).
@@ -151,6 +156,11 @@ pub fn spawn_enemies(
         .map(|c| c.medusa_unlock_secs)
         .unwrap_or(DEFAULT_MEDUSA_UNLOCK_SECS)
         .max(0.0);
+    let dragon_unlock = enemy_cfg
+        .get()
+        .map(|c| c.dragon_unlock_secs)
+        .unwrap_or(DEFAULT_DRAGON_UNLOCK_SECS)
+        .max(0.0);
 
     // Build the spawn table from independent unlock flags so each enemy type
     // respects only its own threshold, regardless of ordering in the config.
@@ -166,6 +176,9 @@ pub fn spawn_enemies(
     }
     if elapsed >= medusa_unlock {
         table.push(EnemyType::Medusa);
+    }
+    if elapsed >= dragon_unlock {
+        table.push(EnemyType::Dragon);
     }
 
     let mut rng = rand::rng();
@@ -237,6 +250,8 @@ fn enemy_color(enemy_type: EnemyType) -> Color {
         EnemyType::Demon => Color::srgb(0.8, 0.1, 0.05),
         // Stone/snake gray for Medusa.
         EnemyType::Medusa => Color::srgb(0.6, 0.6, 0.5),
+        // Deep orange-red for Dragon.
+        EnemyType::Dragon => Color::srgb(0.9, 0.3, 0.0),
         // Fallback for future types added before they get explicit visuals.
         _ => Color::srgb(0.7, 0.3, 0.3),
     }
@@ -251,6 +266,7 @@ fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
         EnemyType::Ghost => DEFAULT_COLLIDER_GHOST,
         EnemyType::Demon => DEFAULT_COLLIDER_DEMON,
         EnemyType::Medusa => DEFAULT_COLLIDER_MEDUSA,
+        EnemyType::Dragon => DEFAULT_COLLIDER_DRAGON,
         _ => 10.0,
     }
 }
@@ -822,6 +838,122 @@ mod tests {
             }
         }
         panic!("expected at least one Medusa spawn in 500 attempts to verify KeepDistance AI");
+    }
+
+    /// Dragon stats match the issue spec (HP 150, speed 90, damage 25).
+    #[test]
+    fn dragon_has_correct_base_stats() {
+        use crate::components::Enemy;
+        let e = Enemy::from_type(EnemyType::Dragon, 1.0);
+        assert_eq!(e.max_hp, 150.0, "Dragon base HP must be 150");
+        assert_eq!(e.move_speed, 90.0, "Dragon speed must be 90");
+        assert_eq!(e.damage, 25.0, "Dragon damage must be 25");
+    }
+
+    /// Before 25 min, Dragon must not appear in the spawn table.
+    #[test]
+    fn dragon_does_not_spawn_before_twenty_five_minutes() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        let mut dragon_count = 0usize;
+        for _ in 0..200 {
+            let mut app = build_playing_app();
+            app.world_mut().resource_mut::<GameData>().elapsed_time =
+                DEFAULT_DRAGON_UNLOCK_SECS - 1.0;
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+
+            let mut q = app.world_mut().query::<&Enemy>();
+            for e in q.iter(app.world()) {
+                if e.enemy_type == EnemyType::Dragon {
+                    dragon_count += 1;
+                }
+            }
+        }
+        assert_eq!(
+            dragon_count, 0,
+            "Dragon must not spawn before 25 min, but spawned {dragon_count} times in 200 attempts"
+        );
+    }
+
+    /// After 25 min, Dragon should appear in the spawn table.
+    #[test]
+    fn dragon_can_spawn_after_twenty_five_minutes() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        let mut dragon_count = 0usize;
+        for _ in 0..500 {
+            let mut app = build_playing_app();
+            app.world_mut().resource_mut::<GameData>().elapsed_time =
+                DEFAULT_DRAGON_UNLOCK_SECS + 1.0;
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+
+            let mut q = app.world_mut().query::<&Enemy>();
+            for e in q.iter(app.world()) {
+                if e.enemy_type == EnemyType::Dragon {
+                    dragon_count += 1;
+                }
+            }
+        }
+        assert!(
+            dragon_count > 0,
+            "Dragon must appear after 25 min (0 spawns in 500 attempts)"
+        );
+    }
+
+    /// Dragon spawned after 25 min must use ChasePlayer AI.
+    #[test]
+    fn dragon_spawns_with_chase_player_ai() {
+        use bevy::ecs::system::RunSystemOnce as _;
+        use std::time::Duration;
+
+        for _ in 0..500 {
+            let mut app = build_playing_app();
+            app.world_mut().resource_mut::<GameData>().elapsed_time =
+                DEFAULT_DRAGON_UNLOCK_SECS + 1.0;
+            app.world_mut().resource_mut::<EnemySpawner>().spawn_timer =
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL + 0.1;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+            app.world_mut()
+                .run_system_once(spawn_enemies)
+                .expect("spawn_enemies should run");
+            app.world_mut().flush();
+
+            let mut eq = app.world_mut().query::<(&Enemy, &EnemyAI)>();
+            let dragons: Vec<_> = eq
+                .iter(app.world())
+                .filter(|(e, _)| e.enemy_type == EnemyType::Dragon)
+                .collect();
+
+            if !dragons.is_empty() {
+                for (_, ai) in &dragons {
+                    assert_eq!(
+                        ai.ai_type,
+                        AIType::ChasePlayer,
+                        "Dragon must use ChasePlayer AI"
+                    );
+                }
+                return;
+            }
+        }
+        panic!("expected at least one Dragon spawn in 500 attempts to verify ChasePlayer AI");
     }
 
     /// Spawned enemy must carry `Enemy`, `EnemyAI`, and `CircleCollider`.
