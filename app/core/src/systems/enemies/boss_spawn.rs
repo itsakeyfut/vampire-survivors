@@ -251,7 +251,9 @@ mod tests {
     fn boss_hp_is_not_difficulty_scaled() {
         let mut app = build_app();
         app.world_mut().resource_mut::<GameData>().elapsed_time = DEFAULT_BOSS_SPAWN_TIME;
-        // Set a high difficulty multiplier to confirm it has no effect on boss HP.
+        // Set a high difficulty multiplier.  check_boss_spawn intentionally
+        // ignores this value and always passes 1.0 to Enemy::from_type;
+        // this assignment demonstrates that the multiplier has no effect.
         app.world_mut()
             .resource_mut::<EnemySpawner>()
             .difficulty_multiplier = 5.0;
