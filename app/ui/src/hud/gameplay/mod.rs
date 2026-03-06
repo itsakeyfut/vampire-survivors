@@ -34,8 +34,8 @@ use bevy::state::state_scoped::DespawnOnExit;
 use vs_core::states::AppState;
 
 use crate::config::hud::gameplay::{
-    GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle, GameplayHudLayoutParams,
-    HpBarHudParams, LevelHudParams, TimerHudParams, XpBarHudParams,
+    BossHpBarHudParams, GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle,
+    GameplayHudLayoutParams, HpBarHudParams, LevelHudParams, TimerHudParams, XpBarHudParams,
 };
 
 // ---------------------------------------------------------------------------
@@ -80,6 +80,7 @@ pub fn setup_gameplay_hud(
     xp_bar_cfg: XpBarHudParams,
     timer_cfg: TimerHudParams,
     level_cfg: LevelHudParams,
+    boss_hp_bar_cfg: BossHpBarHudParams,
 ) {
     let edge = layout_cfg
         .get()
@@ -157,7 +158,7 @@ pub fn setup_gameplay_hud(
                 ..default()
             },))
                 .with_children(|anchor| {
-                    boss_hp_bar::spawn_boss_hp_bar(anchor);
+                    boss_hp_bar::spawn_boss_hp_bar(anchor, boss_hp_bar_cfg.get());
                 });
 
             // ------------------------------------------------------------------

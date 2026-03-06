@@ -20,11 +20,13 @@ pub mod screen_heading;
 pub mod upgrade_card;
 
 pub use gameplay::{
-    EvolutionNotificationHudConfig, EvolutionNotificationHudConfigHandle,
-    EvolutionNotificationHudParams, GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle,
-    GameplayHudLayoutParams, HpBarHudConfig, HpBarHudConfigHandle, HpBarHudParams, LevelHudConfig,
-    LevelHudConfigHandle, LevelHudParams, TimerHudConfig, TimerHudConfigHandle, TimerHudParams,
-    XpBarHudConfig, XpBarHudConfigHandle, XpBarHudParams,
+    BossHpBarHudConfig, BossHpBarHudConfigHandle, BossHpBarHudParams, BossWarningHudConfig,
+    BossWarningHudConfigHandle, BossWarningHudParams, EvolutionNotificationHudConfig,
+    EvolutionNotificationHudConfigHandle, EvolutionNotificationHudParams,
+    GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle, GameplayHudLayoutParams,
+    HpBarHudConfig, HpBarHudConfigHandle, HpBarHudParams, LevelHudConfig, LevelHudConfigHandle,
+    LevelHudParams, TimerHudConfig, TimerHudConfigHandle, TimerHudParams, XpBarHudConfig,
+    XpBarHudConfigHandle, XpBarHudParams,
 };
 pub use menu_button::{MenuButtonHudConfig, MenuButtonHudConfigHandle, MenuButtonHudParams};
 pub use screen_heading::{

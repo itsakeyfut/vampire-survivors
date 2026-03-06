@@ -17,6 +17,8 @@ use bevy::prelude::*;
 use vs_core::components::Enemy;
 use vs_core::types::BossPhase;
 
+use crate::config::hud::gameplay::BossHpBarHudConfig;
+
 // ---------------------------------------------------------------------------
 // Fallback constants
 // ---------------------------------------------------------------------------
@@ -56,13 +58,30 @@ pub struct HudBossHpBar;
 ///
 /// The root node starts with [`Visibility::Hidden`]; `update_boss_hp_bar`
 /// makes it visible when the boss entity exists.
-pub fn spawn_boss_hp_bar(parent: &mut ChildSpawnerCommands) {
+pub fn spawn_boss_hp_bar(parent: &mut ChildSpawnerCommands, cfg: Option<&BossHpBarHudConfig>) {
+    let bar_width = cfg.map(|c| c.bar_width).unwrap_or(DEFAULT_BAR_WIDTH);
+    let bar_height = cfg.map(|c| c.bar_height).unwrap_or(DEFAULT_BAR_HEIGHT);
+    let bar_radius = cfg.map(|c| c.bar_radius).unwrap_or(DEFAULT_BAR_RADIUS);
+    let label_font_size = cfg
+        .map(|c| c.label_font_size)
+        .unwrap_or(DEFAULT_LABEL_FONT_SIZE);
+    let label_gap = cfg.map(|c| c.label_gap).unwrap_or(DEFAULT_LABEL_GAP);
+    let fill_color: Color = cfg
+        .map(|c| Color::from(&c.fill_color))
+        .unwrap_or(DEFAULT_FILL_COLOR);
+    let track_color: Color = cfg
+        .map(|c| Color::from(&c.track_color))
+        .unwrap_or(DEFAULT_TRACK_COLOR);
+    let text_color: Color = cfg
+        .map(|c| Color::from(&c.text_color))
+        .unwrap_or(DEFAULT_TEXT_COLOR);
+
     parent
         .spawn((
             Node {
                 flex_direction: FlexDirection::Column,
                 align_items: AlignItems::Center,
-                row_gap: Val::Px(DEFAULT_LABEL_GAP),
+                row_gap: Val::Px(label_gap),
                 ..default()
             },
             Visibility::Hidden,
@@ -73,22 +92,22 @@ pub fn spawn_boss_hp_bar(parent: &mut ChildSpawnerCommands) {
             col.spawn((
                 Text::new("BOSS"),
                 TextFont {
-                    font_size: DEFAULT_LABEL_FONT_SIZE,
+                    font_size: label_font_size,
                     ..default()
                 },
-                TextColor(DEFAULT_TEXT_COLOR),
+                TextColor(text_color),
             ));
 
             // Background track
             col.spawn((
                 Node {
-                    width: Val::Px(DEFAULT_BAR_WIDTH),
-                    height: Val::Px(DEFAULT_BAR_HEIGHT),
+                    width: Val::Px(bar_width),
+                    height: Val::Px(bar_height),
                     overflow: Overflow::clip(),
                     ..default()
                 },
-                BackgroundColor(DEFAULT_TRACK_COLOR),
-                BorderRadius::all(Val::Px(DEFAULT_BAR_RADIUS)),
+                BackgroundColor(track_color),
+                BorderRadius::all(Val::Px(bar_radius)),
             ))
             .with_children(|track| {
                 // Fill bar — width updated by update_boss_hp_bar each frame.
@@ -98,8 +117,8 @@ pub fn spawn_boss_hp_bar(parent: &mut ChildSpawnerCommands) {
                         height: Val::Percent(100.0),
                         ..default()
                     },
-                    BackgroundColor(DEFAULT_FILL_COLOR),
-                    BorderRadius::all(Val::Px(DEFAULT_BAR_RADIUS)),
+                    BackgroundColor(fill_color),
+                    BorderRadius::all(Val::Px(bar_radius)),
                     HudBossHpBar,
                 ));
             });

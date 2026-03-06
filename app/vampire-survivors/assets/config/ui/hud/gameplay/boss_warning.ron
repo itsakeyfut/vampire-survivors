@@ -1,0 +1,7 @@
+BossWarningHudConfig(
+    display_duration: 4.0,
+    fade_start:       2.0,
+    font_size:        52.0,
+    top_percent:      35.0,
+    text_color:       (r: 1.0, g: 0.15, b: 0.15),
+)

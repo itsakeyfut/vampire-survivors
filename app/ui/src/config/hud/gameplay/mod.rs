@@ -8,7 +8,11 @@
 //! | `config/ui/hud/gameplay/level.ron`                | [`LevelHudConfig`]                | Level label font size and color       |
 //! | `config/ui/hud/gameplay/layout.ron`               | [`GameplayHudLayoutConfig`]       | Widget anchor positions               |
 //! | `config/ui/hud/gameplay/evolution_notification.ron` | [`EvolutionNotificationHudConfig`] | Notification timing, font, color    |
+//! | `config/ui/hud/gameplay/boss_warning.ron`         | [`BossWarningHudConfig`]          | Boss warning timing, font, color      |
+//! | `config/ui/hud/gameplay/boss_hp_bar.ron`          | [`BossHpBarHudConfig`]            | Boss HP bar dimensions and colors     |
 
+pub mod boss_hp_bar;
+pub mod boss_warning;
 pub mod evolution_notification;
 pub mod hp_bar;
 pub mod layout;
@@ -16,6 +20,8 @@ pub mod level;
 pub mod timer;
 pub mod xp_bar;
 
+pub use boss_hp_bar::{BossHpBarHudConfig, BossHpBarHudConfigHandle, BossHpBarHudParams};
+pub use boss_warning::{BossWarningHudConfig, BossWarningHudConfigHandle, BossWarningHudParams};
 pub use evolution_notification::{
     EvolutionNotificationHudConfig, EvolutionNotificationHudConfigHandle,
     EvolutionNotificationHudParams,
