@@ -258,6 +258,9 @@ mod tests {
         advance_and_run(&mut app);
 
         let t = app.world().get::<Transform>(enemy).unwrap().translation;
-        assert_eq!(t.x, 0.0, "KeepDistance enemy must stay still inside the comfort band");
+        assert_eq!(
+            t.x, 0.0,
+            "KeepDistance enemy must stay still inside the comfort band"
+        );
     }
 }

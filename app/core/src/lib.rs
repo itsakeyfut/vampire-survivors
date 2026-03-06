@@ -19,8 +19,11 @@ use resources::{
 
 /// Resets all per-run resources to their defaults at the start of each run.
 ///
-/// Registered on [`OnEnter`]`(`[`AppState::Playing`]`)` so that returning from
-/// `GameOver` → `Title` → `Playing` always begins with a clean slate.
+/// Registered on [`OnTransition`] from [`AppState::CharacterSelect`] to
+/// [`AppState::Playing`] so it fires **only** when a new run begins —
+/// not when returning from [`AppState::LevelUp`] or [`AppState::Paused`],
+/// which would wipe out level progress and pending upgrade choices.
+///
 /// [`MetaProgress`] and [`SelectedCharacter`] are intentionally excluded
 /// because they persist across runs.
 fn reset_per_run_resources(
@@ -78,9 +81,27 @@ impl Plugin for GameCorePlugin {
             .add_message::<GameOverEvent>()
             .add_message::<LevelUpEvent>()
             // ---------------------------------------------------------------
-            // Per-run reset: runs each time the player enters Playing state
+            // Per-run reset: fires only when a brand-new run begins.
+            // Covers both entry paths — Title → Playing (when CharacterSelect
+            // is skipped) and CharacterSelect → Playing (after character
+            // selection).  LevelUp → Playing and Paused → Playing returns are
+            // intentionally excluded so level progress and pending upgrade
+            // choices are preserved.
             // ---------------------------------------------------------------
-            .add_systems(OnEnter(AppState::Playing), reset_per_run_resources)
+            .add_systems(
+                OnTransition {
+                    exited: AppState::Title,
+                    entered: AppState::Playing,
+                },
+                reset_per_run_resources,
+            )
+            .add_systems(
+                OnTransition {
+                    exited: AppState::CharacterSelect,
+                    entered: AppState::Playing,
+                },
+                reset_per_run_resources,
+            )
             // ---------------------------------------------------------------
             // Sub-plugins (each owns its domain's systems)
             // ---------------------------------------------------------------
