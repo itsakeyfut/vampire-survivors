@@ -59,6 +59,11 @@ pub struct EnemyStatsEntry {
     pub xp_value: u32,
     pub gold_chance: f32,
     pub collider_radius: f32,
+    /// Relative spawn weight used for weighted-random selection.
+    ///
+    /// Higher values = more frequent.  Does not affect unlock timing.
+    /// Typical range: 0.3 (Dragon) – 1.0 (Bat/Skeleton).
+    pub spawn_weight: f32,
 }
 
 // ---------------------------------------------------------------------------
@@ -186,14 +191,14 @@ mod tests {
     fn enemy_config_deserialization() {
         let ron_data = r#"
 EnemyConfig(
-    bat: (base_hp: 10.0, speed: 150.0, damage: 5.0, xp_value: 3, gold_chance: 0.05, collider_radius: 8.0),
-    skeleton: (base_hp: 30.0, speed: 80.0, damage: 8.0, xp_value: 5, gold_chance: 0.08, collider_radius: 12.0),
-    zombie: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 14.0),
-    ghost: (base_hp: 25.0, speed: 100.0, damage: 10.0, xp_value: 6, gold_chance: 0.08, collider_radius: 10.0),
-    demon: (base_hp: 80.0, speed: 130.0, damage: 15.0, xp_value: 10, gold_chance: 0.12, collider_radius: 14.0),
-    medusa: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 12.0),
-    dragon: (base_hp: 150.0, speed: 90.0, damage: 25.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0),
-    boss_death: (base_hp: 5000.0, speed: 30.0, damage: 50.0, xp_value: 500, gold_chance: 1.0, collider_radius: 30.0),
+    bat: (base_hp: 10.0, speed: 150.0, damage: 5.0, xp_value: 3, gold_chance: 0.05, collider_radius: 8.0, spawn_weight: 1.0),
+    skeleton: (base_hp: 30.0, speed: 80.0, damage: 8.0, xp_value: 5, gold_chance: 0.08, collider_radius: 12.0, spawn_weight: 1.0),
+    zombie: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 14.0, spawn_weight: 0.8),
+    ghost: (base_hp: 25.0, speed: 100.0, damage: 10.0, xp_value: 6, gold_chance: 0.08, collider_radius: 10.0, spawn_weight: 0.6),
+    demon: (base_hp: 80.0, speed: 130.0, damage: 15.0, xp_value: 10, gold_chance: 0.12, collider_radius: 14.0, spawn_weight: 0.5),
+    medusa: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 12.0, spawn_weight: 0.4),
+    dragon: (base_hp: 150.0, speed: 90.0, damage: 25.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0, spawn_weight: 0.3),
+    boss_death: (base_hp: 5000.0, speed: 30.0, damage: 50.0, xp_value: 500, gold_chance: 1.0, collider_radius: 30.0, spawn_weight: 0.0),
     spawn_base_interval: 0.5,
     max_count: 500,
     cull_distance: 2000.0,
@@ -242,20 +247,22 @@ EnemyConfig(
         assert_eq!(config.medusa_behavior.attack_interval, 2.0);
         assert_eq!(config.dragon_behavior.attack_interval, 3.0);
         assert_eq!(config.dragon_behavior.fireball_speed, 200.0);
+        assert_eq!(config.bat.spawn_weight, 1.0);
+        assert_eq!(config.dragon.spawn_weight, 0.3);
     }
 
     #[test]
     fn stats_for_returns_correct_entry() {
         let ron_data = r#"
 EnemyConfig(
-    bat: (base_hp: 10.0, speed: 150.0, damage: 5.0, xp_value: 3, gold_chance: 0.05, collider_radius: 8.0),
-    skeleton: (base_hp: 30.0, speed: 80.0, damage: 8.0, xp_value: 5, gold_chance: 0.08, collider_radius: 12.0),
-    zombie: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 14.0),
-    ghost: (base_hp: 25.0, speed: 100.0, damage: 10.0, xp_value: 6, gold_chance: 0.08, collider_radius: 10.0),
-    demon: (base_hp: 80.0, speed: 130.0, damage: 15.0, xp_value: 10, gold_chance: 0.12, collider_radius: 14.0),
-    medusa: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 12.0),
-    dragon: (base_hp: 150.0, speed: 90.0, damage: 25.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0),
-    boss_death: (base_hp: 5000.0, speed: 30.0, damage: 50.0, xp_value: 500, gold_chance: 1.0, collider_radius: 30.0),
+    bat: (base_hp: 10.0, speed: 150.0, damage: 5.0, xp_value: 3, gold_chance: 0.05, collider_radius: 8.0, spawn_weight: 1.0),
+    skeleton: (base_hp: 30.0, speed: 80.0, damage: 8.0, xp_value: 5, gold_chance: 0.08, collider_radius: 12.0, spawn_weight: 1.0),
+    zombie: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 14.0, spawn_weight: 0.8),
+    ghost: (base_hp: 25.0, speed: 100.0, damage: 10.0, xp_value: 6, gold_chance: 0.08, collider_radius: 10.0, spawn_weight: 0.6),
+    demon: (base_hp: 80.0, speed: 130.0, damage: 15.0, xp_value: 10, gold_chance: 0.12, collider_radius: 14.0, spawn_weight: 0.5),
+    medusa: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 12.0, spawn_weight: 0.4),
+    dragon: (base_hp: 150.0, speed: 90.0, damage: 25.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0, spawn_weight: 0.3),
+    boss_death: (base_hp: 5000.0, speed: 30.0, damage: 50.0, xp_value: 500, gold_chance: 1.0, collider_radius: 30.0, spawn_weight: 0.0),
     spawn_base_interval: 0.5,
     max_count: 500,
     cull_distance: 2000.0,
