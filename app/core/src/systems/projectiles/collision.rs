@@ -33,7 +33,8 @@ use crate::{
 ///
 /// Used to widen the spatial-grid query so that large enemies whose centres
 /// lie just outside the projectile's radius are still returned as candidates.
-const MAX_ENEMY_COLLIDER_RADIUS: f32 = 32.0;
+/// Must be >= the largest collider in the game; Boss Death uses 60 px.
+const MAX_ENEMY_COLLIDER_RADIUS: f32 = 60.0;
 
 // ---------------------------------------------------------------------------
 // System

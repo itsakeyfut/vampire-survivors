@@ -35,7 +35,11 @@ pub enum AIType {
 }
 
 /// Boss fight phases.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// Attached as a component to the Boss Death entity.  Systems that implement
+/// multi-phase boss behavior query for this component to determine which
+/// attack patterns and movement rules apply.
+#[derive(bevy::prelude::Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BossPhase {
     Phase1,
     Phase2,
