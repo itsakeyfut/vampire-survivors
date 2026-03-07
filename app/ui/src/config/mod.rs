@@ -15,6 +15,8 @@
 //! | `config/ui/hud/gameplay/timer.ron`                | [`TimerHudConfig`]           | Timer font size and color          |
 //! | `config/ui/hud/gameplay/level.ron`                | [`LevelHudConfig`]           | Level label font size and color    |
 //! | `config/ui/hud/gameplay/layout.ron`               | [`GameplayHudLayoutConfig`]  | Widget anchor positions            |
+//! | `config/ui/hud/gameplay/boss_warning.ron`         | [`BossWarningHudConfig`]     | Boss warning overlay settings      |
+//! | `config/ui/hud/gameplay/boss_hp_bar.ron`          | [`BossHpBarHudConfig`]       | Boss HP bar dimensions and colors  |
 //!
 //! All files are watched by Bevy's asset server, so edits take effect while
 //! the game is running (hot-reload).
@@ -24,14 +26,15 @@ pub mod level_up;
 pub mod styles;
 
 pub use hud::{
-    EvolutionNotificationHudConfig, EvolutionNotificationHudConfigHandle,
-    EvolutionNotificationHudParams, GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle,
-    GameplayHudLayoutParams, HpBarHudConfig, HpBarHudConfigHandle, HpBarHudParams, LevelHudConfig,
-    LevelHudConfigHandle, LevelHudParams, MenuButtonHudConfig, MenuButtonHudConfigHandle,
-    MenuButtonHudParams, ScreenHeadingHudConfig, ScreenHeadingHudConfigHandle,
-    ScreenHeadingHudParams, TimerHudConfig, TimerHudConfigHandle, TimerHudParams,
-    UpgradeCardHudConfig, UpgradeCardHudConfigHandle, UpgradeCardHudParams, XpBarHudConfig,
-    XpBarHudConfigHandle, XpBarHudParams,
+    BossHpBarHudConfig, BossHpBarHudConfigHandle, BossHpBarHudParams, BossWarningHudConfig,
+    BossWarningHudConfigHandle, BossWarningHudParams, EvolutionNotificationHudConfig,
+    EvolutionNotificationHudConfigHandle, EvolutionNotificationHudParams,
+    GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle, GameplayHudLayoutParams,
+    HpBarHudConfig, HpBarHudConfigHandle, HpBarHudParams, LevelHudConfig, LevelHudConfigHandle,
+    LevelHudParams, MenuButtonHudConfig, MenuButtonHudConfigHandle, MenuButtonHudParams,
+    ScreenHeadingHudConfig, ScreenHeadingHudConfigHandle, ScreenHeadingHudParams, TimerHudConfig,
+    TimerHudConfigHandle, TimerHudParams, UpgradeCardHudConfig, UpgradeCardHudConfigHandle,
+    UpgradeCardHudParams, XpBarHudConfig, XpBarHudConfigHandle, XpBarHudParams,
 };
 pub use level_up::{
     LevelUpScreenConfig, LevelUpScreenConfigHandle, LevelUpScreenParams, hot_reload_level_up_screen,
@@ -101,6 +104,8 @@ ron_asset_loader!(
     EvolutionNotificationHudConfigLoader,
     EvolutionNotificationHudConfig
 );
+ron_asset_loader!(BossWarningHudConfigLoader, BossWarningHudConfig);
+ron_asset_loader!(BossHpBarHudConfigLoader, BossHpBarHudConfig);
 
 // ---------------------------------------------------------------------------
 // Plugin
@@ -140,7 +145,11 @@ impl Plugin for UiConfigPlugin {
             .init_asset::<GameplayHudLayoutConfig>()
             .register_asset_loader(GameplayHudLayoutConfigLoader)
             .init_asset::<EvolutionNotificationHudConfig>()
-            .register_asset_loader(EvolutionNotificationHudConfigLoader);
+            .register_asset_loader(EvolutionNotificationHudConfigLoader)
+            .init_asset::<BossWarningHudConfig>()
+            .register_asset_loader(BossWarningHudConfigLoader)
+            .init_asset::<BossHpBarHudConfig>()
+            .register_asset_loader(BossHpBarHudConfigLoader);
 
         let asset_server = app.world_mut().resource::<AssetServer>();
 
@@ -170,6 +179,10 @@ impl Plugin for UiConfigPlugin {
             asset_server.load("config/ui/hud/gameplay/layout.ron");
         let evolution_notif_handle: Handle<EvolutionNotificationHudConfig> =
             asset_server.load("config/ui/hud/gameplay/evolution_notification.ron");
+        let boss_warning_handle: Handle<BossWarningHudConfig> =
+            asset_server.load("config/ui/hud/gameplay/boss_warning.ron");
+        let boss_hp_bar_handle: Handle<BossHpBarHudConfig> =
+            asset_server.load("config/ui/hud/gameplay/boss_hp_bar.ron");
 
         app.insert_resource(UiStyleConfigHandle(style_handle))
             .insert_resource(LevelUpScreenConfigHandle(level_up_handle))
@@ -181,7 +194,9 @@ impl Plugin for UiConfigPlugin {
             .insert_resource(TimerHudConfigHandle(timer_handle))
             .insert_resource(LevelHudConfigHandle(level_handle))
             .insert_resource(GameplayHudLayoutConfigHandle(layout_handle))
-            .insert_resource(EvolutionNotificationHudConfigHandle(evolution_notif_handle));
+            .insert_resource(EvolutionNotificationHudConfigHandle(evolution_notif_handle))
+            .insert_resource(BossWarningHudConfigHandle(boss_warning_handle))
+            .insert_resource(BossHpBarHudConfigHandle(boss_hp_bar_handle));
 
         app.add_systems(Update, hot_reload_ui_style)
             .add_systems(Update, hot_reload_level_up_screen)

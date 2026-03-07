@@ -21,6 +21,7 @@
 //! | [`level`]                 | Level label             | `spawn_level`                 | `update_level_text`               |
 //! | [`evolution_notification`]| Evolution toast         | `on_weapon_evolved` (observer)| `update_evolution_notification`   |
 
+pub mod boss_hp_bar;
 pub mod boss_warning;
 pub mod evolution_notification;
 pub mod hp_bar;
@@ -33,8 +34,8 @@ use bevy::state::state_scoped::DespawnOnExit;
 use vs_core::states::AppState;
 
 use crate::config::hud::gameplay::{
-    GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle, GameplayHudLayoutParams,
-    HpBarHudParams, LevelHudParams, TimerHudParams, XpBarHudParams,
+    BossHpBarHudParams, GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle,
+    GameplayHudLayoutParams, HpBarHudParams, LevelHudParams, TimerHudParams, XpBarHudParams,
 };
 
 // ---------------------------------------------------------------------------
@@ -42,6 +43,7 @@ use crate::config::hud::gameplay::{
 // ---------------------------------------------------------------------------
 
 const DEFAULT_EDGE_MARGIN: f32 = 12.0;
+const DEFAULT_BOSS_HP_BAR_BOTTOM: f32 = 28.0;
 
 // ---------------------------------------------------------------------------
 // Anchor marker components
@@ -79,11 +81,16 @@ pub fn setup_gameplay_hud(
     xp_bar_cfg: XpBarHudParams,
     timer_cfg: TimerHudParams,
     level_cfg: LevelHudParams,
+    boss_hp_bar_cfg: BossHpBarHudParams,
 ) {
     let edge = layout_cfg
         .get()
         .map(|c| c.edge_margin)
         .unwrap_or(DEFAULT_EDGE_MARGIN);
+    let boss_hp_bar_bottom = layout_cfg
+        .get()
+        .map(|c| c.boss_hp_bar_bottom)
+        .unwrap_or(DEFAULT_BOSS_HP_BAR_BOTTOM);
 
     commands
         .spawn((
@@ -143,6 +150,21 @@ pub fn setup_gameplay_hud(
             .with_children(|anchor| {
                 timer::spawn_timer(anchor, timer_cfg.get());
             });
+
+            // ------------------------------------------------------------------
+            // Bottom-center: Boss HP bar (hidden until boss spawns)
+            // ------------------------------------------------------------------
+            root.spawn((Node {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(boss_hp_bar_bottom),
+                left: Val::Px(0.0),
+                right: Val::Px(0.0),
+                justify_content: JustifyContent::Center,
+                ..default()
+            },))
+                .with_children(|anchor| {
+                    boss_hp_bar::spawn_boss_hp_bar(anchor, boss_hp_bar_cfg.get());
+                });
 
             // ------------------------------------------------------------------
             // Bottom: XP bar (full viewport width)

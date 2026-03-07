@@ -1,0 +1,18 @@
+// Boss warning notification overlay — tunable parameters.
+// Displayed when Boss Death spawns at the 30-minute mark.
+// Hot-reload enabled: edit while the game is running to tweak timing and style.
+//
+// Parameters:
+// - display_duration: Total lifetime of the notification in seconds before despawn
+// - fade_start:       Time after spawn at which the alpha fade-out begins (seconds)
+// - font_size:        Font size of the warning text in points
+// - top_percent:      Vertical position as a percentage of the screen height
+// - text_color:       RGB text color (values in [0.0, 1.0])
+
+BossWarningHudConfig(
+    display_duration: 4.0,
+    fade_start:       2.0,
+    font_size:        52.0,
+    top_percent:      35.0,
+    text_color:       (r: 1.0, g: 0.15, b: 0.15),
+)

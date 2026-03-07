@@ -13,6 +13,8 @@
 //! | `config/ui/hud/gameplay/timer.ron`                | [`TimerHudConfig`]           | Timer font size and color          |
 //! | `config/ui/hud/gameplay/level.ron`                | [`LevelHudConfig`]           | Level label font size and color    |
 //! | `config/ui/hud/gameplay/layout.ron`               | [`GameplayHudLayoutConfig`]  | Widget anchor positions            |
+//! | `config/ui/hud/gameplay/boss_warning.ron`         | [`BossWarningHudConfig`]     | Boss warning overlay settings      |
+//! | `config/ui/hud/gameplay/boss_hp_bar.ron`          | [`BossHpBarHudConfig`]       | Boss HP bar dimensions and colors  |
 
 pub mod gameplay;
 pub mod menu_button;
@@ -20,11 +22,13 @@ pub mod screen_heading;
 pub mod upgrade_card;
 
 pub use gameplay::{
-    EvolutionNotificationHudConfig, EvolutionNotificationHudConfigHandle,
-    EvolutionNotificationHudParams, GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle,
-    GameplayHudLayoutParams, HpBarHudConfig, HpBarHudConfigHandle, HpBarHudParams, LevelHudConfig,
-    LevelHudConfigHandle, LevelHudParams, TimerHudConfig, TimerHudConfigHandle, TimerHudParams,
-    XpBarHudConfig, XpBarHudConfigHandle, XpBarHudParams,
+    BossHpBarHudConfig, BossHpBarHudConfigHandle, BossHpBarHudParams, BossWarningHudConfig,
+    BossWarningHudConfigHandle, BossWarningHudParams, EvolutionNotificationHudConfig,
+    EvolutionNotificationHudConfigHandle, EvolutionNotificationHudParams,
+    GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle, GameplayHudLayoutParams,
+    HpBarHudConfig, HpBarHudConfigHandle, HpBarHudParams, LevelHudConfig, LevelHudConfigHandle,
+    LevelHudParams, TimerHudConfig, TimerHudConfigHandle, TimerHudParams, XpBarHudConfig,
+    XpBarHudConfigHandle, XpBarHudParams,
 };
 pub use menu_button::{MenuButtonHudConfig, MenuButtonHudConfigHandle, MenuButtonHudParams};
 pub use screen_heading::{

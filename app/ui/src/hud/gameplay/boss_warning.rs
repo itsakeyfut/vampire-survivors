@@ -19,6 +19,8 @@ use bevy::state::state_scoped::DespawnOnExit;
 use vs_core::events::BossSpawnedEvent;
 use vs_core::states::AppState;
 
+use crate::config::hud::gameplay::BossWarningHudParams;
+
 // ---------------------------------------------------------------------------
 // Fallback constants
 // ---------------------------------------------------------------------------
@@ -65,16 +67,38 @@ pub struct BossWarningNotification {
 ///
 /// Runs every frame in the `Playing` state; is a no-op until the event
 /// arrives, after which it spawns the overlay entities once.
-pub fn spawn_boss_warning(mut commands: Commands, mut events: MessageReader<BossSpawnedEvent>) {
+pub fn spawn_boss_warning(
+    mut commands: Commands,
+    mut events: MessageReader<BossSpawnedEvent>,
+    cfg: BossWarningHudParams,
+) {
     for _ in events.read() {
+        let font_size = cfg.get().map(|c| c.font_size).unwrap_or(DEFAULT_FONT_SIZE);
+        let top_percent = cfg
+            .get()
+            .map(|c| c.top_percent)
+            .unwrap_or(DEFAULT_TOP_PERCENT);
+        let duration = cfg
+            .get()
+            .map(|c| c.display_duration)
+            .unwrap_or(DEFAULT_DISPLAY_DURATION);
+        let fade_start = cfg
+            .get()
+            .map(|c| c.fade_start)
+            .unwrap_or(DEFAULT_FADE_START);
+        let text_color = cfg
+            .get()
+            .map(|c| Color::from(&c.text_color))
+            .unwrap_or(DEFAULT_TEXT_COLOR);
+
         let text_entity = commands
             .spawn((
                 Text::new("BOSS APPROACHING"),
                 TextFont {
-                    font_size: DEFAULT_FONT_SIZE,
+                    font_size,
                     ..default()
                 },
-                TextColor(DEFAULT_TEXT_COLOR),
+                TextColor(text_color),
                 TextLayout::new_with_justify(Justify::Center),
             ))
             .id();
@@ -84,17 +108,17 @@ pub fn spawn_boss_warning(mut commands: Commands, mut events: MessageReader<Boss
                 Node {
                     position_type: PositionType::Absolute,
                     width: Val::Percent(100.0),
-                    top: Val::Percent(DEFAULT_TOP_PERCENT),
+                    top: Val::Percent(top_percent),
                     display: Display::Flex,
                     justify_content: JustifyContent::Center,
                     ..default()
                 },
                 BossWarningNotification {
                     elapsed: 0.0,
-                    duration: DEFAULT_DISPLAY_DURATION,
-                    fade_start: DEFAULT_FADE_START,
+                    duration,
+                    fade_start,
                     text_entity,
-                    text_color: DEFAULT_TEXT_COLOR,
+                    text_color,
                 },
                 DespawnOnExit(AppState::Playing),
             ))
