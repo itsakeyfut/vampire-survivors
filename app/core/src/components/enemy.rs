@@ -147,6 +147,21 @@ pub struct DragonFireball {
     pub lifetime: f32,
 }
 
+/// Scythe projectile fired by Boss Death during [`BossPhase::Phase3`].
+///
+/// Moves in a straight line toward the player's position at fire time.
+/// Despawns when [`lifetime`](BossScythe::lifetime) reaches zero or
+/// when it hits the player.
+#[derive(Component, Debug)]
+pub struct BossScythe {
+    /// Contact damage dealt to the player on hit.
+    pub damage: f32,
+    /// Velocity vector (pixels/second).
+    pub velocity: Vec2,
+    /// Remaining lifetime before the projectile despawns (seconds).
+    pub lifetime: f32,
+}
+
 /// Marker component: this enemy phases through other enemy entities.
 ///
 /// Currently informational — no enemy-to-enemy collision is implemented.

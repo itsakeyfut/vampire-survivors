@@ -52,6 +52,21 @@ pub struct GameConfig {
     pub mini_death_spawn_count: usize,
     /// Radial distance from the boss center when placing Mini Deaths (pixels).
     pub mini_death_spawn_radius: f32,
+    // Boss Phase3 behavior
+    /// Speed multiplier applied to the boss's base move speed in Phase3.
+    pub boss_phase3_speed_multiplier: f32,
+    /// Number of Mini Deaths summoned at the Phase3 transition.
+    pub mini_death_spawn_count_phase3: usize,
+    /// Seconds between scythe projectile shots in Phase3.
+    pub boss_scythe_interval: f32,
+    /// Scythe projectile travel speed in pixels per second.
+    pub boss_scythe_speed: f32,
+    /// Scythe projectile lifetime in seconds before despawn.
+    pub boss_scythe_lifetime: f32,
+    /// Damage dealt to the player on scythe hit.
+    pub boss_scythe_damage: f32,
+    /// Scythe projectile collider radius in pixels.
+    pub boss_scythe_radius: f32,
 }
 
 /// Resource holding the handle to the loaded game configuration.
@@ -143,6 +158,13 @@ GameConfig(
     boss_phase2_speed_multiplier: 1.5,
     mini_death_spawn_count: 3,
     mini_death_spawn_radius: 80.0,
+    boss_phase3_speed_multiplier: 2.0,
+    mini_death_spawn_count_phase3: 5,
+    boss_scythe_interval: 3.0,
+    boss_scythe_speed: 250.0,
+    boss_scythe_lifetime: 8.0,
+    boss_scythe_damage: 80.0,
+    boss_scythe_radius: 15.0,
 )
 "#;
         let config: GameConfig = ron::de::from_str(ron_data).unwrap();
@@ -166,5 +188,12 @@ GameConfig(
         assert_eq!(config.boss_phase2_speed_multiplier, 1.5);
         assert_eq!(config.mini_death_spawn_count, 3);
         assert_eq!(config.mini_death_spawn_radius, 80.0);
+        assert_eq!(config.boss_phase3_speed_multiplier, 2.0);
+        assert_eq!(config.mini_death_spawn_count_phase3, 5);
+        assert_eq!(config.boss_scythe_interval, 3.0);
+        assert_eq!(config.boss_scythe_speed, 250.0);
+        assert_eq!(config.boss_scythe_lifetime, 8.0);
+        assert_eq!(config.boss_scythe_damage, 80.0);
+        assert_eq!(config.boss_scythe_radius, 15.0);
     }
 }

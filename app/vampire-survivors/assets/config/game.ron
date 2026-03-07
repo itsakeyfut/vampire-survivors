@@ -51,4 +51,12 @@ GameConfig(
     boss_phase2_speed_multiplier:  1.5,   // Phase2 move speed = base × 1.5
     mini_death_spawn_count:        3,     // Mini Deaths spawned at Phase2 transition
     mini_death_spawn_radius:       80.0,  // Radial offset from boss center (pixels)
+    // Boss Phase3 behavior
+    boss_phase3_speed_multiplier:  2.0,   // Phase3 move speed = base × 2.0
+    mini_death_spawn_count_phase3: 5,     // Mini Deaths spawned at Phase3 transition
+    boss_scythe_interval:          3.0,   // Seconds between scythe shots
+    boss_scythe_speed:             250.0, // Scythe travel speed (pixels/second)
+    boss_scythe_lifetime:          8.0,   // Scythe lifetime before despawn (seconds)
+    boss_scythe_damage:            80.0,  // Damage dealt on scythe hit
+    boss_scythe_radius:            15.0,  // Scythe collider radius (pixels)
 )

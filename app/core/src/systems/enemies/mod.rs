@@ -1,5 +1,6 @@
 pub mod ai;
 pub mod boss_ai;
+pub mod boss_scythe;
 pub mod boss_spawn;
 pub mod cull;
 pub mod difficulty;
@@ -17,7 +18,10 @@ impl Plugin for EnemiesPlugin {
     fn build(&self, app: &mut App) {
         use crate::systems::enemies::ai::move_enemies;
         use crate::systems::enemies::boss_ai::{
-            check_boss_phase_transition, move_boss_phase1, move_boss_phase2,
+            check_boss_phase_transition, move_boss_phase1, move_boss_phase2, move_boss_phase3,
+        };
+        use crate::systems::enemies::boss_scythe::{
+            boss_scythe_player_collision, move_boss_scythes, tick_boss_scythe_attack,
         };
         use crate::systems::enemies::boss_spawn::check_boss_spawn;
         use crate::systems::enemies::cull::cull_distant_enemies;
@@ -38,9 +42,16 @@ impl Plugin for EnemiesPlugin {
                 move_enemies.after(player_movement),
                 move_boss_phase1.after(player_movement),
                 move_boss_phase2.after(player_movement),
+                move_boss_phase3.after(player_movement),
                 check_boss_phase_transition
                     .after(move_boss_phase1)
-                    .after(move_boss_phase2),
+                    .after(move_boss_phase2)
+                    .after(move_boss_phase3),
+                tick_boss_scythe_attack.after(move_boss_phase3),
+                move_boss_scythes,
+                boss_scythe_player_collision
+                    .after(move_boss_scythes)
+                    .after(enemy_player_collision),
                 update_difficulty.after(update_game_timer),
                 // Boss spawn must run before spawn_enemies so that setting
                 // EnemySpawner.active = false takes effect within the same frame.
