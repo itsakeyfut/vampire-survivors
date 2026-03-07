@@ -13,6 +13,7 @@ use vs_core::components::{Player, WeaponInventory};
 use vs_core::types::WeaponType;
 
 use crate::config::hud::gameplay::WeaponSlotsHudConfig;
+use crate::config::hud::gameplay::weapon_slots::WeaponSlotsHudConfigHandle;
 
 // ---------------------------------------------------------------------------
 // Fallback constants
@@ -174,6 +175,54 @@ pub fn update_weapon_slots(
         } else {
             *text = Text::new("");
             *vis = Visibility::Hidden;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Hot-reload system
+// ---------------------------------------------------------------------------
+
+/// Updates weapon slot appearance when `config/ui/hud/gameplay/weapon_slots.ron`
+/// is loaded or modified.
+pub fn hot_reload_weapon_slots_hud(
+    mut events: MessageReader<AssetEvent<WeaponSlotsHudConfig>>,
+    cfg_assets: Res<Assets<WeaponSlotsHudConfig>>,
+    cfg_handle: Option<Res<WeaponSlotsHudConfigHandle>>,
+    mut slot_q: Query<(&mut Node, &mut BorderRadius), With<HudWeaponSlot>>,
+    mut label_q: Query<(&mut TextFont, &mut TextColor), With<HudWeaponSlotLabel>>,
+) {
+    let Some(cfg_handle) = cfg_handle else {
+        return;
+    };
+
+    let mut needs_apply = false;
+    for event in events.read() {
+        match event {
+            AssetEvent::Added { .. } => {
+                info!("Weapon slots HUD config loaded");
+                needs_apply = true;
+            }
+            AssetEvent::Modified { .. } => {
+                info!("Weapon slots HUD config hot-reloaded");
+                needs_apply = true;
+            }
+            AssetEvent::Removed { .. } => {
+                warn!("Weapon slots HUD config removed");
+            }
+            _ => {}
+        }
+    }
+
+    if needs_apply && let Some(cfg) = cfg_assets.get(&cfg_handle.0) {
+        for (mut node, mut br) in slot_q.iter_mut() {
+            node.width = Val::Px(cfg.slot_size);
+            node.height = Val::Px(cfg.slot_size);
+            *br = BorderRadius::all(Val::Px(cfg.slot_radius));
+        }
+        for (mut font, mut tc) in label_q.iter_mut() {
+            font.font_size = cfg.label_font_size;
+            *tc = TextColor(Color::from(&cfg.text_color));
         }
     }
 }

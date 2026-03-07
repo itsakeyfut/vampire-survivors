@@ -239,7 +239,15 @@ impl Plugin for UiConfigPlugin {
             .add_systems(Update, crate::hud::gameplay::xp_bar::hot_reload_xp_bar_hud)
             .add_systems(Update, crate::hud::gameplay::timer::hot_reload_timer_hud)
             .add_systems(Update, crate::hud::gameplay::level::hot_reload_level_hud)
-            .add_systems(Update, crate::hud::gameplay::hot_reload_gameplay_layout);
+            .add_systems(Update, crate::hud::gameplay::hot_reload_gameplay_layout)
+            .add_systems(
+                Update,
+                crate::hud::gameplay::kill_count::hot_reload_kill_count_hud,
+            )
+            .add_systems(
+                Update,
+                crate::hud::gameplay::weapon_slots::hot_reload_weapon_slots_hud,
+            );
 
         info!("✅ UiConfigPlugin initialized");
     }

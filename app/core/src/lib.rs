@@ -41,9 +41,10 @@ fn reset_per_run_resources(
 }
 use states::AppState;
 use systems::{
-    enemies::EnemiesPlugin, game_over::GameOverPlugin, game_timer::TimerPlugin,
-    kill_count::track_kill_count, player::PlayerPlugin, projectiles::ProjectilesPlugin,
-    spatial::SpatialPlugin, victory::VictoryPlugin, weapons::WeaponsPlugin, xp::XpPlugin,
+    damage::apply_damage_to_enemies, enemies::EnemiesPlugin, game_over::GameOverPlugin,
+    game_timer::TimerPlugin, kill_count::track_kill_count, player::PlayerPlugin,
+    projectiles::ProjectilesPlugin, spatial::SpatialPlugin, victory::VictoryPlugin,
+    weapons::WeaponsPlugin, xp::XpPlugin,
 };
 
 /// Core game plugin. Registers states, inserts default resources, and wires up
@@ -107,7 +108,12 @@ impl Plugin for GameCorePlugin {
             // ---------------------------------------------------------------
             // Sub-plugins (each owns its domain's systems)
             // ---------------------------------------------------------------
-            .add_systems(Update, track_kill_count.run_if(in_state(AppState::Playing)))
+            .add_systems(
+                Update,
+                track_kill_count
+                    .after(apply_damage_to_enemies)
+                    .run_if(in_state(AppState::Playing)),
+            )
             .add_plugins((
                 TimerPlugin,
                 SpatialPlugin,

@@ -11,6 +11,7 @@ use bevy::prelude::*;
 use vs_core::resources::GameData;
 
 use crate::config::hud::gameplay::KillCountHudConfig;
+use crate::config::hud::gameplay::kill_count::KillCountHudConfigHandle;
 
 // ---------------------------------------------------------------------------
 // Fallback constants
@@ -68,6 +69,48 @@ pub fn update_kill_count(
         return;
     };
     *text = Text::new(format!("Kills: {}", game_data.kill_count));
+}
+
+// ---------------------------------------------------------------------------
+// Hot-reload system
+// ---------------------------------------------------------------------------
+
+/// Updates kill count label appearance when `config/ui/hud/gameplay/kill_count.ron`
+/// is loaded or modified.
+pub fn hot_reload_kill_count_hud(
+    mut events: MessageReader<AssetEvent<KillCountHudConfig>>,
+    cfg_assets: Res<Assets<KillCountHudConfig>>,
+    cfg_handle: Option<Res<KillCountHudConfigHandle>>,
+    mut label_q: Query<(&mut TextColor, &mut TextFont), With<HudKillCount>>,
+) {
+    let Some(cfg_handle) = cfg_handle else {
+        return;
+    };
+
+    let mut needs_apply = false;
+    for event in events.read() {
+        match event {
+            AssetEvent::Added { .. } => {
+                info!("Kill count HUD config loaded");
+                needs_apply = true;
+            }
+            AssetEvent::Modified { .. } => {
+                info!("Kill count HUD config hot-reloaded");
+                needs_apply = true;
+            }
+            AssetEvent::Removed { .. } => {
+                warn!("Kill count HUD config removed");
+            }
+            _ => {}
+        }
+    }
+
+    if needs_apply && let Some(cfg) = cfg_assets.get(&cfg_handle.0) {
+        for (mut tc, mut font) in label_q.iter_mut() {
+            *tc = TextColor(Color::from(&cfg.text_color));
+            font.font_size = cfg.font_size;
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
