@@ -1,0 +1,20 @@
+// Victory screen configuration — visual style for the win screen.
+// Loaded from config/ui/screen/victory.ron.
+// Hot-reloading applies the next time the victory screen is opened.
+//
+// Fields:
+// - victory_color:     Color of the "YOU WIN!" heading (RGB, 0.0–1.0)
+// - stat_color:        Color of the run-statistics text lines (RGB, 0.0–1.0)
+// - stat_font_size:    Font size of stat lines in points
+// - stats_margin_top:  Top margin between heading and stats container (px)
+// - button_margin_top: Top margin between stats container and button (px)
+// - row_gap:           Vertical gap between individual stat lines (px)
+
+VictoryScreenConfig(
+    victory_color:     (r: 1.0,  g: 0.85, b: 0.10),
+    stat_color:        (r: 0.85, g: 0.85, b: 0.85),
+    stat_font_size:    24.0,
+    stats_margin_top:  16.0,
+    button_margin_top: 48.0,
+    row_gap:           8.0,
+)

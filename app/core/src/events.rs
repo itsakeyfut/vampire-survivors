@@ -97,6 +97,14 @@ pub struct BossSpawnedEvent;
 #[derive(Message, Debug, Clone)]
 pub struct GameOverEvent;
 
+/// Fired when Boss Death is defeated and the run ends in victory.
+///
+/// The [`check_boss_defeated`](crate::systems::victory::check_boss_defeated)
+/// system emits this event and immediately transitions to
+/// [`AppState::Victory`](crate::states::AppState::Victory).
+#[derive(Message, Debug, Clone)]
+pub struct VictoryEvent;
+
 /// Fired when accumulated XP reaches the next-level threshold.
 ///
 /// The [`check_level_up`](crate::systems::xp::level_up::check_level_up) system

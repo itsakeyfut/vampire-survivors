@@ -11,5 +11,6 @@ pub mod game_timer;
 pub mod player;
 pub mod projectiles;
 pub mod spatial;
+pub mod victory;
 pub mod weapons;
 pub mod xp;
