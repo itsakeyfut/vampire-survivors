@@ -19,6 +19,7 @@ use bevy::prelude::*;
 
 use crate::{
     components::{CircleCollider, Enemy, EnemyAI, GameSessionEntity, Player},
+    config::{EnemyConfig, EnemyParams},
     types::{AIType, BossPhase, EnemyType},
 };
 
@@ -106,12 +107,17 @@ pub fn move_boss_phase2(
 pub fn check_boss_phase_transition(
     mut commands: Commands,
     mut boss_q: Query<(&Enemy, &mut BossPhase, &Transform)>,
+    enemy_cfg: EnemyParams,
 ) {
     for (enemy, mut phase, boss_tf) in boss_q.iter_mut() {
         match *phase {
             BossPhase::Phase1 if enemy.current_hp < enemy.max_hp * PHASE2_HP_THRESHOLD => {
                 *phase = BossPhase::Phase2;
-                spawn_mini_deaths(&mut commands, boss_tf.translation.truncate());
+                spawn_mini_deaths(
+                    &mut commands,
+                    boss_tf.translation.truncate(),
+                    enemy_cfg.get(),
+                );
             }
             BossPhase::Phase2 if enemy.current_hp < enemy.max_hp * PHASE3_HP_THRESHOLD => {
                 *phase = BossPhase::Phase3;
@@ -128,7 +134,25 @@ pub fn check_boss_phase_transition(
 
 /// Spawns [`MINI_DEATH_SPAWN_COUNT`] Mini Death entities evenly distributed
 /// around `boss_pos` at radius [`MINI_DEATH_SPAWN_RADIUS`].
-fn spawn_mini_deaths(commands: &mut Commands, boss_pos: Vec2) {
+///
+/// Uses `Enemy::from_config()` when `cfg` is available so that hot-reloading
+/// `enemy.ron` takes effect.  Falls back to compile-time constants otherwise.
+fn spawn_mini_deaths(commands: &mut Commands, boss_pos: Vec2, cfg: Option<&EnemyConfig>) {
+    let (enemy, collider_radius) = match cfg {
+        Some(c) => {
+            let stats = c.stats_for(EnemyType::MiniDeath);
+            let collider = stats.collider_radius;
+            (
+                Enemy::from_config(EnemyType::MiniDeath, stats, 1.0),
+                collider,
+            )
+        }
+        None => (
+            Enemy::from_type(EnemyType::MiniDeath, 1.0),
+            MINI_DEATH_COLLIDER,
+        ),
+    };
+
     let angle_step = std::f32::consts::TAU / MINI_DEATH_SPAWN_COUNT as f32;
     for i in 0..MINI_DEATH_SPAWN_COUNT {
         let angle = i as f32 * angle_step;
@@ -137,19 +161,19 @@ fn spawn_mini_deaths(commands: &mut Commands, boss_pos: Vec2) {
 
         commands.spawn((
             GameSessionEntity,
-            Enemy::from_type(EnemyType::MiniDeath, 1.0),
+            enemy.clone(),
             EnemyAI {
                 ai_type: AIType::ChasePlayer,
                 attack_timer: 0.0,
                 attack_range: 0.0,
             },
             CircleCollider {
-                radius: MINI_DEATH_COLLIDER,
+                radius: collider_radius,
             },
             // Dark purple placeholder sprite to distinguish Mini Deaths from the boss.
             Sprite {
                 color: Color::srgb(0.7, 0.1, 0.7),
-                custom_size: Some(Vec2::splat(MINI_DEATH_COLLIDER * 2.0)),
+                custom_size: Some(Vec2::splat(collider_radius * 2.0)),
                 ..default()
             },
             Transform::from_xyz(spawn_pos.x, spawn_pos.y, 5.0),

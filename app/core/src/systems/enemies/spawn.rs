@@ -327,8 +327,10 @@ fn enemy_color(enemy_type: EnemyType) -> Color {
         EnemyType::Medusa => Color::srgb(0.6, 0.6, 0.5),
         // Deep orange-red for Dragon.
         EnemyType::Dragon => Color::srgb(0.9, 0.3, 0.0),
-        // Fallback for future types added before they get explicit visuals.
-        _ => Color::srgb(0.7, 0.3, 0.3),
+        // Bright red for Boss Death (matches boss_spawn.rs).
+        EnemyType::BossDeath => Color::srgb(1.0, 0.1, 0.1),
+        // Dark purple for Mini Deaths (matches boss_ai.rs spawn_mini_deaths).
+        EnemyType::MiniDeath => Color::srgb(0.7, 0.1, 0.7),
     }
 }
 
@@ -342,7 +344,10 @@ fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
         EnemyType::Demon => DEFAULT_COLLIDER_DEMON,
         EnemyType::Medusa => DEFAULT_COLLIDER_MEDUSA,
         EnemyType::Dragon => DEFAULT_COLLIDER_DRAGON,
-        _ => 10.0,
+        // Boss Death uses a large collider matching boss_spawn.rs.
+        EnemyType::BossDeath => 60.0,
+        // Mini Death uses a medium collider matching boss_ai.rs.
+        EnemyType::MiniDeath => 20.0,
     }
 }
 
