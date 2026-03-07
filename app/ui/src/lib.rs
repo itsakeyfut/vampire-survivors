@@ -77,6 +77,8 @@ impl Plugin for GameUIPlugin {
                     hud::gameplay::evolution_notification::update_evolution_notification,
                     hud::gameplay::boss_warning::spawn_boss_warning,
                     hud::gameplay::boss_warning::update_boss_warning,
+                    hud::gameplay::weapon_slots::update_weapon_slots,
+                    hud::gameplay::kill_count::update_kill_count,
                     (
                         hud::gameplay::boss_hp_bar::maybe_spawn_boss_hp_bar,
                         hud::gameplay::boss_hp_bar::update_boss_hp_bar_world,

@@ -1,10 +1,11 @@
 //! HP bar widget.
 //!
-//! Displays the player's current HP as a horizontal fill bar.
+//! Displays the player's current HP as a horizontal fill bar with dynamic
+//! color (green → yellow → red) and a numeric label ("HP 100/100").
 //!
 //! ```text
-//! HP
-//! ████████░░  (200 × 16 px track; fill width ∝ current_hp / max_hp)
+//! HP 100/100
+//! ████████░░  (200 × 16 px track; fill color and width ∝ current_hp / max_hp)
 //! ```
 //!
 //! # Usage
@@ -17,6 +18,7 @@
 use bevy::prelude::*;
 use vs_core::components::{Player, PlayerStats};
 
+use crate::config::hud::gameplay::HpBarHudParams;
 use crate::config::hud::gameplay::hp_bar::{HpBarHudConfig, HpBarHudConfigHandle};
 
 // ---------------------------------------------------------------------------
@@ -28,9 +30,19 @@ const DEFAULT_BAR_HEIGHT: f32 = 16.0;
 const DEFAULT_BAR_RADIUS: f32 = 4.0;
 const DEFAULT_LABEL_FONT_SIZE: f32 = 14.0;
 const DEFAULT_LABEL_GAP: f32 = 4.0;
-const DEFAULT_FILL_COLOR: Color = Color::srgb(0.85, 0.20, 0.20);
-const DEFAULT_TRACK_COLOR: Color = Color::srgb(0.20, 0.05, 0.05);
+/// Green: HP > 50%.
+const DEFAULT_FILL_COLOR_HIGH: Color = Color::srgb(0.20, 0.80, 0.20);
+/// Yellow: HP 25–50%.
+const DEFAULT_FILL_COLOR_MID: Color = Color::srgb(0.90, 0.80, 0.10);
+/// Red: HP ≤ 25%.
+const DEFAULT_FILL_COLOR_LOW: Color = Color::srgb(0.85, 0.20, 0.20);
+const DEFAULT_TRACK_COLOR: Color = Color::srgb(0.10, 0.10, 0.10);
 const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
+
+/// HP fraction above which the bar is green.
+const HP_THRESHOLD_HIGH: f32 = 0.5;
+/// HP fraction above which the bar is yellow (below this → red).
+const HP_THRESHOLD_LOW: f32 = 0.25;
 
 // ---------------------------------------------------------------------------
 // Marker components
@@ -38,7 +50,8 @@ const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
 
 /// Marks the inner fill [`Node`] of the HP bar.
 ///
-/// [`update_hp_bar`] queries this marker to set `node.width` each frame.
+/// [`update_hp_bar`] queries this marker to set `node.width` and
+/// `BackgroundColor` each frame.
 #[derive(Component, Debug)]
 pub struct HudHpBar;
 
@@ -48,9 +61,10 @@ pub struct HudHpBar;
 #[derive(Component, Debug)]
 pub struct HudHpBarTrack;
 
-/// Marks the "HP" label [`Text`] node.
+/// Marks the "HP XX/XX" label [`Text`] node.
 ///
-/// [`hot_reload_hp_bar_hud`] uses this to update font size and color.
+/// [`update_hp_bar`] updates this text each frame.
+/// [`hot_reload_hp_bar_hud`] updates its font size and color.
 #[derive(Component, Debug)]
 pub struct HudHpBarLabel;
 
@@ -78,7 +92,7 @@ pub fn spawn_hp_bar(parent: &mut ChildSpawnerCommands, cfg: Option<&HpBarHudConf
     let label_gap = cfg.map(|c| c.label_gap).unwrap_or(DEFAULT_LABEL_GAP);
     let fill_color = cfg
         .map(|c| Color::from(&c.fill_color))
-        .unwrap_or(DEFAULT_FILL_COLOR);
+        .unwrap_or(DEFAULT_FILL_COLOR_HIGH);
     let track_color = cfg
         .map(|c| Color::from(&c.track_color))
         .unwrap_or(DEFAULT_TRACK_COLOR);
@@ -96,7 +110,7 @@ pub fn spawn_hp_bar(parent: &mut ChildSpawnerCommands, cfg: Option<&HpBarHudConf
             HudHpBarRoot,
         ))
         .with_children(|col| {
-            // "HP" label
+            // "HP XX/XX" label — updated every frame by update_hp_bar.
             col.spawn((
                 Text::new("HP"),
                 TextFont {
@@ -120,7 +134,7 @@ pub fn spawn_hp_bar(parent: &mut ChildSpawnerCommands, cfg: Option<&HpBarHudConf
                 HudHpBarTrack,
             ))
             .with_children(|track| {
-                // fill bar — width is updated by update_hp_bar
+                // fill bar — width and color updated by update_hp_bar each frame.
                 track.spawn((
                     Node {
                         width: Val::Percent(100.0),
@@ -139,25 +153,53 @@ pub fn spawn_hp_bar(parent: &mut ChildSpawnerCommands, cfg: Option<&HpBarHudConf
 // Update system
 // ---------------------------------------------------------------------------
 
-/// Sets the HP bar fill width from [`PlayerStats`].
+/// Updates the HP bar fill width, color, and label each frame.
 ///
-/// Width is `(current_hp / max_hp) * 100 %`, clamped to `[0, 100]`.
+/// - **Width**: `(current_hp / max_hp) × 100 %`, clamped to `[0, 100]`.
+/// - **Color**: green (> 50 %), yellow (25–50 %), red (≤ 25 %).
+/// - **Label**: "HP {current}/{max}" rounded to integers.
 pub fn update_hp_bar(
     player_q: Query<&PlayerStats, With<Player>>,
-    mut bar_q: Query<&mut Node, With<HudHpBar>>,
+    mut bar_q: Query<(&mut Node, &mut BackgroundColor), With<HudHpBar>>,
+    mut label_q: Query<&mut Text, With<HudHpBarLabel>>,
+    cfg: HpBarHudParams,
 ) {
     let Ok(stats) = player_q.single() else {
         return;
     };
-    let Ok(mut node) = bar_q.single_mut() else {
+    let Ok((mut node, mut bg)) = bar_q.single_mut() else {
         return;
     };
+
     let pct = if stats.max_hp > 0.0 {
-        (stats.current_hp / stats.max_hp).clamp(0.0, 1.0) * 100.0
+        (stats.current_hp / stats.max_hp).clamp(0.0, 1.0)
     } else {
         0.0
     };
-    node.width = Val::Percent(pct);
+
+    node.width = Val::Percent(pct * 100.0);
+
+    // Dynamic fill color.
+    bg.0 = if pct > HP_THRESHOLD_HIGH {
+        cfg.get()
+            .map(|c| Color::from(&c.fill_color))
+            .unwrap_or(DEFAULT_FILL_COLOR_HIGH)
+    } else if pct > HP_THRESHOLD_LOW {
+        cfg.get()
+            .map(|c| Color::from(&c.fill_color_mid))
+            .unwrap_or(DEFAULT_FILL_COLOR_MID)
+    } else {
+        cfg.get()
+            .map(|c| Color::from(&c.fill_color_low))
+            .unwrap_or(DEFAULT_FILL_COLOR_LOW)
+    };
+
+    // HP number label.
+    if let Ok(mut text) = label_q.single_mut() {
+        let cur = stats.current_hp.ceil() as u32;
+        let max = stats.max_hp as u32;
+        *text = Text::new(format!("HP  {cur}/{max}"));
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -176,10 +218,7 @@ pub fn hot_reload_hp_bar_hud(
         (&mut BackgroundColor, &mut Node, &mut BorderRadius),
         (With<HudHpBarTrack>, Without<HudHpBarRoot>),
     >,
-    mut fill_q: Query<
-        (&mut BackgroundColor, &mut BorderRadius),
-        (With<HudHpBar>, Without<HudHpBarTrack>),
-    >,
+    mut fill_q: Query<&mut BorderRadius, (With<HudHpBar>, Without<HudHpBarTrack>)>,
     mut label_q: Query<(&mut TextColor, &mut TextFont), With<HudHpBarLabel>>,
 ) {
     let Some(cfg_handle) = cfg_handle else {
@@ -190,15 +229,15 @@ pub fn hot_reload_hp_bar_hud(
     for event in events.read() {
         match event {
             AssetEvent::Added { .. } => {
-                info!("✅ HP bar HUD config loaded");
+                info!("HP bar HUD config loaded");
                 needs_apply = true;
             }
             AssetEvent::Modified { .. } => {
-                info!("🔥 HP bar HUD config hot-reloaded");
+                info!("HP bar HUD config hot-reloaded");
                 needs_apply = true;
             }
             AssetEvent::Removed { .. } => {
-                warn!("⚠️ HP bar HUD config removed");
+                warn!("HP bar HUD config removed");
             }
             _ => {}
         }
@@ -215,8 +254,8 @@ pub fn hot_reload_hp_bar_hud(
             node.height = Val::Px(cfg.bar_height);
             *br = radius;
         }
-        for (mut bg, mut br) in fill_q.iter_mut() {
-            *bg = BackgroundColor(Color::from(&cfg.fill_color));
+        // Fill color is managed by update_hp_bar; only update border radius here.
+        for mut br in fill_q.iter_mut() {
             *br = radius;
         }
         for (mut tc, mut font) in label_q.iter_mut() {
@@ -237,9 +276,13 @@ mod tests {
 
     use super::*;
 
-    fn build_app_with_bar() -> (App, Entity) {
+    fn build_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin));
+        app
+    }
+
+    fn spawn_bar(app: &mut App) -> (Entity, Entity) {
         let bar = app
             .world_mut()
             .spawn((
@@ -247,10 +290,12 @@ mod tests {
                     width: Val::Percent(100.0),
                     ..default()
                 },
+                BackgroundColor(DEFAULT_FILL_COLOR_HIGH),
                 HudHpBar,
             ))
             .id();
-        (app, bar)
+        let label = app.world_mut().spawn((Text::new("HP"), HudHpBarLabel)).id();
+        (bar, label)
     }
 
     fn insert_player(app: &mut App, current_hp: f32, max_hp: f32) {
@@ -266,7 +311,8 @@ mod tests {
 
     #[test]
     fn full_hp_fills_bar_to_100_percent() {
-        let (mut app, bar) = build_app_with_bar();
+        let mut app = build_app();
+        let (bar, _) = spawn_bar(&mut app);
         insert_player(&mut app, 100.0, 100.0);
         app.world_mut().run_system_once(update_hp_bar).unwrap();
         assert_eq!(
@@ -277,7 +323,8 @@ mod tests {
 
     #[test]
     fn half_hp_fills_bar_to_50_percent() {
-        let (mut app, bar) = build_app_with_bar();
+        let mut app = build_app();
+        let (bar, _) = spawn_bar(&mut app);
         insert_player(&mut app, 50.0, 100.0);
         app.world_mut().run_system_once(update_hp_bar).unwrap();
         assert_eq!(
@@ -288,7 +335,8 @@ mod tests {
 
     #[test]
     fn zero_hp_fills_bar_to_0_percent() {
-        let (mut app, bar) = build_app_with_bar();
+        let mut app = build_app();
+        let (bar, _) = spawn_bar(&mut app);
         insert_player(&mut app, 0.0, 100.0);
         app.world_mut().run_system_once(update_hp_bar).unwrap();
         assert_eq!(
@@ -299,7 +347,8 @@ mod tests {
 
     #[test]
     fn hp_over_max_is_clamped_to_100_percent() {
-        let (mut app, bar) = build_app_with_bar();
+        let mut app = build_app();
+        let (bar, _) = spawn_bar(&mut app);
         insert_player(&mut app, 150.0, 100.0);
         app.world_mut().run_system_once(update_hp_bar).unwrap();
         assert_eq!(
@@ -308,12 +357,72 @@ mod tests {
         );
     }
 
+    /// Above 50% → green fill color.
+    #[test]
+    fn high_hp_uses_green_fill_color() {
+        let mut app = build_app();
+        let (bar, _) = spawn_bar(&mut app);
+        insert_player(&mut app, 80.0, 100.0); // 80% > 50%
+        app.world_mut().run_system_once(update_hp_bar).unwrap();
+        let color = app.world().get::<BackgroundColor>(bar).unwrap().0;
+        let srgb = color.to_srgba();
+        assert!(
+            srgb.green > srgb.red,
+            "high HP should show green, got {color:?}"
+        );
+    }
+
+    /// 25–50% → yellow (red > 0.5, green > 0.5).
+    #[test]
+    fn mid_hp_uses_yellow_fill_color() {
+        let mut app = build_app();
+        let (bar, _) = spawn_bar(&mut app);
+        insert_player(&mut app, 35.0, 100.0); // 35%, mid range
+        app.world_mut().run_system_once(update_hp_bar).unwrap();
+        let color = app.world().get::<BackgroundColor>(bar).unwrap().0;
+        let srgb = color.to_srgba();
+        assert!(
+            srgb.red > 0.5 && srgb.green > 0.5,
+            "mid HP should show yellow, got {color:?}"
+        );
+    }
+
+    /// ≤ 25% → red (red dominant).
+    #[test]
+    fn low_hp_uses_red_fill_color() {
+        let mut app = build_app();
+        let (bar, _) = spawn_bar(&mut app);
+        insert_player(&mut app, 10.0, 100.0); // 10% ≤ 25%
+        app.world_mut().run_system_once(update_hp_bar).unwrap();
+        let color = app.world().get::<BackgroundColor>(bar).unwrap().0;
+        let srgb = color.to_srgba();
+        assert!(
+            srgb.red > srgb.green,
+            "low HP should show red, got {color:?}"
+        );
+    }
+
+    /// Label is updated to "HP {cur}/{max}".
+    #[test]
+    fn label_shows_hp_numbers() {
+        let mut app = build_app();
+        let (_, label) = spawn_bar(&mut app);
+        insert_player(&mut app, 75.0, 100.0);
+        app.world_mut().run_system_once(update_hp_bar).unwrap();
+        let text = app.world().get::<Text>(label).unwrap();
+        let s = text.0.as_str();
+        assert!(
+            s.contains("75"),
+            "label should contain current HP; got '{s}'"
+        );
+        assert!(s.contains("100"), "label should contain max HP; got '{s}'");
+    }
+
     #[test]
     fn no_player_leaves_bar_unchanged() {
-        let (mut app, bar) = build_app_with_bar();
-        // No player spawned — system should be a no-op.
+        let mut app = build_app();
+        let (bar, _) = spawn_bar(&mut app);
         app.world_mut().run_system_once(update_hp_bar).unwrap();
-        // Width stays at the initial value set in build_app_with_bar.
         assert_eq!(
             app.world().get::<Node>(bar).unwrap().width,
             Val::Percent(100.0)

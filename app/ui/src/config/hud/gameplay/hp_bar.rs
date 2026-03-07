@@ -21,8 +21,12 @@ pub struct HpBarHudConfig {
     pub label_font_size: f32,
     /// Gap between the label and the track in pixels.
     pub label_gap: f32,
-    /// Fill color (shown for current HP).
+    /// Fill color when HP > 50% (green).
     pub fill_color: SrgbColor,
+    /// Fill color when HP is 25–50% (yellow).
+    pub fill_color_mid: SrgbColor,
+    /// Fill color when HP ≤ 25% (red).
+    pub fill_color_low: SrgbColor,
     /// Track color (shown for missing HP).
     pub track_color: SrgbColor,
     /// Label text color.
@@ -66,8 +70,10 @@ HpBarHudConfig(
     bar_radius:       4.0,
     label_font_size:  14.0,
     label_gap:        4.0,
-    fill_color:       (r: 0.85, g: 0.20, b: 0.20),
-    track_color:      (r: 0.20, g: 0.05, b: 0.05),
+    fill_color:       (r: 0.20, g: 0.80, b: 0.20),
+    fill_color_mid:   (r: 0.90, g: 0.80, b: 0.10),
+    fill_color_low:   (r: 0.85, g: 0.20, b: 0.20),
+    track_color:      (r: 0.10, g: 0.10, b: 0.10),
     text_color:       (r: 0.95, g: 0.90, b: 0.85),
 )
 "#;
@@ -80,7 +86,9 @@ HpBarHudConfig(
         assert_eq!(cfg.bar_radius, 4.0);
         assert_eq!(cfg.label_font_size, 14.0);
         assert_eq!(cfg.label_gap, 4.0);
-        assert!((cfg.fill_color.r - 0.85).abs() < 1e-6);
+        assert!((cfg.fill_color.g - 0.80).abs() < 1e-6); // green high-HP
+        assert!((cfg.fill_color_mid.r - 0.90).abs() < 1e-6); // yellow mid-HP
+        assert!((cfg.fill_color_low.r - 0.85).abs() < 1e-6); // red low-HP
     }
 
     #[test]
