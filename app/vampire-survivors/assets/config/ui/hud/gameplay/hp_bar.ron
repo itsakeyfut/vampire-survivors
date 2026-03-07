@@ -9,7 +9,9 @@
 // - bar_radius:       Corner radius of the track and fill in pixels
 // - label_font_size:  Font size of the "HP" label in points
 // - label_gap:        Vertical gap between the label and the track in pixels
-// - fill_color:       Color of the filled (current HP) portion (RGB, 0.0-1.0)
+// - fill_color:       Color when HP > 50% (green)
+// - fill_color_mid:   Color when HP is 25–50% (yellow)
+// - fill_color_low:   Color when HP ≤ 25% (red)
 // - track_color:      Color of the empty (missing HP) portion (RGB, 0.0-1.0)
 // - text_color:       Color of the "HP" label text (RGB, 0.0-1.0)
 
@@ -19,7 +21,9 @@ HpBarHudConfig(
     bar_radius:         4.0,
     label_font_size:   14.0,
     label_gap:          4.0,
-    fill_color:  (r: 0.85, g: 0.20, b: 0.20),
-    track_color: (r: 0.20, g: 0.05, b: 0.05),
-    text_color:  (r: 0.95, g: 0.90, b: 0.85),
+    fill_color:     (r: 0.20, g: 0.80, b: 0.20),
+    fill_color_mid:  (r: 0.90, g: 0.80, b: 0.10),
+    fill_color_low:  (r: 0.85, g: 0.20, b: 0.20),
+    track_color:    (r: 0.10, g: 0.10, b: 0.10),
+    text_color:     (r: 0.95, g: 0.90, b: 0.85),
 )

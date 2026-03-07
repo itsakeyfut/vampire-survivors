@@ -1,0 +1,13 @@
+// Kill count HUD configuration
+// Controls the appearance of the kill counter in the bottom-right corner.
+//
+// Hot-reload enabled: Edit this file while the game is running to see changes instantly!
+//
+// Parameters:
+// - font_size:   Font size of the kill counter label in points
+// - text_color:  Color of the label text (RGB, 0.0-1.0)
+
+KillCountHudConfig(
+    font_size:  14.0,
+    text_color: (r: 0.95, g: 0.90, b: 0.85),
+)

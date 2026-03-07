@@ -32,11 +32,13 @@ pub use hud::{
     BossWarningHudConfigHandle, BossWarningHudParams, EvolutionNotificationHudConfig,
     EvolutionNotificationHudConfigHandle, EvolutionNotificationHudParams, GameplayHudLayoutConfig,
     GameplayHudLayoutConfigHandle, GameplayHudLayoutParams, HpBarHudConfig, HpBarHudConfigHandle,
-    HpBarHudParams, LevelHudConfig, LevelHudConfigHandle, LevelHudParams, MenuButtonHudConfig,
+    HpBarHudParams, KillCountHudConfig, KillCountHudConfigHandle, KillCountHudParams,
+    LevelHudConfig, LevelHudConfigHandle, LevelHudParams, MenuButtonHudConfig,
     MenuButtonHudConfigHandle, MenuButtonHudParams, ScreenHeadingHudConfig,
     ScreenHeadingHudConfigHandle, ScreenHeadingHudParams, TimerHudConfig, TimerHudConfigHandle,
     TimerHudParams, UpgradeCardHudConfig, UpgradeCardHudConfigHandle, UpgradeCardHudParams,
-    XpBarHudConfig, XpBarHudConfigHandle, XpBarHudParams,
+    WeaponSlotsHudConfig, WeaponSlotsHudConfigHandle, WeaponSlotsHudParams, XpBarHudConfig,
+    XpBarHudConfigHandle, XpBarHudParams,
 };
 pub use level_up::{
     LevelUpScreenConfig, LevelUpScreenConfigHandle, LevelUpScreenParams, hot_reload_level_up_screen,
@@ -112,6 +114,8 @@ ron_asset_loader!(
 );
 ron_asset_loader!(BossWarningHudConfigLoader, BossWarningHudConfig);
 ron_asset_loader!(BossHpBarHudConfigLoader, BossHpBarHudConfig);
+ron_asset_loader!(KillCountHudConfigLoader, KillCountHudConfig);
+ron_asset_loader!(WeaponSlotsHudConfigLoader, WeaponSlotsHudConfig);
 
 // ---------------------------------------------------------------------------
 // Plugin
@@ -157,7 +161,11 @@ impl Plugin for UiConfigPlugin {
             .init_asset::<BossWarningHudConfig>()
             .register_asset_loader(BossWarningHudConfigLoader)
             .init_asset::<BossHpBarHudConfig>()
-            .register_asset_loader(BossHpBarHudConfigLoader);
+            .register_asset_loader(BossHpBarHudConfigLoader)
+            .init_asset::<KillCountHudConfig>()
+            .register_asset_loader(KillCountHudConfigLoader)
+            .init_asset::<WeaponSlotsHudConfig>()
+            .register_asset_loader(WeaponSlotsHudConfigLoader);
 
         let asset_server = app.world_mut().resource::<AssetServer>();
 
@@ -193,6 +201,10 @@ impl Plugin for UiConfigPlugin {
             asset_server.load("config/ui/hud/gameplay/boss_warning.ron");
         let boss_hp_bar_handle: Handle<BossHpBarHudConfig> =
             asset_server.load("config/ui/hud/gameplay/boss_hp_bar.ron");
+        let kill_count_handle: Handle<KillCountHudConfig> =
+            asset_server.load("config/ui/hud/gameplay/kill_count.ron");
+        let weapon_slots_handle: Handle<WeaponSlotsHudConfig> =
+            asset_server.load("config/ui/hud/gameplay/weapon_slots.ron");
 
         app.insert_resource(UiStyleConfigHandle(style_handle))
             .insert_resource(LevelUpScreenConfigHandle(level_up_handle))
@@ -207,7 +219,9 @@ impl Plugin for UiConfigPlugin {
             .insert_resource(GameplayHudLayoutConfigHandle(layout_handle))
             .insert_resource(EvolutionNotificationHudConfigHandle(evolution_notif_handle))
             .insert_resource(BossWarningHudConfigHandle(boss_warning_handle))
-            .insert_resource(BossHpBarHudConfigHandle(boss_hp_bar_handle));
+            .insert_resource(BossHpBarHudConfigHandle(boss_hp_bar_handle))
+            .insert_resource(KillCountHudConfigHandle(kill_count_handle))
+            .insert_resource(WeaponSlotsHudConfigHandle(weapon_slots_handle));
 
         app.add_systems(Update, hot_reload_ui_style)
             .add_systems(Update, hot_reload_level_up_screen)
@@ -225,7 +239,15 @@ impl Plugin for UiConfigPlugin {
             .add_systems(Update, crate::hud::gameplay::xp_bar::hot_reload_xp_bar_hud)
             .add_systems(Update, crate::hud::gameplay::timer::hot_reload_timer_hud)
             .add_systems(Update, crate::hud::gameplay::level::hot_reload_level_hud)
-            .add_systems(Update, crate::hud::gameplay::hot_reload_gameplay_layout);
+            .add_systems(Update, crate::hud::gameplay::hot_reload_gameplay_layout)
+            .add_systems(
+                Update,
+                crate::hud::gameplay::kill_count::hot_reload_kill_count_hud,
+            )
+            .add_systems(
+                Update,
+                crate::hud::gameplay::weapon_slots::hot_reload_weapon_slots_hud,
+            );
 
         info!("✅ UiConfigPlugin initialized");
     }

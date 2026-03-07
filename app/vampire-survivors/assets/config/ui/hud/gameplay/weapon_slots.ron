@@ -1,0 +1,23 @@
+// Weapon slots HUD configuration
+// Controls the 6-slot weapon display at the bottom of the screen.
+//
+// Hot-reload enabled: Edit this file while the game is running to see changes instantly!
+//
+// Parameters:
+// - slot_size:       Side length of each square slot in pixels
+// - slot_gap:        Gap between adjacent slots in pixels
+// - slot_radius:     Corner radius of each slot in pixels
+// - label_font_size: Font size of the weapon abbreviation label in points
+// - empty_color:     Background color for empty slots (RGB, 0.0-1.0)
+// - active_color:    Background color for slots with a weapon (RGB, 0.0-1.0)
+// - text_color:      Color of the weapon label text (RGB, 0.0-1.0)
+
+WeaponSlotsHudConfig(
+    slot_size:       40.0,
+    slot_gap:         4.0,
+    slot_radius:      4.0,
+    label_font_size:  10.0,
+    empty_color:  (r: 0.10, g: 0.07, b: 0.15),
+    active_color: (r: 0.35, g: 0.20, b: 0.55),
+    text_color:   (r: 0.95, g: 0.90, b: 0.85),
+)

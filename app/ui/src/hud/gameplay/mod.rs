@@ -6,9 +6,10 @@
 //!
 //! ```text
 //! ┌─────────────────────────────────────────────────┐
-//! │  HP                  Lv. 1              0:00    │
-//! │  ██████████░░░░░░                               │
+//! │  HP 100/100          Lv. 1             0:00     │
+//! │  ████████████░░░░                               │
 //! │                                                 │
+//! │  [ Wh ][ MW ][    ][    ][    ][    ]  Kills: 0 │
 //! │░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│ ← XP bar
 //! └─────────────────────────────────────────────────┘
 //! ```
@@ -16,21 +17,25 @@
 //! The boss HP bar is **not** part of this overlay — it is rendered in world
 //! space as child sprites of the boss entity (see [`boss_hp_bar`]).
 //!
-//! | Module                    | Widget                  | Spawn / Observer              | Update system                     |
-//! |---------------------------|-------------------------|-------------------------------|-----------------------------------|
-//! | [`hp_bar`]                | HP bar                  | `spawn_hp_bar`                | `update_hp_bar`                   |
-//! | [`xp_bar`]                | XP bar                  | `spawn_xp_bar`                | `update_xp_bar`                   |
-//! | [`timer`]                 | Elapsed timer           | `spawn_timer`                 | `update_timer`                    |
-//! | [`level`]                 | Level label             | `spawn_level`                 | `update_level_text`               |
-//! | [`evolution_notification`]| Evolution toast         | `on_weapon_evolved` (observer)| `update_evolution_notification`   |
-//! | [`boss_hp_bar`]           | Boss HP bar (world-space)| `maybe_spawn_boss_hp_bar`    | `update_boss_hp_bar_world`        |
+//! | Module                    | Widget                   | Spawn                       | Update system                     |
+//! |---------------------------|--------------------------|-----------------------------|-----------------------------------|
+//! | [`hp_bar`]                | HP bar (color + number)  | `spawn_hp_bar`              | `update_hp_bar`                   |
+//! | [`xp_bar`]                | XP bar                   | `spawn_xp_bar`              | `update_xp_bar`                   |
+//! | [`timer`]                 | Elapsed timer            | `spawn_timer`               | `update_timer`                    |
+//! | [`level`]                 | Level label              | `spawn_level`               | `update_level_text`               |
+//! | [`evolution_notification`]| Evolution toast          | `on_weapon_evolved`         | `update_evolution_notification`   |
+//! | [`weapon_slots`]          | 6 weapon slots           | `spawn_weapon_slots`        | `update_weapon_slots`             |
+//! | [`kill_count`]            | Kill counter             | `spawn_kill_count`          | `update_kill_count`               |
+//! | [`boss_hp_bar`]           | Boss HP bar (world-space)| `maybe_spawn_boss_hp_bar`   | `update_boss_hp_bar_world`        |
 
 pub mod boss_hp_bar;
 pub mod boss_warning;
 pub mod evolution_notification;
 pub mod hp_bar;
+pub mod kill_count;
 pub mod level;
 pub mod timer;
+pub mod weapon_slots;
 pub mod xp_bar;
 
 use bevy::prelude::*;
@@ -39,14 +44,17 @@ use vs_core::states::AppState;
 
 use crate::config::hud::gameplay::{
     GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle, GameplayHudLayoutParams,
-    HpBarHudParams, LevelHudParams, TimerHudParams, XpBarHudParams,
+    HpBarHudParams, KillCountHudParams, LevelHudParams, TimerHudParams, WeaponSlotsHudParams,
+    XpBarHudParams,
 };
 
 // ---------------------------------------------------------------------------
-// Fallback constant
+// Fallback constants
 // ---------------------------------------------------------------------------
 
 const DEFAULT_EDGE_MARGIN: f32 = 12.0;
+/// Height of the XP bar (10 px) plus a small gap — positions bottom widgets above it.
+const BOTTOM_WIDGET_OFFSET: f32 = 18.0;
 
 // ---------------------------------------------------------------------------
 // Anchor marker components
@@ -68,6 +76,14 @@ pub struct HudTimerAnchor;
 #[derive(Component, Debug)]
 pub struct HudXpBarAnchor;
 
+/// Marks the bottom-center anchor node (holds weapon slots).
+#[derive(Component, Debug)]
+pub struct HudWeaponSlotsAnchor;
+
+/// Marks the bottom-right anchor node (holds the kill count).
+#[derive(Component, Debug)]
+pub struct HudKillCountAnchor;
+
 // ---------------------------------------------------------------------------
 // Setup system
 // ---------------------------------------------------------------------------
@@ -77,6 +93,7 @@ pub struct HudXpBarAnchor;
 /// Runs on [`OnEnter(AppState::Playing)`].  The root node carries
 /// [`DespawnOnExit`]`(`[`AppState::Playing`]`)` so all HUD entities are
 /// automatically cleaned up on every state transition away from `Playing`.
+#[allow(clippy::too_many_arguments)]
 pub fn setup_gameplay_hud(
     mut commands: Commands,
     layout_cfg: GameplayHudLayoutParams,
@@ -84,6 +101,8 @@ pub fn setup_gameplay_hud(
     xp_bar_cfg: XpBarHudParams,
     timer_cfg: TimerHudParams,
     level_cfg: LevelHudParams,
+    weapon_slots_cfg: WeaponSlotsHudParams,
+    kill_count_cfg: KillCountHudParams,
 ) {
     let edge = layout_cfg
         .get()
@@ -147,6 +166,40 @@ pub fn setup_gameplay_hud(
             ))
             .with_children(|anchor| {
                 timer::spawn_timer(anchor, timer_cfg.get());
+            });
+
+            // ------------------------------------------------------------------
+            // Bottom-center: Weapon slots (above XP bar)
+            // ------------------------------------------------------------------
+            root.spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    bottom: Val::Px(BOTTOM_WIDGET_OFFSET),
+                    left: Val::Px(0.0),
+                    right: Val::Px(0.0),
+                    justify_content: JustifyContent::Center,
+                    ..default()
+                },
+                HudWeaponSlotsAnchor,
+            ))
+            .with_children(|anchor| {
+                weapon_slots::spawn_weapon_slots(anchor, weapon_slots_cfg.get());
+            });
+
+            // ------------------------------------------------------------------
+            // Bottom-right: Kill count (above XP bar)
+            // ------------------------------------------------------------------
+            root.spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    bottom: Val::Px(BOTTOM_WIDGET_OFFSET),
+                    right: Val::Px(edge),
+                    ..default()
+                },
+                HudKillCountAnchor,
+            ))
+            .with_children(|anchor| {
+                kill_count::spawn_kill_count(anchor, kill_count_cfg.get());
             });
 
             // ------------------------------------------------------------------
@@ -225,6 +278,6 @@ pub fn hot_reload_gameplay_layout(
             node.top = Val::Px(edge);
             node.right = Val::Px(edge);
         }
-        // XP bar is pinned to the bottom edge with no margin — not updated here.
+        // XP bar, weapon slots, and kill count use fixed bottom offsets — not updated here.
     }
 }
