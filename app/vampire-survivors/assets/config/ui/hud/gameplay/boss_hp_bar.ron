@@ -1,24 +1,28 @@
-// Boss HP bar HUD configuration.
-// Controls the appearance of the boss HP bar displayed near the bottom of the screen.
-// The bar is hidden until Boss Death spawns, then shown automatically.
+// Boss HP bar configuration.
+// The bar is rendered as world-space child sprites attached to the boss entity,
+// so it moves with the boss rather than being fixed to the screen.
+//
 // Hot-reload enabled: edit while the game is running to tweak appearance instantly!
 //
 // Parameters:
-// - bar_width:        Width of the track in pixels
-// - bar_height:       Height of the track in pixels
-// - bar_radius:       Corner radius of the track and fill in pixels
-// - label_font_size:  Font size of the "BOSS" label in points
-// - label_gap:        Vertical gap between the label and the track in pixels
-// - fill_color:       Color of the filled (current HP) portion (RGB, 0.0-1.0)
-// - track_color:      Color of the empty (missing HP) portion (RGB, 0.0-1.0)
-// - text_color:       Color of the "BOSS" label text (RGB, 0.0-1.0)
+// - label_text:        Name shown above the HP track
+// - bar_width:         Width of the track in world pixels
+// - bar_height:        Height of the track in world pixels
+// - label_font_size:   Font size of the label in points
+// - label_gap:         Vertical gap between the label and the track in world pixels
+// - y_offset:          Vertical offset from the boss center to the bar track center
+//                      (negative values place the bar below the boss center)
+// - fill_color:        Color of the filled (current HP) portion (RGB, 0.0-1.0)
+// - track_color:       Color of the empty (missing HP) portion (RGB, 0.0-1.0)
+// - text_color:        Color of the label text (RGB, 0.0-1.0)
 
 BossHpBarHudConfig(
-    bar_width:       400.0,
-    bar_height:       20.0,
-    bar_radius:        4.0,
+    label_text:      "DEATH",
+    bar_width:       160.0,
+    bar_height:        8.0,
     label_font_size:  14.0,
     label_gap:         4.0,
+    y_offset:        -90.0,
     fill_color:  (r: 0.65, g: 0.10, b: 0.85),
     track_color: (r: 0.15, g: 0.05, b: 0.20),
     text_color:  (r: 0.95, g: 0.90, b: 0.85),
