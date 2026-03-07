@@ -109,12 +109,7 @@ mod tests {
     fn enter_character_select(app: &mut App) {
         app.world_mut()
             .resource_mut::<NextState<AppState>>()
-            .set(AppState::Playing);
-        app.update();
-        app.world_mut()
-            .resource_mut::<NextState<AppState>>()
             .set(AppState::CharacterSelect);
-        app.update();
         app.update();
     }
 

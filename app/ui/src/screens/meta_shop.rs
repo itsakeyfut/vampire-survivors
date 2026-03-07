@@ -97,6 +97,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
+    use crate::components::MenuButton;
 
     fn build_app() -> App {
         let mut app = App::new();
@@ -118,22 +119,32 @@ mod tests {
     }
 
     #[test]
-    fn setup_spawns_nodes() {
+    fn setup_spawns_heading() {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::MetaShop), setup_meta_shop_screen);
         enter_meta_shop(&mut app);
 
-        let mut q = app.world_mut().query_filtered::<Entity, With<Node>>();
-        assert!(q.iter(app.world()).count() > 0);
+        let mut q = app
+            .world_mut()
+            .query_filtered::<Entity, With<ScreenHeadingHud>>();
+        assert_eq!(
+            q.iter(app.world()).count(),
+            1,
+            "meta shop must have exactly one ScreenHeadingHud"
+        );
     }
 
     #[test]
-    fn has_back_button() {
+    fn back_button_goes_to_title() {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::MetaShop), setup_meta_shop_screen);
         enter_meta_shop(&mut app);
 
-        let mut q = app.world_mut().query_filtered::<Entity, With<Button>>();
-        assert_eq!(q.iter(app.world()).count(), 1);
+        let mut q = app.world_mut().query::<&MenuButton>();
+        let actions: Vec<ButtonAction> = q.iter(app.world()).map(|b| b.action).collect();
+        assert!(
+            actions.contains(&ButtonAction::GoToTitle),
+            "meta shop back button must use GoToTitle"
+        );
     }
 }
