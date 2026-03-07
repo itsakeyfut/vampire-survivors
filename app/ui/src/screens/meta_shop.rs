@@ -1,12 +1,13 @@
-//! Character select screen — minimal stub.
+//! Meta shop screen — minimal stub.
 //!
-//! Displays a heading and a "Play" button that starts the run.
-//! A full character-selection UI (with per-character cards and stats) will be
-//! implemented in a later phase; this stub keeps the Title → CharacterSelect →
-//! Playing flow functional.
+//! Displays a heading and a "Back" button that returns to the Title screen.
+//! A full gold shop UI (with purchasable upgrades and character unlocks) will be
+//! implemented in a later phase; this stub ensures `AppState::MetaShop` has an
+//! entry handler so the Gold Shop button on the title screen does not lead to
+//! an uninitialized state.
 //!
-//! All entities are tagged with [`DespawnOnExit`]`(AppState::CharacterSelect)`
-//! so they are cleaned up automatically on any state transition.
+//! All entities are tagged with [`DespawnOnExit`]`(AppState::MetaShop)` so
+//! they are cleaned up automatically on any state transition.
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
@@ -30,8 +31,8 @@ const DEFAULT_ROW_GAP: f32 = 16.0;
 // System
 // ---------------------------------------------------------------------------
 
-/// Spawns the character select screen when entering [`AppState::CharacterSelect`].
-pub fn setup_character_select_screen(
+/// Spawns the meta shop screen when entering [`AppState::MetaShop`].
+pub fn setup_meta_shop_screen(
     mut commands: Commands,
     ui_style: UiStyleParams,
     heading_cfg: ScreenHeadingHudParams,
@@ -66,11 +67,11 @@ pub fn setup_character_select_screen(
                 ..default()
             },
             BackgroundColor(bg_color),
-            DespawnOnExit(AppState::CharacterSelect),
+            DespawnOnExit(AppState::MetaShop),
         ))
         .with_children(|parent| {
             parent.spawn((
-                Text::new("Choose Your Character"),
+                Text::new("Gold Shop"),
                 TextFont {
                     font_size: heading_font_size,
                     ..default()
@@ -82,8 +83,6 @@ pub fn setup_character_select_screen(
                 },
                 ScreenHeadingHud,
             ));
-
-            spawn_large_menu_button(parent, "Play", ButtonAction::StartGame, btn_cfg.get());
 
             spawn_large_menu_button(parent, "Back", ButtonAction::GoToTitle, btn_cfg.get());
         });
@@ -106,14 +105,14 @@ mod tests {
         app
     }
 
-    fn enter_character_select(app: &mut App) {
+    fn enter_meta_shop(app: &mut App) {
         app.world_mut()
             .resource_mut::<NextState<AppState>>()
             .set(AppState::Playing);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<AppState>>()
-            .set(AppState::CharacterSelect);
+            .set(AppState::MetaShop);
         app.update();
         app.update();
     }
@@ -121,26 +120,20 @@ mod tests {
     #[test]
     fn setup_spawns_nodes() {
         let mut app = build_app();
-        app.add_systems(
-            OnEnter(AppState::CharacterSelect),
-            setup_character_select_screen,
-        );
-        enter_character_select(&mut app);
+        app.add_systems(OnEnter(AppState::MetaShop), setup_meta_shop_screen);
+        enter_meta_shop(&mut app);
 
         let mut q = app.world_mut().query_filtered::<Entity, With<Node>>();
         assert!(q.iter(app.world()).count() > 0);
     }
 
     #[test]
-    fn has_two_buttons() {
+    fn has_back_button() {
         let mut app = build_app();
-        app.add_systems(
-            OnEnter(AppState::CharacterSelect),
-            setup_character_select_screen,
-        );
-        enter_character_select(&mut app);
+        app.add_systems(OnEnter(AppState::MetaShop), setup_meta_shop_screen);
+        enter_meta_shop(&mut app);
 
         let mut q = app.world_mut().query_filtered::<Entity, With<Button>>();
-        assert_eq!(q.iter(app.world()).count(), 2);
+        assert_eq!(q.iter(app.world()).count(), 1);
     }
 }

@@ -46,6 +46,11 @@ impl Plugin for GameUIPlugin {
                 OnEnter(AppState::CharacterSelect),
                 screens::character_select::setup_character_select_screen,
             )
+            // Meta shop screen
+            .add_systems(
+                OnEnter(AppState::MetaShop),
+                screens::meta_shop::setup_meta_shop_screen,
+            )
             // Game-over screen
             .add_systems(
                 OnEnter(AppState::GameOver),
