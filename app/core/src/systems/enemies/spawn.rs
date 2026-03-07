@@ -60,6 +60,10 @@ const DEFAULT_COLLIDER_MEDUSA: f32 = 12.0;
 const DEFAULT_MEDUSA_UNLOCK_SECS: f32 = 1200.0;
 /// Collider radius for Dragon enemies (pixels).
 const DEFAULT_COLLIDER_DRAGON: f32 = 20.0;
+/// Collider radius for Boss Death (pixels).
+const DEFAULT_COLLIDER_BOSS_DEATH: f32 = 60.0;
+/// Collider radius for Mini Death enemies (pixels).
+const DEFAULT_COLLIDER_MINI_DEATH: f32 = 20.0;
 /// Elapsed seconds before Dragon is added to the spawn table (25 minutes).
 const DEFAULT_DRAGON_UNLOCK_SECS: f32 = 1500.0;
 /// Fallback spawn weight for Bat (used when config is not loaded).
@@ -327,9 +331,9 @@ fn enemy_color(enemy_type: EnemyType) -> Color {
         EnemyType::Medusa => Color::srgb(0.6, 0.6, 0.5),
         // Deep orange-red for Dragon.
         EnemyType::Dragon => Color::srgb(0.9, 0.3, 0.0),
-        // Bright red for Boss Death (matches boss_spawn.rs).
+        // Bright red for Boss Death — matches boss_spawn.rs placeholder.
         EnemyType::BossDeath => Color::srgb(1.0, 0.1, 0.1),
-        // Dark purple for Mini Deaths (matches boss_ai.rs spawn_mini_deaths).
+        // Dark purple for Mini Deaths — matches boss_ai.rs spawn_mini_deaths.
         EnemyType::MiniDeath => Color::srgb(0.7, 0.1, 0.7),
     }
 }
@@ -344,10 +348,8 @@ fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
         EnemyType::Demon => DEFAULT_COLLIDER_DEMON,
         EnemyType::Medusa => DEFAULT_COLLIDER_MEDUSA,
         EnemyType::Dragon => DEFAULT_COLLIDER_DRAGON,
-        // Boss Death uses a large collider matching boss_spawn.rs.
-        EnemyType::BossDeath => 60.0,
-        // Mini Death uses a medium collider matching boss_ai.rs.
-        EnemyType::MiniDeath => 20.0,
+        EnemyType::BossDeath => DEFAULT_COLLIDER_BOSS_DEATH,
+        EnemyType::MiniDeath => DEFAULT_COLLIDER_MINI_DEATH,
     }
 }
 
