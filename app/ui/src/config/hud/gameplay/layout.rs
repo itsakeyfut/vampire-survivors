@@ -12,9 +12,6 @@ use serde::Deserialize;
 pub struct GameplayHudLayoutConfig {
     /// Distance in pixels from each screen edge to the nearest widget anchor.
     pub edge_margin: f32,
-    /// Distance in pixels from the bottom edge to the boss HP bar anchor.
-    /// Should be large enough to sit above the XP bar.
-    pub boss_hp_bar_bottom: f32,
 }
 
 /// Resource holding the handle to the loaded [`GameplayHudLayoutConfig`].
@@ -49,8 +46,7 @@ mod tests {
 
     const RON: &str = r#"
 GameplayHudLayoutConfig(
-    edge_margin:       12.0,
-    boss_hp_bar_bottom: 28.0,
+    edge_margin: 12.0,
 )
 "#;
 
@@ -58,18 +54,11 @@ GameplayHudLayoutConfig(
     fn gameplay_hud_layout_config_deserialization() {
         let cfg: GameplayHudLayoutConfig = ron::de::from_str(RON).expect("RON parse must succeed");
         assert_eq!(cfg.edge_margin, 12.0);
-        assert_eq!(cfg.boss_hp_bar_bottom, 28.0);
     }
 
     #[test]
-    fn edge_margin_is_positive() {
+    fn edge_margin_is_non_negative() {
         let cfg: GameplayHudLayoutConfig = ron::de::from_str(RON).unwrap();
         assert!(cfg.edge_margin >= 0.0);
-    }
-
-    #[test]
-    fn boss_hp_bar_bottom_is_positive() {
-        let cfg: GameplayHudLayoutConfig = ron::de::from_str(RON).unwrap();
-        assert!(cfg.boss_hp_bar_bottom >= 0.0);
     }
 }

@@ -1,163 +1,172 @@
-//! Boss HP bar widget.
+//! World-space boss HP bar.
 //!
-//! Displays Boss Death's current HP as a centered horizontal bar near the
-//! bottom of the screen.  The widget is spawned as part of the gameplay HUD
-//! but stays invisible until a boss entity exists in the world.
+//! Spawns a label + track + fill as child sprites of the boss entity, so the
+//! bar moves with the boss automatically.  The bar is created the first frame a
+//! [`BossPhase`] entity appears and is cleaned up automatically when the boss
+//! entity is despawned.
 //!
 //! ```text
-//!        ── BOSS ──
-//!  ████████████████████████████░░░░░   (400 × 20 px bar)
+//!         DEATH          ← Text2d label (world space)
+//!  ████████████░░░░░░    ← track sprite + fill sprite
 //! ```
 //!
-//! The bar is hidden (`Visibility::Hidden`) while no [`BossPhase`] entity
-//! exists and made visible (`Visibility::Visible`) by [`update_boss_hp_bar`]
-//! as soon as the boss spawns.
+//! ## System overview
+//!
+//! | System                    | Runs when                        | Effect                               |
+//! |---------------------------|----------------------------------|--------------------------------------|
+//! | [`maybe_spawn_boss_hp_bar`] | Every frame while `Playing`    | One-shot: spawns bar children once   |
+//! | [`update_boss_hp_bar_world`] | Every frame while `Playing`   | Updates fill width to match HP %     |
 
 use bevy::prelude::*;
 use vs_core::components::Enemy;
 use vs_core::types::BossPhase;
 
-use crate::config::hud::gameplay::BossHpBarHudConfig;
-
 // ---------------------------------------------------------------------------
 // Fallback constants
 // ---------------------------------------------------------------------------
 
-const DEFAULT_BAR_WIDTH: f32 = 400.0;
-const DEFAULT_BAR_HEIGHT: f32 = 20.0;
-const DEFAULT_BAR_RADIUS: f32 = 4.0;
+const DEFAULT_LABEL_TEXT: &str = "DEATH";
+const DEFAULT_BAR_WIDTH: f32 = 160.0;
+const DEFAULT_BAR_HEIGHT: f32 = 8.0;
 const DEFAULT_LABEL_FONT_SIZE: f32 = 14.0;
 const DEFAULT_LABEL_GAP: f32 = 4.0;
-/// Fill color: dark purple — distinct from the player's red HP bar.
+const DEFAULT_Y_OFFSET: f32 = -90.0;
 const DEFAULT_FILL_COLOR: Color = Color::srgb(0.65, 0.10, 0.85);
 const DEFAULT_TRACK_COLOR: Color = Color::srgb(0.15, 0.05, 0.20);
 const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
+
+/// Z offset of the bar track relative to the boss entity.
+const Z_TRACK: f32 = 1.0;
+/// Z offset of the fill sprite (above track).
+const Z_FILL: f32 = 1.5;
+/// Z offset of the label text (above both).
+const Z_LABEL: f32 = 2.0;
 
 // ---------------------------------------------------------------------------
 // Marker components
 // ---------------------------------------------------------------------------
 
-/// Marks the column root of the boss HP bar widget.
+/// Placed on the boss entity after the HP bar children have been spawned.
 ///
-/// [`update_boss_hp_bar`] toggles `Visibility` on this node to show or hide
-/// the entire widget.
+/// Used by [`maybe_spawn_boss_hp_bar`] to avoid re-spawning the bar on every frame.
 #[derive(Component, Debug)]
-pub struct HudBossHpBarRoot;
+pub struct BossHpBarAttached;
 
-/// Marks the inner fill [`Node`] of the boss HP bar.
+/// Placed on the fill sprite child.
 ///
-/// [`update_boss_hp_bar`] queries this marker to set `node.width` each frame.
+/// Stores the full-width reference so [`update_boss_hp_bar_world`] can scale
+/// the sprite proportionally to current HP.
 #[derive(Component, Debug)]
-pub struct HudBossHpBar;
-
-// ---------------------------------------------------------------------------
-// Spawn
-// ---------------------------------------------------------------------------
-
-/// Spawns the boss HP bar (label + track + fill) as a child of `parent`.
-///
-/// The root node starts with [`Visibility::Hidden`]; `update_boss_hp_bar`
-/// makes it visible when the boss entity exists.
-pub fn spawn_boss_hp_bar(parent: &mut ChildSpawnerCommands, cfg: Option<&BossHpBarHudConfig>) {
-    let bar_width = cfg.map(|c| c.bar_width).unwrap_or(DEFAULT_BAR_WIDTH);
-    let bar_height = cfg.map(|c| c.bar_height).unwrap_or(DEFAULT_BAR_HEIGHT);
-    let bar_radius = cfg.map(|c| c.bar_radius).unwrap_or(DEFAULT_BAR_RADIUS);
-    let label_font_size = cfg
-        .map(|c| c.label_font_size)
-        .unwrap_or(DEFAULT_LABEL_FONT_SIZE);
-    let label_gap = cfg.map(|c| c.label_gap).unwrap_or(DEFAULT_LABEL_GAP);
-    let fill_color: Color = cfg
-        .map(|c| Color::from(&c.fill_color))
-        .unwrap_or(DEFAULT_FILL_COLOR);
-    let track_color: Color = cfg
-        .map(|c| Color::from(&c.track_color))
-        .unwrap_or(DEFAULT_TRACK_COLOR);
-    let text_color: Color = cfg
-        .map(|c| Color::from(&c.text_color))
-        .unwrap_or(DEFAULT_TEXT_COLOR);
-
-    parent
-        .spawn((
-            Node {
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                row_gap: Val::Px(label_gap),
-                ..default()
-            },
-            Visibility::Hidden,
-            HudBossHpBarRoot,
-        ))
-        .with_children(|col| {
-            // "BOSS" label
-            col.spawn((
-                Text::new("BOSS"),
-                TextFont {
-                    font_size: label_font_size,
-                    ..default()
-                },
-                TextColor(text_color),
-            ));
-
-            // Background track
-            col.spawn((
-                Node {
-                    width: Val::Px(bar_width),
-                    height: Val::Px(bar_height),
-                    overflow: Overflow::clip(),
-                    ..default()
-                },
-                BackgroundColor(track_color),
-                BorderRadius::all(Val::Px(bar_radius)),
-            ))
-            .with_children(|track| {
-                // Fill bar — width updated by update_boss_hp_bar each frame.
-                track.spawn((
-                    Node {
-                        width: Val::Percent(100.0),
-                        height: Val::Percent(100.0),
-                        ..default()
-                    },
-                    BackgroundColor(fill_color),
-                    BorderRadius::all(Val::Px(bar_radius)),
-                    HudBossHpBar,
-                ));
-            });
-        });
+pub struct BossHpBarFill {
+    /// Full track width in world pixels (= 100% HP).
+    pub max_width: f32,
+    /// Track height in world pixels.
+    pub height: f32,
 }
 
 // ---------------------------------------------------------------------------
-// Update system
+// Systems
 // ---------------------------------------------------------------------------
 
-/// Shows the boss HP bar and updates its fill while Boss Death is alive.
+/// Spawns the HP bar (track + fill + label) as children of each new boss entity.
 ///
-/// - When a [`BossPhase`] entity exists: sets `Visibility::Visible` on the
-///   root and updates the fill bar width proportional to `current_hp / max_hp`.
-/// - When no boss entity exists: keeps the root hidden.
-pub fn update_boss_hp_bar(
-    boss_q: Query<&Enemy, With<BossPhase>>,
-    mut root_q: Query<&mut Visibility, With<HudBossHpBarRoot>>,
-    mut bar_q: Query<&mut Node, With<HudBossHpBar>>,
+/// Runs every `Playing` frame, but is a no-op after the first frame because
+/// [`BossHpBarAttached`] is inserted immediately on spawn.
+pub fn maybe_spawn_boss_hp_bar(
+    mut commands: Commands,
+    boss_q: Query<Entity, (With<BossPhase>, Without<BossHpBarAttached>)>,
+    cfg: crate::config::hud::gameplay::BossHpBarHudParams<'_>,
 ) {
-    let Ok(mut visibility) = root_q.single_mut() else {
+    for boss_entity in boss_q.iter() {
+        let c = cfg.get();
+        let label_text = c
+            .map(|c| c.label_text.as_str())
+            .unwrap_or(DEFAULT_LABEL_TEXT);
+        let bar_width = c.map(|c| c.bar_width).unwrap_or(DEFAULT_BAR_WIDTH);
+        let bar_height = c.map(|c| c.bar_height).unwrap_or(DEFAULT_BAR_HEIGHT);
+        let label_font_size = c
+            .map(|c| c.label_font_size)
+            .unwrap_or(DEFAULT_LABEL_FONT_SIZE);
+        let label_gap = c.map(|c| c.label_gap).unwrap_or(DEFAULT_LABEL_GAP);
+        let y_offset = c.map(|c| c.y_offset).unwrap_or(DEFAULT_Y_OFFSET);
+        let fill_color: Color = c
+            .map(|c| Color::from(&c.fill_color))
+            .unwrap_or(DEFAULT_FILL_COLOR);
+        let track_color: Color = c
+            .map(|c| Color::from(&c.track_color))
+            .unwrap_or(DEFAULT_TRACK_COLOR);
+        let text_color: Color = c
+            .map(|c| Color::from(&c.text_color))
+            .unwrap_or(DEFAULT_TEXT_COLOR);
+
+        // Label sits above the track: bottom of text ≈ top of track + label_gap.
+        let label_y = y_offset + bar_height / 2.0 + label_gap + label_font_size * 0.6;
+
+        commands
+            .entity(boss_entity)
+            .insert(BossHpBarAttached)
+            .with_children(|parent| {
+                // Background track.
+                parent.spawn((
+                    Sprite {
+                        custom_size: Some(Vec2::new(bar_width, bar_height)),
+                        color: track_color,
+                        ..default()
+                    },
+                    Transform::from_xyz(0.0, y_offset, Z_TRACK),
+                ));
+
+                // Fill sprite — starts at 100%, scaled down by update_boss_hp_bar_world.
+                parent.spawn((
+                    Sprite {
+                        custom_size: Some(Vec2::new(bar_width, bar_height)),
+                        color: fill_color,
+                        ..default()
+                    },
+                    Transform::from_xyz(0.0, y_offset, Z_FILL),
+                    BossHpBarFill {
+                        max_width: bar_width,
+                        height: bar_height,
+                    },
+                ));
+
+                // Name label above the track.
+                parent.spawn((
+                    Text2d::new(label_text),
+                    TextFont {
+                        font_size: label_font_size,
+                        ..default()
+                    },
+                    TextColor(text_color),
+                    Transform::from_xyz(0.0, label_y, Z_LABEL),
+                ));
+            });
+    }
+}
+
+/// Updates the fill sprite width each frame to reflect the boss's current HP.
+///
+/// The fill is left-aligned within the track: `Transform.translation.x` is
+/// shifted so the left edge stays fixed while the right edge shrinks.
+pub fn update_boss_hp_bar_world(
+    boss_q: Query<&Enemy, With<BossPhase>>,
+    mut fill_q: Query<(&BossHpBarFill, &mut Sprite, &mut Transform)>,
+) {
+    let Ok(enemy) = boss_q.single() else {
         return;
     };
 
-    match boss_q.single() {
-        Ok(enemy) => {
-            *visibility = Visibility::Visible;
-            if let Ok(mut node) = bar_q.single_mut() {
-                let pct = if enemy.max_hp > 0.0 {
-                    (enemy.current_hp / enemy.max_hp).clamp(0.0, 1.0) * 100.0
-                } else {
-                    0.0
-                };
-                node.width = Val::Percent(pct);
-            }
-        }
-        Err(_) => {
-            *visibility = Visibility::Hidden;
-        }
+    let pct = if enemy.max_hp > 0.0 {
+        (enemy.current_hp / enemy.max_hp).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    for (fill, mut sprite, mut tf) in fill_q.iter_mut() {
+        let new_width = fill.max_width * pct;
+        sprite.custom_size = Some(Vec2::new(new_width, fill.height));
+        // Keep the left edge pinned to the track's left edge.
+        tf.translation.x = -fill.max_width / 2.0 + new_width / 2.0;
     }
 }
 
@@ -167,6 +176,8 @@ pub fn update_boss_hp_bar(
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use bevy::ecs::system::RunSystemOnce as _;
 
     use super::*;
@@ -178,106 +189,117 @@ mod tests {
         app
     }
 
-    fn spawn_bar(app: &mut App) -> (Entity, Entity) {
-        let bar = app
-            .world_mut()
+    fn spawn_fill(app: &mut App, max_width: f32) -> Entity {
+        app.world_mut()
             .spawn((
-                Node {
-                    width: Val::Percent(100.0),
+                Sprite {
+                    custom_size: Some(Vec2::new(max_width, DEFAULT_BAR_HEIGHT)),
                     ..default()
                 },
-                HudBossHpBar,
+                Transform::from_xyz(0.0, 0.0, Z_FILL),
+                BossHpBarFill {
+                    max_width,
+                    height: DEFAULT_BAR_HEIGHT,
+                },
             ))
-            .id();
-        let root = app
-            .world_mut()
-            .spawn((Visibility::Hidden, HudBossHpBarRoot))
-            .id();
-        (root, bar)
+            .id()
     }
 
-    fn spawn_boss(app: &mut App, current_hp: f32, max_hp: f32) -> Entity {
-        let mut enemy = Enemy::from_type(EnemyType::BossDeath, 1.0);
+    fn spawn_boss(app: &mut App, current_hp: f32, max_hp: f32) {
+        let mut enemy = vs_core::components::Enemy::from_type(EnemyType::BossDeath, 1.0);
         enemy.current_hp = current_hp;
         enemy.max_hp = max_hp;
-        app.world_mut().spawn((enemy, BossPhase::Phase1)).id()
+        app.world_mut().spawn((enemy, BossPhase::Phase1));
     }
 
-    /// Bar is visible and at 100% when boss is at full HP.
+    fn advance(app: &mut App, secs: f32) {
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_secs_f32(secs));
+    }
+
+    /// Fill is at 100% width when boss is at full HP.
     #[test]
-    fn full_hp_shows_bar_at_100_percent() {
+    fn full_hp_fills_bar_100_percent() {
         let mut app = build_app();
-        let (root, bar) = spawn_bar(&mut app);
+        let fill = spawn_fill(&mut app, 160.0);
         spawn_boss(&mut app, 5000.0, 5000.0);
+        advance(&mut app, 1.0 / 60.0);
 
-        app.world_mut().run_system_once(update_boss_hp_bar).unwrap();
+        app.world_mut()
+            .run_system_once(update_boss_hp_bar_world)
+            .unwrap();
 
-        assert_eq!(
-            *app.world().get::<Visibility>(root).unwrap(),
-            Visibility::Visible
-        );
-        assert_eq!(
-            app.world().get::<Node>(bar).unwrap().width,
-            Val::Percent(100.0)
-        );
-    }
-
-    /// Bar fill reflects partial HP correctly.
-    #[test]
-    fn partial_hp_fills_bar_proportionally() {
-        let mut app = build_app();
-        let (_, bar) = spawn_bar(&mut app);
-        spawn_boss(&mut app, 2500.0, 5000.0); // 50%
-
-        app.world_mut().run_system_once(update_boss_hp_bar).unwrap();
-
-        assert_eq!(
-            app.world().get::<Node>(bar).unwrap().width,
-            Val::Percent(50.0)
+        let node = app.world().get::<Sprite>(fill).unwrap();
+        assert_eq!(node.custom_size.unwrap().x, 160.0);
+        let tf = app.world().get::<Transform>(fill).unwrap();
+        assert!(
+            (tf.translation.x).abs() < 1e-5,
+            "fill x should be 0 at 100%"
         );
     }
 
-    /// Bar is hidden when no boss entity exists.
+    /// Fill reflects 50% HP correctly.
     #[test]
-    fn no_boss_hides_bar() {
+    fn half_hp_fills_bar_50_percent() {
         let mut app = build_app();
-        let (root, _) = spawn_bar(&mut app);
+        let fill = spawn_fill(&mut app, 160.0);
+        spawn_boss(&mut app, 2500.0, 5000.0);
+        advance(&mut app, 1.0 / 60.0);
 
-        app.world_mut().run_system_once(update_boss_hp_bar).unwrap();
+        app.world_mut()
+            .run_system_once(update_boss_hp_bar_world)
+            .unwrap();
 
-        assert_eq!(
-            *app.world().get::<Visibility>(root).unwrap(),
-            Visibility::Hidden
-        );
+        let sprite = app.world().get::<Sprite>(fill).unwrap();
+        assert!((sprite.custom_size.unwrap().x - 80.0).abs() < 1e-5);
+        // Left-align: center of 80px fill within 160px track → x = -40
+        let tf = app.world().get::<Transform>(fill).unwrap();
+        assert!((tf.translation.x - (-40.0)).abs() < 1e-5);
+    }
+
+    /// Fill is zero width when boss HP is 0.
+    #[test]
+    fn zero_hp_fills_bar_0_percent() {
+        let mut app = build_app();
+        let fill = spawn_fill(&mut app, 160.0);
+        spawn_boss(&mut app, 0.0, 5000.0);
+        advance(&mut app, 1.0 / 60.0);
+
+        app.world_mut()
+            .run_system_once(update_boss_hp_bar_world)
+            .unwrap();
+
+        let sprite = app.world().get::<Sprite>(fill).unwrap();
+        assert!((sprite.custom_size.unwrap().x).abs() < 1e-5);
     }
 
     /// Overheal is clamped to 100%.
     #[test]
-    fn hp_over_max_clamped_to_100_percent() {
+    fn overheal_clamped_to_100_percent() {
         let mut app = build_app();
-        let (_, bar) = spawn_bar(&mut app);
-        spawn_boss(&mut app, 6000.0, 5000.0); // 120% — should clamp
+        let fill = spawn_fill(&mut app, 160.0);
+        spawn_boss(&mut app, 9999.0, 5000.0);
+        advance(&mut app, 1.0 / 60.0);
 
-        app.world_mut().run_system_once(update_boss_hp_bar).unwrap();
+        app.world_mut()
+            .run_system_once(update_boss_hp_bar_world)
+            .unwrap();
 
-        assert_eq!(
-            app.world().get::<Node>(bar).unwrap().width,
-            Val::Percent(100.0)
-        );
+        let sprite = app.world().get::<Sprite>(fill).unwrap();
+        assert!((sprite.custom_size.unwrap().x - 160.0).abs() < 1e-5);
     }
 
-    /// Zero HP shows 0% fill.
+    /// No boss → update_boss_hp_bar_world returns early without panicking.
     #[test]
-    fn zero_hp_shows_empty_bar() {
+    fn no_boss_does_not_panic() {
         let mut app = build_app();
-        let (_, bar) = spawn_bar(&mut app);
-        spawn_boss(&mut app, 0.0, 5000.0);
+        spawn_fill(&mut app, 160.0);
+        advance(&mut app, 1.0 / 60.0);
 
-        app.world_mut().run_system_once(update_boss_hp_bar).unwrap();
-
-        assert_eq!(
-            app.world().get::<Node>(bar).unwrap().width,
-            Val::Percent(0.0)
-        );
+        // Must not panic.
+        app.world_mut()
+            .run_system_once(update_boss_hp_bar_world)
+            .unwrap();
     }
 }

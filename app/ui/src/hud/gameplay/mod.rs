@@ -13,6 +13,9 @@
 //! └─────────────────────────────────────────────────┘
 //! ```
 //!
+//! The boss HP bar is **not** part of this overlay — it is rendered in world
+//! space as child sprites of the boss entity (see [`boss_hp_bar`]).
+//!
 //! | Module                    | Widget                  | Spawn / Observer              | Update system                     |
 //! |---------------------------|-------------------------|-------------------------------|-----------------------------------|
 //! | [`hp_bar`]                | HP bar                  | `spawn_hp_bar`                | `update_hp_bar`                   |
@@ -20,6 +23,7 @@
 //! | [`timer`]                 | Elapsed timer           | `spawn_timer`                 | `update_timer`                    |
 //! | [`level`]                 | Level label             | `spawn_level`                 | `update_level_text`               |
 //! | [`evolution_notification`]| Evolution toast         | `on_weapon_evolved` (observer)| `update_evolution_notification`   |
+//! | [`boss_hp_bar`]           | Boss HP bar (world-space)| `maybe_spawn_boss_hp_bar`    | `update_boss_hp_bar_world`        |
 
 pub mod boss_hp_bar;
 pub mod boss_warning;
@@ -34,8 +38,8 @@ use bevy::state::state_scoped::DespawnOnExit;
 use vs_core::states::AppState;
 
 use crate::config::hud::gameplay::{
-    BossHpBarHudParams, GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle,
-    GameplayHudLayoutParams, HpBarHudParams, LevelHudParams, TimerHudParams, XpBarHudParams,
+    GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle, GameplayHudLayoutParams,
+    HpBarHudParams, LevelHudParams, TimerHudParams, XpBarHudParams,
 };
 
 // ---------------------------------------------------------------------------
@@ -43,7 +47,6 @@ use crate::config::hud::gameplay::{
 // ---------------------------------------------------------------------------
 
 const DEFAULT_EDGE_MARGIN: f32 = 12.0;
-const DEFAULT_BOSS_HP_BAR_BOTTOM: f32 = 28.0;
 
 // ---------------------------------------------------------------------------
 // Anchor marker components
@@ -81,16 +84,11 @@ pub fn setup_gameplay_hud(
     xp_bar_cfg: XpBarHudParams,
     timer_cfg: TimerHudParams,
     level_cfg: LevelHudParams,
-    boss_hp_bar_cfg: BossHpBarHudParams,
 ) {
     let edge = layout_cfg
         .get()
         .map(|c| c.edge_margin)
         .unwrap_or(DEFAULT_EDGE_MARGIN);
-    let boss_hp_bar_bottom = layout_cfg
-        .get()
-        .map(|c| c.boss_hp_bar_bottom)
-        .unwrap_or(DEFAULT_BOSS_HP_BAR_BOTTOM);
 
     commands
         .spawn((
@@ -152,21 +150,6 @@ pub fn setup_gameplay_hud(
             });
 
             // ------------------------------------------------------------------
-            // Bottom-center: Boss HP bar (hidden until boss spawns)
-            // ------------------------------------------------------------------
-            root.spawn((Node {
-                position_type: PositionType::Absolute,
-                bottom: Val::Px(boss_hp_bar_bottom),
-                left: Val::Px(0.0),
-                right: Val::Px(0.0),
-                justify_content: JustifyContent::Center,
-                ..default()
-            },))
-                .with_children(|anchor| {
-                    boss_hp_bar::spawn_boss_hp_bar(anchor, boss_hp_bar_cfg.get());
-                });
-
-            // ------------------------------------------------------------------
             // Bottom: XP bar (full viewport width)
             // ------------------------------------------------------------------
             root.spawn((
@@ -215,15 +198,15 @@ pub fn hot_reload_gameplay_layout(
     for event in events.read() {
         match event {
             AssetEvent::Added { .. } => {
-                info!("✅ Gameplay HUD layout config loaded");
+                info!("Gameplay HUD layout config loaded");
                 needs_apply = true;
             }
             AssetEvent::Modified { .. } => {
-                info!("🔥 Gameplay HUD layout config hot-reloaded");
+                info!("Gameplay HUD layout config hot-reloaded");
                 needs_apply = true;
             }
             AssetEvent::Removed { .. } => {
-                warn!("⚠️ Gameplay HUD layout config removed");
+                warn!("Gameplay HUD layout config removed");
             }
             _ => {}
         }
