@@ -41,6 +41,11 @@ impl Plugin for GameUIPlugin {
                 OnEnter(AppState::GameOver),
                 screens::game_over::setup_game_over_screen,
             )
+            // Victory screen
+            .add_systems(
+                OnEnter(AppState::Victory),
+                screens::victory::setup_victory_screen,
+            )
             // Level-up card selection overlay.
             // Must run after generate_level_up_choices so LevelUpChoices is
             // already populated when the UI reads it.

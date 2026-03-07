@@ -10,7 +10,7 @@ use bevy::prelude::*;
 
 use events::{
     BossSpawnedEvent, DamageEnemyEvent, EnemyDiedEvent, GameOverEvent, LevelUpEvent,
-    PlayerDamagedEvent, WeaponFiredEvent,
+    PlayerDamagedEvent, VictoryEvent, WeaponFiredEvent,
 };
 use resources::{
     EnemySpawner, GameData, LevelUpChoices, MetaProgress, PendingUpgradeIndex, SelectedCharacter,
@@ -43,7 +43,7 @@ use states::AppState;
 use systems::{
     enemies::EnemiesPlugin, game_over::GameOverPlugin, game_timer::TimerPlugin,
     player::PlayerPlugin, projectiles::ProjectilesPlugin, spatial::SpatialPlugin,
-    weapons::WeaponsPlugin, xp::XpPlugin,
+    victory::VictoryPlugin, weapons::WeaponsPlugin, xp::XpPlugin,
 };
 
 /// Core game plugin. Registers states, inserts default resources, and wires up
@@ -79,6 +79,7 @@ impl Plugin for GameCorePlugin {
             .add_message::<EnemyDiedEvent>()
             .add_message::<PlayerDamagedEvent>()
             .add_message::<GameOverEvent>()
+            .add_message::<VictoryEvent>()
             .add_message::<LevelUpEvent>()
             .add_message::<BossSpawnedEvent>()
             // ---------------------------------------------------------------
@@ -115,6 +116,7 @@ impl Plugin for GameCorePlugin {
                 ProjectilesPlugin,
                 XpPlugin,
                 GameOverPlugin,
+                VictoryPlugin,
             ));
     }
 }
