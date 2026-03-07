@@ -13,8 +13,8 @@ use events::{
     PlayerDamagedEvent, VictoryEvent, WeaponFiredEvent,
 };
 use resources::{
-    EnemySpawner, GameData, LevelUpChoices, MetaProgress, PendingUpgradeIndex, SelectedCharacter,
-    SpatialGrid, TreasureSpawner,
+    EnemySpawner, GameData, GameSettings, LevelUpChoices, MetaProgress, PendingUpgradeIndex,
+    SelectedCharacter, SpatialGrid, TreasureSpawner,
 };
 
 /// Resets all per-run resources to their defaults at the start of each run.
@@ -72,6 +72,10 @@ impl Plugin for GameCorePlugin {
             // Persistent meta-progression (loaded from save/meta.json)
             // ---------------------------------------------------------------
             .insert_resource(MetaProgress::load())
+            // ---------------------------------------------------------------
+            // User settings (language, future: volume, etc.)
+            // ---------------------------------------------------------------
+            .insert_resource(GameSettings::default())
             // ---------------------------------------------------------------
             // Events
             // ---------------------------------------------------------------

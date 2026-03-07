@@ -19,6 +19,7 @@ pub mod camera;
 pub mod components;
 pub mod config;
 pub mod hud;
+pub mod i18n;
 pub mod screens;
 pub mod styles;
 
@@ -50,6 +51,19 @@ impl Plugin for GameUIPlugin {
             .add_systems(
                 OnEnter(AppState::MetaShop),
                 screens::meta_shop::setup_meta_shop_screen,
+            )
+            // Settings screen
+            .add_systems(
+                OnEnter(AppState::Settings),
+                screens::settings::setup_settings_screen,
+            )
+            .add_systems(
+                Update,
+                (
+                    screens::settings::update_settings_display,
+                    i18n::update_translatable_texts,
+                )
+                    .run_if(in_state(AppState::Settings)),
             )
             // Game-over screen
             .add_systems(

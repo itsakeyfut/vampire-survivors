@@ -47,4 +47,6 @@ pub enum AppState {
     Victory,
     /// Meta-progression gold shop (accessible from Title).
     MetaShop,
+    /// Settings screen (accessible from Title).
+    Settings,
 }
