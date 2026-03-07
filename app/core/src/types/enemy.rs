@@ -19,6 +19,8 @@ pub enum EnemyType {
     Dragon,
     /// Appears at 30 min. Final boss, multi-phase.
     BossDeath,
+    /// Summoned by Boss Death at Phase2 (HP < 60%). Low HP, normal speed.
+    MiniDeath,
 }
 
 /// Enemy AI behavior mode.
@@ -62,7 +64,7 @@ mod tests {
     }
 
     #[test]
-    fn enemy_type_all_eight_variants_exist() {
+    fn enemy_type_all_nine_variants_exist() {
         // Ensure every variant listed in the spec compiles and is distinct.
         let variants = [
             EnemyType::Bat,
@@ -73,8 +75,9 @@ mod tests {
             EnemyType::Medusa,
             EnemyType::Dragon,
             EnemyType::BossDeath,
+            EnemyType::MiniDeath,
         ];
-        assert_eq!(variants.len(), 8);
+        assert_eq!(variants.len(), 9);
         // All variants must be distinct (PartialEq).
         for i in 0..variants.len() {
             for j in 0..variants.len() {

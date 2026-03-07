@@ -41,6 +41,17 @@ pub struct GameConfig {
     // Projectile defaults
     pub base_projectile_speed: f32,
     pub base_projectile_lifetime: f32,
+    // Boss Phase2 behavior
+    /// HP fraction (inclusive) at which Phase1 → Phase2 triggers.
+    pub boss_phase2_hp_threshold: f32,
+    /// HP fraction (inclusive) at which Phase2 → Phase3 triggers.
+    pub boss_phase3_hp_threshold: f32,
+    /// Speed multiplier applied to the boss's base move speed in Phase2.
+    pub boss_phase2_speed_multiplier: f32,
+    /// Number of Mini Deaths summoned at the Phase2 transition.
+    pub mini_death_spawn_count: usize,
+    /// Radial distance from the boss center when placing Mini Deaths (pixels).
+    pub mini_death_spawn_radius: f32,
 }
 
 /// Resource holding the handle to the loaded game configuration.
@@ -127,6 +138,11 @@ GameConfig(
     spatial_grid_cell_size: 64.0,
     base_projectile_speed: 300.0,
     base_projectile_lifetime: 5.0,
+    boss_phase2_hp_threshold: 0.6,
+    boss_phase3_hp_threshold: 0.3,
+    boss_phase2_speed_multiplier: 1.5,
+    mini_death_spawn_count: 3,
+    mini_death_spawn_radius: 80.0,
 )
 "#;
         let config: GameConfig = ron::de::from_str(ron_data).unwrap();
@@ -145,5 +161,10 @@ GameConfig(
         assert_eq!(config.spatial_grid_cell_size, 64.0);
         assert_eq!(config.base_projectile_speed, 300.0);
         assert_eq!(config.base_projectile_lifetime, 5.0);
+        assert_eq!(config.boss_phase2_hp_threshold, 0.6);
+        assert_eq!(config.boss_phase3_hp_threshold, 0.3);
+        assert_eq!(config.boss_phase2_speed_multiplier, 1.5);
+        assert_eq!(config.mini_death_spawn_count, 3);
+        assert_eq!(config.mini_death_spawn_radius, 80.0);
     }
 }

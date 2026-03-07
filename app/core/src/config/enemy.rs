@@ -85,6 +85,7 @@ pub struct EnemyConfig {
     pub medusa: EnemyStatsEntry,
     pub dragon: EnemyStatsEntry,
     pub boss_death: EnemyStatsEntry,
+    pub mini_death: EnemyStatsEntry,
     // Spawning parameters
     pub spawn_base_interval: f32,
     pub max_count: usize,
@@ -120,6 +121,7 @@ impl EnemyConfig {
             EnemyType::Medusa => &self.medusa,
             EnemyType::Dragon => &self.dragon,
             EnemyType::BossDeath => &self.boss_death,
+            EnemyType::MiniDeath => &self.mini_death,
         }
     }
 }
@@ -199,6 +201,7 @@ EnemyConfig(
     medusa: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 12.0, spawn_weight: 0.4),
     dragon: (base_hp: 150.0, speed: 90.0, damage: 25.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0, spawn_weight: 0.3),
     boss_death: (base_hp: 5000.0, speed: 30.0, damage: 50.0, xp_value: 500, gold_chance: 1.0, collider_radius: 30.0, spawn_weight: 0.0),
+    mini_death: (base_hp: 800.0, speed: 80.0, damage: 30.0, xp_value: 50, gold_chance: 0.5, collider_radius: 20.0, spawn_weight: 0.0),
     spawn_base_interval: 0.5,
     max_count: 500,
     cull_distance: 2000.0,
@@ -232,6 +235,8 @@ EnemyConfig(
         assert_eq!(config.skeleton.base_hp, 30.0);
         assert_eq!(config.boss_death.base_hp, 5000.0);
         assert_eq!(config.boss_death.xp_value, 500);
+        assert_eq!(config.mini_death.base_hp, 800.0);
+        assert_eq!(config.mini_death.speed, 80.0);
         assert_eq!(config.spawn_base_interval, 0.5);
         assert_eq!(config.max_count, 500);
         assert_eq!(config.cull_distance, 2000.0);
@@ -263,6 +268,7 @@ EnemyConfig(
     medusa: (base_hp: 60.0, speed: 60.0, damage: 12.0, xp_value: 8, gold_chance: 0.10, collider_radius: 12.0, spawn_weight: 0.4),
     dragon: (base_hp: 150.0, speed: 90.0, damage: 25.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0, spawn_weight: 0.3),
     boss_death: (base_hp: 5000.0, speed: 30.0, damage: 50.0, xp_value: 500, gold_chance: 1.0, collider_radius: 30.0, spawn_weight: 0.0),
+    mini_death: (base_hp: 800.0, speed: 80.0, damage: 30.0, xp_value: 50, gold_chance: 0.5, collider_radius: 20.0, spawn_weight: 0.0),
     spawn_base_interval: 0.5,
     max_count: 500,
     cull_distance: 2000.0,
@@ -294,5 +300,7 @@ EnemyConfig(
         assert_eq!(config.stats_for(EnemyType::Bat).collider_radius, 8.0);
         assert_eq!(config.stats_for(EnemyType::BossDeath).base_hp, 5000.0);
         assert_eq!(config.stats_for(EnemyType::BossDeath).collider_radius, 30.0);
+        assert_eq!(config.stats_for(EnemyType::MiniDeath).base_hp, 800.0);
+        assert_eq!(config.stats_for(EnemyType::MiniDeath).collider_radius, 20.0);
     }
 }

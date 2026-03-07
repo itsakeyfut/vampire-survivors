@@ -45,4 +45,10 @@ GameConfig(
     // Projectile defaults
     base_projectile_speed:    300.0,
     base_projectile_lifetime: 5.0,
+    // Boss Phase2 behavior
+    boss_phase2_hp_threshold:      0.6,   // Phase1 → Phase2 at HP ≤ 60%
+    boss_phase3_hp_threshold:      0.3,   // Phase2 → Phase3 at HP ≤ 30%
+    boss_phase2_speed_multiplier:  1.5,   // Phase2 move speed = base × 1.5
+    mini_death_spawn_count:        3,     // Mini Deaths spawned at Phase2 transition
+    mini_death_spawn_radius:       80.0,  // Radial offset from boss center (pixels)
 )
