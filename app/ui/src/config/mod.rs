@@ -7,6 +7,7 @@
 //! |---------------------------------------------------|------------------------------|------------------------------------|
 //! | `config/ui/styles.ron`                            | [`UiStyleConfig`]            | Shared background and title colors |
 //! | `config/ui/screen/level_up.ron`                   | [`LevelUpScreenConfig`]      | Level-up overlay and heading color |
+//! | `config/ui/screen/victory.ron`                    | [`VictoryScreenConfig`]      | Victory screen colors and spacing  |
 //! | `config/ui/hud/screen_heading.ron`                | [`ScreenHeadingHudConfig`]   | Heading font size and margin       |
 //! | `config/ui/hud/menu_button.ron`                   | [`MenuButtonHudConfig`]      | Button dimensions, colors, font    |
 //! | `config/ui/hud/upgrade_card.ron`                  | [`UpgradeCardHudConfig`]     | Card layout, colors, typography    |
@@ -24,6 +25,7 @@
 pub mod hud;
 pub mod level_up;
 pub mod styles;
+pub mod victory;
 
 pub use hud::{
     BossHpBarHudConfig, BossHpBarHudConfigHandle, BossHpBarHudParams, BossWarningHudConfig,
@@ -42,6 +44,9 @@ pub use level_up::{
 pub use styles::{
     SrgbColor, SrgbaColor, TitleHeadingText, TitleScreenBg, UiStyleConfig, UiStyleConfigHandle,
     UiStyleParams, hot_reload_ui_style,
+};
+pub use victory::{
+    VictoryScreenConfig, VictoryScreenConfigHandle, VictoryScreenParams, hot_reload_victory_screen,
 };
 
 use bevy::asset::io::Reader;
@@ -88,6 +93,7 @@ macro_rules! ron_asset_loader {
 // Screen config loaders
 ron_asset_loader!(UiStyleConfigLoader, UiStyleConfig);
 ron_asset_loader!(LevelUpScreenConfigLoader, LevelUpScreenConfig);
+ron_asset_loader!(VictoryScreenConfigLoader, VictoryScreenConfig);
 
 // HUD config loaders
 ron_asset_loader!(ScreenHeadingHudConfigLoader, ScreenHeadingHudConfig);
@@ -123,7 +129,9 @@ impl Plugin for UiConfigPlugin {
         app.init_asset::<UiStyleConfig>()
             .register_asset_loader(UiStyleConfigLoader)
             .init_asset::<LevelUpScreenConfig>()
-            .register_asset_loader(LevelUpScreenConfigLoader);
+            .register_asset_loader(LevelUpScreenConfigLoader)
+            .init_asset::<VictoryScreenConfig>()
+            .register_asset_loader(VictoryScreenConfigLoader);
 
         // HUD configs
         app.init_asset::<ScreenHeadingHudConfig>()
@@ -157,6 +165,8 @@ impl Plugin for UiConfigPlugin {
         let style_handle: Handle<UiStyleConfig> = asset_server.load("config/ui/styles.ron");
         let level_up_handle: Handle<LevelUpScreenConfig> =
             asset_server.load("config/ui/screen/level_up.ron");
+        let victory_handle: Handle<VictoryScreenConfig> =
+            asset_server.load("config/ui/screen/victory.ron");
 
         // Load HUD configs
         let screen_heading_handle: Handle<ScreenHeadingHudConfig> =
@@ -186,6 +196,7 @@ impl Plugin for UiConfigPlugin {
 
         app.insert_resource(UiStyleConfigHandle(style_handle))
             .insert_resource(LevelUpScreenConfigHandle(level_up_handle))
+            .insert_resource(VictoryScreenConfigHandle(victory_handle))
             .insert_resource(ScreenHeadingHudConfigHandle(screen_heading_handle))
             .insert_resource(MenuButtonHudConfigHandle(menu_button_handle))
             .insert_resource(UpgradeCardHudConfigHandle(upgrade_card_handle))
@@ -200,6 +211,7 @@ impl Plugin for UiConfigPlugin {
 
         app.add_systems(Update, hot_reload_ui_style)
             .add_systems(Update, hot_reload_level_up_screen)
+            .add_systems(Update, hot_reload_victory_screen)
             .add_systems(
                 Update,
                 crate::hud::screen_heading::hot_reload_screen_heading_hud,

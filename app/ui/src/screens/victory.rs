@@ -8,6 +8,7 @@
 //! - Background color: [`UiStyleParams`]
 //! - Heading layout: [`ScreenHeadingHudParams`]
 //! - Button dimensions and colors: [`MenuButtonHudParams`]
+//! - Victory-specific colors and spacing: [`VictoryScreenParams`]
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
@@ -15,26 +16,31 @@ use vs_core::resources::GameData;
 use vs_core::states::AppState;
 
 use crate::components::ButtonAction;
-use crate::config::{MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams};
+use crate::config::{
+    MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams, VictoryScreenParams,
+};
 use crate::hud::gameplay::timer::format_elapsed;
 use crate::hud::menu_button::spawn_large_menu_button;
 use crate::hud::screen_heading::spawn_screen_heading;
-use crate::styles::DEFAULT_BG_COLOR;
 
 // ---------------------------------------------------------------------------
-// Constants (local to this screen)
+// Fallback constants (used when VictoryScreenConfig / UiStyleConfig not loaded)
 // ---------------------------------------------------------------------------
 
-/// Gold tone used for the "YOU WIN!" heading.
-const VICTORY_COLOR: Color = Color::srgb(1.0, 0.85, 0.1);
-/// Muted white used for the stat lines.
-const STAT_TEXT_COLOR: Color = Color::srgb(0.85, 0.85, 0.85);
+/// Near-black background, matching the shared screen palette.
+const DEFAULT_BG_COLOR: Color = Color::srgb(0.05, 0.05, 0.08);
+/// Gold tone for the "YOU WIN!" heading.
+const DEFAULT_VICTORY_COLOR: Color = Color::srgb(1.0, 0.85, 0.1);
+/// Muted white for stat text lines.
+const DEFAULT_STAT_COLOR: Color = Color::srgb(0.85, 0.85, 0.85);
 /// Font size for stat lines.
 const DEFAULT_STAT_FONT_SIZE: f32 = 24.0;
-/// Gap between heading and stats container (pixels).
-const STATS_MARGIN_TOP: f32 = 16.0;
-/// Gap between stats container and title button (pixels).
-const BUTTON_MARGIN_TOP: f32 = 48.0;
+/// Top margin between heading and stats container (pixels).
+const DEFAULT_STATS_MARGIN_TOP: f32 = 16.0;
+/// Top margin between stats and button (pixels).
+const DEFAULT_BUTTON_MARGIN_TOP: f32 = 48.0;
+/// Vertical gap between individual stat lines (pixels).
+const DEFAULT_ROW_GAP: f32 = 8.0;
 
 // ---------------------------------------------------------------------------
 // Marker components
@@ -51,18 +57,45 @@ pub struct VictoryScreenBg;
 /// Spawns the victory screen UI when entering [`AppState::Victory`].
 ///
 /// Reads [`GameData`] to display the run statistics (clear time, level
-/// reached, enemies defeated).
+/// reached, enemies defeated).  Visual tunables are loaded from
+/// `config/ui/screen/victory.ron` via [`VictoryScreenParams`]; the private
+/// `DEFAULT_*` constants above serve as fallbacks while the file loads.
 pub fn setup_victory_screen(
     mut commands: Commands,
     ui_style: UiStyleParams,
     heading_cfg: ScreenHeadingHudParams,
     btn_cfg: MenuButtonHudParams,
+    victory_cfg: VictoryScreenParams,
     game_data: Res<GameData>,
 ) {
     let bg_color = ui_style
         .get()
         .map(|c| Color::from(&c.bg_color))
         .unwrap_or(DEFAULT_BG_COLOR);
+    let victory_color = victory_cfg
+        .get()
+        .map(|c| Color::from(&c.victory_color))
+        .unwrap_or(DEFAULT_VICTORY_COLOR);
+    let stat_color = victory_cfg
+        .get()
+        .map(|c| Color::from(&c.stat_color))
+        .unwrap_or(DEFAULT_STAT_COLOR);
+    let stat_font_size = victory_cfg
+        .get()
+        .map(|c| c.stat_font_size)
+        .unwrap_or(DEFAULT_STAT_FONT_SIZE);
+    let stats_margin_top = victory_cfg
+        .get()
+        .map(|c| c.stats_margin_top)
+        .unwrap_or(DEFAULT_STATS_MARGIN_TOP);
+    let button_margin_top = victory_cfg
+        .get()
+        .map(|c| c.button_margin_top)
+        .unwrap_or(DEFAULT_BUTTON_MARGIN_TOP);
+    let row_gap = victory_cfg
+        .get()
+        .map(|c| c.row_gap)
+        .unwrap_or(DEFAULT_ROW_GAP);
 
     let clear_time = format_elapsed(game_data.elapsed_time as u32);
     let level = game_data.current_level;
@@ -84,15 +117,15 @@ pub fn setup_victory_screen(
         ))
         .with_children(|parent| {
             // "YOU WIN!" heading — gold.
-            spawn_screen_heading(parent, "YOU WIN!", VICTORY_COLOR, heading_cfg.get());
+            spawn_screen_heading(parent, "YOU WIN!", victory_color, heading_cfg.get());
 
             // Run statistics.
             parent
                 .spawn(Node {
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Center,
-                    margin: UiRect::top(Val::Px(STATS_MARGIN_TOP)),
-                    row_gap: Val::Px(8.0),
+                    margin: UiRect::top(Val::Px(stats_margin_top)),
+                    row_gap: Val::Px(row_gap),
                     ..default()
                 })
                 .with_children(|stats| {
@@ -104,17 +137,17 @@ pub fn setup_victory_screen(
                         stats.spawn((
                             Text::new(line),
                             TextFont {
-                                font_size: DEFAULT_STAT_FONT_SIZE,
+                                font_size: stat_font_size,
                                 ..default()
                             },
-                            TextColor(STAT_TEXT_COLOR),
+                            TextColor(stat_color),
                         ));
                     }
                 });
 
             // Title button.
             parent.spawn(Node {
-                margin: UiRect::top(Val::Px(BUTTON_MARGIN_TOP)),
+                margin: UiRect::top(Val::Px(button_margin_top)),
                 ..default()
             });
             spawn_large_menu_button(parent, "Title", ButtonAction::GoToTitle, btn_cfg.get());
