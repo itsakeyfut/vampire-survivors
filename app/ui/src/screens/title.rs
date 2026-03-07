@@ -12,7 +12,7 @@
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
-use vs_core::resources::MetaProgress;
+use vs_core::resources::{GameSettings, MetaProgress};
 use vs_core::states::AppState;
 
 use crate::components::ButtonAction;
@@ -21,6 +21,7 @@ use crate::config::{
 };
 use crate::hud::menu_button::spawn_large_menu_button;
 use crate::hud::screen_heading::ScreenHeadingHud;
+use crate::i18n::t;
 use crate::styles::{DEFAULT_BG_COLOR, DEFAULT_TITLE_COLOR};
 
 // ---------------------------------------------------------------------------
@@ -53,10 +54,12 @@ pub struct TitleGoldLabel;
 pub fn setup_title_screen(
     mut commands: Commands,
     meta: Res<MetaProgress>,
+    settings: Res<GameSettings>,
     ui_style: UiStyleParams,
     heading_cfg: ScreenHeadingHudParams,
     btn_cfg: MenuButtonHudParams,
 ) {
+    let lang = settings.language;
     let bg_color = ui_style
         .get()
         .map(|c| Color::from(&c.bg_color))
@@ -111,7 +114,7 @@ pub fn setup_title_screen(
 
             // Gold display — updated when MetaProgress changes by update_title_gold.
             parent.spawn((
-                Text::new(format!("Gold: {}", meta.total_gold)),
+                Text::new(format!("{}: {}", t("gold_display", lang), meta.total_gold)),
                 TextFont {
                     font_size: DEFAULT_GOLD_FONT_SIZE,
                     ..default()
@@ -123,7 +126,7 @@ pub fn setup_title_screen(
             // Start Game button — transitions to CharacterSelect.
             spawn_large_menu_button(
                 parent,
-                "Start Game",
+                t("btn_start_game", lang),
                 ButtonAction::GoToCharacterSelect,
                 btn_cfg.get(),
             );
@@ -131,8 +134,16 @@ pub fn setup_title_screen(
             // Gold Shop button — transitions to MetaShop.
             spawn_large_menu_button(
                 parent,
-                "Gold Shop",
+                t("btn_gold_shop", lang),
                 ButtonAction::GoToMetaShop,
+                btn_cfg.get(),
+            );
+
+            // Settings button — transitions to Settings.
+            spawn_large_menu_button(
+                parent,
+                t("btn_settings", lang),
+                ButtonAction::GoToSettings,
                 btn_cfg.get(),
             );
         });
@@ -140,19 +151,21 @@ pub fn setup_title_screen(
 
 /// Keeps the gold display current while the player is on the title screen.
 ///
-/// Runs only in [`AppState::Title`] and early-returns when [`MetaProgress`]
-/// has not changed (e.g. it was not modified since the last frame).
+/// Runs only in [`AppState::Title`] and early-returns when neither
+/// [`MetaProgress`] nor [`GameSettings`] has changed.
 pub fn update_title_gold(
     meta: Res<MetaProgress>,
+    settings: Res<GameSettings>,
     mut label_q: Query<&mut Text, With<TitleGoldLabel>>,
 ) {
-    if !meta.is_changed() {
+    if !meta.is_changed() && !settings.is_changed() {
         return;
     }
     let Ok(mut text) = label_q.single_mut() else {
         return;
     };
-    *text = Text::new(format!("Gold: {}", meta.total_gold));
+    let lang = settings.language;
+    *text = Text::new(format!("{}: {}", t("gold_display", lang), meta.total_gold));
 }
 
 // ---------------------------------------------------------------------------
@@ -173,6 +186,7 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin));
         app.init_state::<AppState>();
         app.insert_resource(MetaProgress::default());
+        app.insert_resource(GameSettings::default());
         app
     }
 
@@ -210,8 +224,8 @@ mod tests {
         let mut q = app.world_mut().query_filtered::<Entity, With<Button>>();
         assert_eq!(
             q.iter(app.world()).count(),
-            2,
-            "title screen should have exactly two buttons (Start Game + Gold Shop)"
+            3,
+            "title screen should have exactly three buttons (Start Game + Gold Shop + Settings)"
         );
     }
 
@@ -299,8 +313,8 @@ mod tests {
             .query_filtered::<Entity, With<LargeMenuButtonHud>>();
         assert_eq!(
             q.iter(app.world()).count(),
-            2,
-            "both Start Game and Gold Shop should have LargeMenuButtonHud"
+            3,
+            "Start Game, Gold Shop, and Settings should have LargeMenuButtonHud"
         );
     }
 
