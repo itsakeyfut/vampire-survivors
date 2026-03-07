@@ -50,6 +50,12 @@ pub struct HudWeaponSlotLabel {
     pub index: usize,
 }
 
+/// Marks the row container node that holds the six weapon slots.
+///
+/// [`hot_reload_weapon_slots_hud`] queries this to update `column_gap` on config reload.
+#[derive(Component, Debug)]
+pub struct HudWeaponSlotsRow;
+
 // ---------------------------------------------------------------------------
 // Display helpers
 // ---------------------------------------------------------------------------
@@ -98,11 +104,14 @@ pub fn spawn_weapon_slots(parent: &mut ChildSpawnerCommands, cfg: Option<&Weapon
 
     // Row container.
     parent
-        .spawn(Node {
-            flex_direction: FlexDirection::Row,
-            column_gap: Val::Px(slot_gap),
-            ..default()
-        })
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(slot_gap),
+                ..default()
+            },
+            HudWeaponSlotsRow,
+        ))
         .with_children(|row| {
             for i in 0..WEAPON_SLOT_COUNT {
                 row.spawn((
@@ -185,11 +194,16 @@ pub fn update_weapon_slots(
 
 /// Updates weapon slot appearance when `config/ui/hud/gameplay/weapon_slots.ron`
 /// is loaded or modified.
+#[allow(clippy::type_complexity)]
 pub fn hot_reload_weapon_slots_hud(
     mut events: MessageReader<AssetEvent<WeaponSlotsHudConfig>>,
     cfg_assets: Res<Assets<WeaponSlotsHudConfig>>,
     cfg_handle: Option<Res<WeaponSlotsHudConfigHandle>>,
-    mut slot_q: Query<(&mut Node, &mut BorderRadius), With<HudWeaponSlot>>,
+    mut row_q: Query<&mut Node, With<HudWeaponSlotsRow>>,
+    mut slot_q: Query<
+        (&mut Node, &mut BorderRadius),
+        (With<HudWeaponSlot>, Without<HudWeaponSlotsRow>),
+    >,
     mut label_q: Query<(&mut TextFont, &mut TextColor), With<HudWeaponSlotLabel>>,
 ) {
     let Some(cfg_handle) = cfg_handle else {
@@ -215,6 +229,9 @@ pub fn hot_reload_weapon_slots_hud(
     }
 
     if needs_apply && let Some(cfg) = cfg_assets.get(&cfg_handle.0) {
+        for mut row in row_q.iter_mut() {
+            row.column_gap = Val::Px(cfg.slot_gap);
+        }
         for (mut node, mut br) in slot_q.iter_mut() {
             node.width = Val::Px(cfg.slot_size);
             node.height = Val::Px(cfg.slot_size);
