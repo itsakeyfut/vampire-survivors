@@ -16,7 +16,9 @@ pub struct EnemiesPlugin;
 impl Plugin for EnemiesPlugin {
     fn build(&self, app: &mut App) {
         use crate::systems::enemies::ai::move_enemies;
-        use crate::systems::enemies::boss_ai::{check_boss_phase_transition, move_boss_phase1};
+        use crate::systems::enemies::boss_ai::{
+            check_boss_phase_transition, move_boss_phase1, move_boss_phase2,
+        };
         use crate::systems::enemies::boss_spawn::check_boss_spawn;
         use crate::systems::enemies::cull::cull_distant_enemies;
         use crate::systems::enemies::difficulty::update_difficulty;
@@ -35,7 +37,10 @@ impl Plugin for EnemiesPlugin {
             (
                 move_enemies.after(player_movement),
                 move_boss_phase1.after(player_movement),
-                check_boss_phase_transition.after(move_boss_phase1),
+                move_boss_phase2.after(player_movement),
+                check_boss_phase_transition
+                    .after(move_boss_phase1)
+                    .after(move_boss_phase2),
                 update_difficulty.after(update_game_timer),
                 // Boss spawn must run before spawn_enemies so that setting
                 // EnemySpawner.active = false takes effect within the same frame.

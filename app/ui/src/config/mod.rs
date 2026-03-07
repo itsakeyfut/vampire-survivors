@@ -28,13 +28,13 @@ pub mod styles;
 pub use hud::{
     BossHpBarHudConfig, BossHpBarHudConfigHandle, BossHpBarHudParams, BossWarningHudConfig,
     BossWarningHudConfigHandle, BossWarningHudParams, EvolutionNotificationHudConfig,
-    EvolutionNotificationHudConfigHandle, EvolutionNotificationHudParams,
-    GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle, GameplayHudLayoutParams,
-    HpBarHudConfig, HpBarHudConfigHandle, HpBarHudParams, LevelHudConfig, LevelHudConfigHandle,
-    LevelHudParams, MenuButtonHudConfig, MenuButtonHudConfigHandle, MenuButtonHudParams,
-    ScreenHeadingHudConfig, ScreenHeadingHudConfigHandle, ScreenHeadingHudParams, TimerHudConfig,
-    TimerHudConfigHandle, TimerHudParams, UpgradeCardHudConfig, UpgradeCardHudConfigHandle,
-    UpgradeCardHudParams, XpBarHudConfig, XpBarHudConfigHandle, XpBarHudParams,
+    EvolutionNotificationHudConfigHandle, EvolutionNotificationHudParams, GameplayHudLayoutConfig,
+    GameplayHudLayoutConfigHandle, GameplayHudLayoutParams, HpBarHudConfig, HpBarHudConfigHandle,
+    HpBarHudParams, LevelHudConfig, LevelHudConfigHandle, LevelHudParams, MenuButtonHudConfig,
+    MenuButtonHudConfigHandle, MenuButtonHudParams, ScreenHeadingHudConfig,
+    ScreenHeadingHudConfigHandle, ScreenHeadingHudParams, TimerHudConfig, TimerHudConfigHandle,
+    TimerHudParams, UpgradeCardHudConfig, UpgradeCardHudConfigHandle, UpgradeCardHudParams,
+    XpBarHudConfig, XpBarHudConfigHandle, XpBarHudParams,
 };
 pub use level_up::{
     LevelUpScreenConfig, LevelUpScreenConfigHandle, LevelUpScreenParams, hot_reload_level_up_screen,

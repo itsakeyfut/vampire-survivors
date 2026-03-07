@@ -66,8 +66,7 @@ BossWarningHudConfig(
 
     #[test]
     fn boss_warning_hud_config_deserialization() {
-        let cfg: BossWarningHudConfig =
-            ron::de::from_str(RON).expect("RON parse must succeed");
+        let cfg: BossWarningHudConfig = ron::de::from_str(RON).expect("RON parse must succeed");
         assert_eq!(cfg.display_duration, 4.0);
         assert_eq!(cfg.fade_start, 2.0);
         assert_eq!(cfg.font_size, 52.0);

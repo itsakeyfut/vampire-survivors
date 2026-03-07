@@ -91,6 +91,17 @@ EnemyConfig(
         collider_radius: 30.0,
         spawn_weight:    0.0,
     ),
+    // Mini Death — summoned by Boss Death at Phase 2 (HP < 60%).
+    // Lower HP than the boss; not in the normal spawn table (spawn_weight: 0.0).
+    mini_death: (
+        base_hp:         800.0,
+        speed:           80.0,
+        damage:          30.0,
+        xp_value:        50,
+        gold_chance:     0.5,
+        collider_radius: 20.0,
+        spawn_weight:    0.0,
+    ),
     // Spawn / difficulty parameters
     spawn_base_interval: 0.5,
     max_count:           500,

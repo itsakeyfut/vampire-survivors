@@ -1206,6 +1206,7 @@ mod tests {
             medusa: stats(0.0),
             dragon: stats(0.0),
             boss_death: stats(0.0),
+            mini_death: stats(0.0),
             spawn_base_interval: 0.5,
             max_count: 500,
             cull_distance: 2000.0,

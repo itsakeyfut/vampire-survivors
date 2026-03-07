@@ -75,8 +75,7 @@ BossHpBarHudConfig(
 
     #[test]
     fn boss_hp_bar_hud_config_deserialization() {
-        let cfg: BossHpBarHudConfig =
-            ron::de::from_str(RON).expect("RON parse must succeed");
+        let cfg: BossHpBarHudConfig = ron::de::from_str(RON).expect("RON parse must succeed");
         assert_eq!(cfg.bar_width, 400.0);
         assert_eq!(cfg.bar_height, 20.0);
         assert_eq!(cfg.bar_radius, 4.0);
