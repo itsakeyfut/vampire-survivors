@@ -37,6 +37,20 @@ impl Plugin for GameUIPlugin {
             .add_systems(Startup, camera::setup_camera)
             // Title screen
             .add_systems(OnEnter(AppState::Title), screens::title::setup_title_screen)
+            .add_systems(
+                Update,
+                screens::title::update_title_gold.run_if(in_state(AppState::Title)),
+            )
+            // Character select screen
+            .add_systems(
+                OnEnter(AppState::CharacterSelect),
+                screens::character_select::setup_character_select_screen,
+            )
+            // Meta shop screen
+            .add_systems(
+                OnEnter(AppState::MetaShop),
+                screens::meta_shop::setup_meta_shop_screen,
+            )
             // Game-over screen
             .add_systems(
                 OnEnter(AppState::GameOver),

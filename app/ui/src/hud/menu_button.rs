@@ -85,6 +85,7 @@ pub fn spawn_large_menu_button(
                     ..default()
                 },
                 TextColor(text_color),
+                TextLayout::new_with_linebreak(LineBreak::NoWrap),
                 LargeMenuButtonLabelHud,
             ));
         });

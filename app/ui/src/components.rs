@@ -43,8 +43,12 @@ pub struct MenuButton {
 /// correct state transition, avoiding per-screen input handling.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ButtonAction {
-    /// Transition from Title to Playing — starts a new run.
+    /// Transition directly to Playing — used for dev shortcuts and stubs.
     StartGame,
+    /// Transition from Title to CharacterSelect — the normal new-run entry point.
+    GoToCharacterSelect,
+    /// Transition from Title to MetaShop.
+    GoToMetaShop,
     /// Return to the Title screen from any state.
     GoToTitle,
     /// Confirm the upgrade card at the given index and resume gameplay.
@@ -111,6 +115,12 @@ fn apply_action(
     match action {
         ButtonAction::StartGame => {
             next_state.set(AppState::Playing);
+        }
+        ButtonAction::GoToCharacterSelect => {
+            next_state.set(AppState::CharacterSelect);
+        }
+        ButtonAction::GoToMetaShop => {
+            next_state.set(AppState::MetaShop);
         }
         ButtonAction::GoToTitle => {
             next_state.set(AppState::Title);

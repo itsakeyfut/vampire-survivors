@@ -1,7 +1,8 @@
 //! Title screen — the first screen the player sees when the game starts.
 //!
-//! Spawns a full-screen layout containing a screen heading and a large menu
-//! button, composed from HUD widget functions.  All entities are tagged with
+//! Spawns a full-screen layout containing the game title, a gold display,
+//! a "Start Game" button (→ CharacterSelect), and a "Gold Shop" button
+//! (→ MetaShop).  All entities are tagged with
 //! [`DespawnOnExit`]`(AppState::Title)` so Bevy automatically despawns them
 //! when the state transitions away from `Title`.
 //!
@@ -11,6 +12,7 @@
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
+use vs_core::resources::MetaProgress;
 use vs_core::states::AppState;
 
 use crate::components::ButtonAction;
@@ -27,6 +29,21 @@ use crate::styles::{DEFAULT_BG_COLOR, DEFAULT_TITLE_COLOR};
 
 const DEFAULT_FONT_SIZE: f32 = 72.0;
 const DEFAULT_MARGIN_BOTTOM: f32 = 80.0;
+/// Gap between the title column's children (heading, gold label, buttons).
+const DEFAULT_BUTTON_GAP: f32 = 16.0;
+const DEFAULT_GOLD_FONT_SIZE: f32 = 20.0;
+const DEFAULT_GOLD_TEXT_COLOR: Color = Color::srgb(1.0, 0.85, 0.20);
+
+// ---------------------------------------------------------------------------
+// Marker components
+// ---------------------------------------------------------------------------
+
+/// Marks the gold display [`Text`] node on the title screen.
+///
+/// [`update_title_gold`] queries this marker to update the displayed amount
+/// whenever [`MetaProgress`] changes.
+#[derive(Component, Debug)]
+pub struct TitleGoldLabel;
 
 // ---------------------------------------------------------------------------
 // Systems
@@ -35,6 +52,7 @@ const DEFAULT_MARGIN_BOTTOM: f32 = 80.0;
 /// Spawns the title screen UI when entering [`AppState::Title`].
 pub fn setup_title_screen(
     mut commands: Commands,
+    meta: Res<MetaProgress>,
     ui_style: UiStyleParams,
     heading_cfg: ScreenHeadingHudParams,
     btn_cfg: MenuButtonHudParams,
@@ -64,6 +82,7 @@ pub fn setup_title_screen(
                 flex_direction: FlexDirection::Column,
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
+                row_gap: Val::Px(DEFAULT_BUTTON_GAP),
                 ..default()
             },
             BackgroundColor(bg_color),
@@ -90,9 +109,50 @@ pub fn setup_title_screen(
                 TitleHeadingText,
             ));
 
-            // Start button.
-            spawn_large_menu_button(parent, "Start", ButtonAction::StartGame, btn_cfg.get());
+            // Gold display — updated when MetaProgress changes by update_title_gold.
+            parent.spawn((
+                Text::new(format!("Gold: {}", meta.total_gold)),
+                TextFont {
+                    font_size: DEFAULT_GOLD_FONT_SIZE,
+                    ..default()
+                },
+                TextColor(DEFAULT_GOLD_TEXT_COLOR),
+                TitleGoldLabel,
+            ));
+
+            // Start Game button — transitions to CharacterSelect.
+            spawn_large_menu_button(
+                parent,
+                "Start Game",
+                ButtonAction::GoToCharacterSelect,
+                btn_cfg.get(),
+            );
+
+            // Gold Shop button — transitions to MetaShop.
+            spawn_large_menu_button(
+                parent,
+                "Gold Shop",
+                ButtonAction::GoToMetaShop,
+                btn_cfg.get(),
+            );
         });
+}
+
+/// Keeps the gold display current while the player is on the title screen.
+///
+/// Runs only in [`AppState::Title`] and early-returns when [`MetaProgress`]
+/// has not changed (e.g. it was not modified since the last frame).
+pub fn update_title_gold(
+    meta: Res<MetaProgress>,
+    mut label_q: Query<&mut Text, With<TitleGoldLabel>>,
+) {
+    if !meta.is_changed() {
+        return;
+    }
+    let Ok(mut text) = label_q.single_mut() else {
+        return;
+    };
+    *text = Text::new(format!("Gold: {}", meta.total_gold));
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +161,7 @@ pub fn setup_title_screen(
 
 #[cfg(test)]
 mod tests {
+    use bevy::ecs::system::RunSystemOnce as _;
     use bevy::state::app::StatesPlugin;
 
     use super::*;
@@ -111,6 +172,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin));
         app.init_state::<AppState>();
+        app.insert_resource(MetaProgress::default());
         app
     }
 
@@ -140,7 +202,7 @@ mod tests {
     }
 
     #[test]
-    fn setup_title_screen_has_exactly_one_button() {
+    fn setup_title_screen_has_two_buttons() {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::Title), setup_title_screen);
         enter_title(&mut app);
@@ -148,20 +210,70 @@ mod tests {
         let mut q = app.world_mut().query_filtered::<Entity, With<Button>>();
         assert_eq!(
             q.iter(app.world()).count(),
-            1,
-            "title screen should have exactly one button"
+            2,
+            "title screen should have exactly two buttons (Start Game + Gold Shop)"
         );
     }
 
     #[test]
-    fn start_button_has_start_game_action() {
+    fn start_button_goes_to_character_select() {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::Title), setup_title_screen);
         enter_title(&mut app);
 
         let mut q = app.world_mut().query::<&MenuButton>();
-        let btn = q.single(app.world()).expect("MenuButton should exist");
-        assert_eq!(btn.action, ButtonAction::StartGame);
+        let actions: Vec<ButtonAction> = q.iter(app.world()).map(|b| b.action).collect();
+        assert!(
+            actions.contains(&ButtonAction::GoToCharacterSelect),
+            "Start Game button must use GoToCharacterSelect"
+        );
+    }
+
+    #[test]
+    fn gold_shop_button_goes_to_meta_shop() {
+        let mut app = build_app();
+        app.add_systems(OnEnter(AppState::Title), setup_title_screen);
+        enter_title(&mut app);
+
+        let mut q = app.world_mut().query::<&MenuButton>();
+        let actions: Vec<ButtonAction> = q.iter(app.world()).map(|b| b.action).collect();
+        assert!(
+            actions.contains(&ButtonAction::GoToMetaShop),
+            "Gold Shop button must use GoToMetaShop"
+        );
+    }
+
+    #[test]
+    fn gold_label_shows_current_gold() {
+        let mut app = build_app();
+        app.world_mut().resource_mut::<MetaProgress>().total_gold = 42;
+        app.add_systems(OnEnter(AppState::Title), setup_title_screen);
+        enter_title(&mut app);
+
+        let mut q = app
+            .world_mut()
+            .query_filtered::<&Text, With<TitleGoldLabel>>();
+        let text = q.single(app.world()).expect("TitleGoldLabel must exist");
+        assert!(
+            text.0.contains("42"),
+            "gold label should contain '42', got '{}'",
+            text.0
+        );
+    }
+
+    #[test]
+    fn update_title_gold_reflects_meta_progress() {
+        let mut app = build_app();
+        let label = app
+            .world_mut()
+            .spawn((Text::new("Gold: 0"), TitleGoldLabel))
+            .id();
+        app.world_mut().resource_mut::<MetaProgress>().total_gold = 99;
+
+        app.world_mut().run_system_once(update_title_gold).unwrap();
+
+        let text = app.world().get::<Text>(label).unwrap();
+        assert!(text.0.contains("99"), "expected '99' in '{}'", text.0);
     }
 
     #[test]
@@ -173,15 +285,11 @@ mod tests {
         let mut q = app
             .world_mut()
             .query_filtered::<Entity, With<TitleScreenBg>>();
-        assert_eq!(
-            q.iter(app.world()).count(),
-            1,
-            "exactly one TitleScreenBg expected"
-        );
+        assert_eq!(q.iter(app.world()).count(), 1);
     }
 
     #[test]
-    fn title_screen_button_has_hud_marker() {
+    fn title_screen_has_two_button_hud_markers() {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::Title), setup_title_screen);
         enter_title(&mut app);
@@ -191,8 +299,8 @@ mod tests {
             .query_filtered::<Entity, With<LargeMenuButtonHud>>();
         assert_eq!(
             q.iter(app.world()).count(),
-            1,
-            "exactly one LargeMenuButtonHud expected"
+            2,
+            "both Start Game and Gold Shop should have LargeMenuButtonHud"
         );
     }
 
@@ -205,10 +313,6 @@ mod tests {
         let mut q = app
             .world_mut()
             .query_filtered::<Entity, With<ScreenHeadingHud>>();
-        assert_eq!(
-            q.iter(app.world()).count(),
-            1,
-            "exactly one ScreenHeadingHud expected"
-        );
+        assert_eq!(q.iter(app.world()).count(), 1);
     }
 }
