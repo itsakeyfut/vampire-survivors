@@ -1,17 +1,18 @@
 //! Boss AI systems — movement and phase-transition logic.
 //!
-//! | Phase     | HP threshold | Behavior                                     |
-//! |-----------|--------------|----------------------------------------------|
-//! | `Phase1`  | 100% – 60%   | Chase player at base speed (30 px/s)         |
-//! | `Phase2`  | ≤ 60%        | Chase at 1.5× speed, 3 Mini Deaths summoned  |
-//! | `Phase3`  | ≤ 30%        | Implemented in future issue                  |
+//! | Phase     | HP threshold | Behavior                                                 |
+//! |-----------|--------------|----------------------------------------------------------|
+//! | `Phase1`  | 100% – 60%   | Chase player at base speed (30 px/s)                     |
+//! | `Phase2`  | ≤ 60%        | Chase at 1.5× speed, 3 Mini Deaths summoned              |
+//! | `Phase3`  | ≤ 30%        | Chase at 2× speed, 5 Mini Deaths, scythe every 3 s       |
 //!
 //! ## System ordering
 //!
 //! All systems run each frame in [`AppState::Playing`]:
 //!
-//! - [`move_boss_phase1`] / [`move_boss_phase2`] run after `player_movement`
-//!   so the boss always aims at the player's updated position.
+//! - [`move_boss_phase1`] / [`move_boss_phase2`] / [`move_boss_phase3`] run
+//!   after `player_movement` so the boss always aims at the player's updated
+//!   position.
 //! - [`check_boss_phase_transition`] runs after the move systems; once it
 //!   flips the phase, the corresponding move system stops and the next starts.
 
@@ -29,10 +30,16 @@ use crate::{
 
 /// HP fraction (inclusive) below which Phase1 transitions to Phase2.
 const DEFAULT_PHASE2_HP_THRESHOLD: f32 = 0.6;
+/// HP fraction (inclusive) below which Phase2 transitions to Phase3.
+const DEFAULT_PHASE3_HP_THRESHOLD: f32 = 0.3;
 /// Speed multiplier applied to the boss's base `move_speed` in Phase2.
 const DEFAULT_PHASE2_SPEED_MULTIPLIER: f32 = 1.5;
+/// Speed multiplier applied to the boss's base `move_speed` in Phase3.
+const DEFAULT_PHASE3_SPEED_MULTIPLIER: f32 = 2.0;
 /// Number of Mini Deaths summoned when the boss enters Phase2.
 const DEFAULT_MINI_DEATH_SPAWN_COUNT: usize = 3;
+/// Number of Mini Deaths summoned when the boss enters Phase3.
+const DEFAULT_MINI_DEATH_SPAWN_COUNT_PHASE3: usize = 5;
 /// Radial offset from the boss center when placing each Mini Death (pixels).
 const DEFAULT_MINI_DEATH_SPAWN_RADIUS: f32 = 80.0;
 /// Collider radius for Mini Death entities when config is not loaded (pixels).
@@ -99,17 +106,48 @@ pub fn move_boss_phase2(
     }
 }
 
+/// Moves Boss Death toward the player while in [`BossPhase::Phase3`].
+///
+/// Applies `boss_phase3_speed_multiplier` (default 2.0×) to `enemy.move_speed`,
+/// raising the effective speed from 30 to 60 px/s.  The system is a no-op when
+/// no player entity exists or when the boss is in any phase other than Phase3.
+pub fn move_boss_phase3(
+    time: Res<Time>,
+    player_q: Query<&Transform, With<Player>>,
+    mut boss_q: Query<(&Enemy, &mut Transform, &BossPhase), Without<Player>>,
+    game_cfg: GameParams,
+) {
+    let Ok(player_tf) = player_q.single() else {
+        return;
+    };
+    let player_pos = player_tf.translation.truncate();
+    let dt = time.delta_secs();
+    let multiplier = game_cfg
+        .get()
+        .map(|c| c.boss_phase3_speed_multiplier)
+        .unwrap_or(DEFAULT_PHASE3_SPEED_MULTIPLIER);
+
+    for (enemy, mut boss_tf, phase) in boss_q.iter_mut() {
+        if *phase != BossPhase::Phase3 {
+            continue;
+        }
+        let boss_pos = boss_tf.translation.truncate();
+        let direction = (player_pos - boss_pos).normalize_or_zero();
+        boss_tf.translation += (direction * enemy.move_speed * multiplier * dt).extend(0.0);
+    }
+}
+
 /// Monitors boss HP and advances phase when thresholds are crossed (inclusive).
 ///
-/// - Phase1 → Phase2 at HP ≤ 60%: increases speed and summons Mini Deaths.
-/// - Phase2 → Phase3 at HP ≤ 30%: detected but no Phase3 behavior yet —
-///   the boss remains in Phase2 until Phase3 is implemented in a future issue.
+/// - Phase1 → Phase2 at HP ≤ 60%: increases speed and summons 3 Mini Deaths.
+/// - Phase2 → Phase3 at HP ≤ 30%: further increases speed, summons 5 Mini Deaths,
+///   and resets the scythe attack timer so the first shot fires after a full interval.
 ///
 /// Runs every frame; each transition fires exactly once (guarded by the
 /// current phase check).
 pub fn check_boss_phase_transition(
     mut commands: Commands,
-    mut boss_q: Query<(&Enemy, &mut BossPhase, &Transform)>,
+    mut boss_q: Query<(&Enemy, &mut BossPhase, &Transform, &mut EnemyAI)>,
     game_cfg: GameParams,
     enemy_cfg: EnemyParams,
 ) {
@@ -117,19 +155,45 @@ pub fn check_boss_phase_transition(
         .get()
         .map(|c| c.boss_phase2_hp_threshold)
         .unwrap_or(DEFAULT_PHASE2_HP_THRESHOLD);
+    let phase3_threshold = game_cfg
+        .get()
+        .map(|c| c.boss_phase3_hp_threshold)
+        .unwrap_or(DEFAULT_PHASE3_HP_THRESHOLD);
+    let spawn_radius = game_cfg
+        .get()
+        .map(|c| c.mini_death_spawn_radius)
+        .unwrap_or(DEFAULT_MINI_DEATH_SPAWN_RADIUS);
+    let phase2_count = game_cfg
+        .get()
+        .map(|c| c.mini_death_spawn_count)
+        .unwrap_or(DEFAULT_MINI_DEATH_SPAWN_COUNT);
+    let phase3_count = game_cfg
+        .get()
+        .map(|c| c.mini_death_spawn_count_phase3)
+        .unwrap_or(DEFAULT_MINI_DEATH_SPAWN_COUNT_PHASE3);
 
-    for (enemy, mut phase, boss_tf) in boss_q.iter_mut() {
+    for (enemy, mut phase, boss_tf, mut ai) in boss_q.iter_mut() {
         if *phase == BossPhase::Phase1 && enemy.current_hp <= enemy.max_hp * phase2_threshold {
             *phase = BossPhase::Phase2;
             spawn_mini_deaths(
                 &mut commands,
                 boss_tf.translation.truncate(),
-                game_cfg.get(),
+                phase2_count,
+                spawn_radius,
+                enemy_cfg.get(),
+            );
+        } else if *phase == BossPhase::Phase2 && enemy.current_hp <= enemy.max_hp * phase3_threshold
+        {
+            *phase = BossPhase::Phase3;
+            ai.attack_timer = 0.0;
+            spawn_mini_deaths(
+                &mut commands,
+                boss_tf.translation.truncate(),
+                phase3_count,
+                spawn_radius,
                 enemy_cfg.get(),
             );
         }
-        // Phase3 behavior is implemented in a future issue.
-        // The boss deliberately stays in Phase2 to avoid freezing.
     }
 }
 
@@ -139,22 +203,16 @@ pub fn check_boss_phase_transition(
 
 /// Spawns Mini Death entities evenly distributed around `boss_pos`.
 ///
-/// Spawn count and radius are read from [`GameConfig`]; falls back to
-/// `DEFAULT_MINI_DEATH_SPAWN_COUNT` / `DEFAULT_MINI_DEATH_SPAWN_RADIUS`.
+/// `spawn_count` and `spawn_radius` are provided by the caller (computed from
+/// [`GameConfig`] or fallback defaults depending on the phase).
 /// Enemy stats are read from [`EnemyConfig`] when available.
 fn spawn_mini_deaths(
     commands: &mut Commands,
     boss_pos: Vec2,
-    game_cfg: Option<&crate::config::GameConfig>,
+    spawn_count: usize,
+    spawn_radius: f32,
     enemy_cfg: Option<&EnemyConfig>,
 ) {
-    let spawn_count = game_cfg
-        .map(|c| c.mini_death_spawn_count)
-        .unwrap_or(DEFAULT_MINI_DEATH_SPAWN_COUNT);
-    let spawn_radius = game_cfg
-        .map(|c| c.mini_death_spawn_radius)
-        .unwrap_or(DEFAULT_MINI_DEATH_SPAWN_RADIUS);
-
     let (enemy, collider_radius) = match enemy_cfg {
         Some(c) => {
             let stats = c.stats_for(EnemyType::MiniDeath);
@@ -211,7 +269,7 @@ mod tests {
     use super::*;
     use crate::{
         components::{Enemy, Player},
-        types::{BossPhase, EnemyType},
+        types::{AIType, BossPhase, EnemyType},
     };
 
     fn build_app() -> App {
@@ -234,6 +292,11 @@ mod tests {
             .spawn((
                 enemy,
                 BossPhase::Phase1,
+                EnemyAI {
+                    ai_type: AIType::BossMultiPhase,
+                    attack_timer: 0.0,
+                    attack_range: 300.0,
+                },
                 Transform::from_xyz(pos.x, pos.y, 0.0),
             ))
             .id()
@@ -296,6 +359,21 @@ mod tests {
 
         let x = app.world().get::<Transform>(boss).unwrap().translation.x;
         assert_eq!(x, -500.0, "Phase2 boss must not be moved by Phase1 system");
+    }
+
+    /// Phase3 boss is not moved by move_boss_phase1.
+    #[test]
+    fn phase3_boss_not_moved_by_phase1_system() {
+        let mut app = build_app();
+        let boss = spawn_boss(&mut app, 500.0, 5000.0, Vec2::new(-500.0, 0.0));
+        app.world_mut().entity_mut(boss).insert(BossPhase::Phase3);
+        spawn_player(&mut app, Vec2::ZERO);
+
+        advance(&mut app, 1.0 / 60.0);
+        app.world_mut().run_system_once(move_boss_phase1).unwrap();
+
+        let x = app.world().get::<Transform>(boss).unwrap().translation.x;
+        assert_eq!(x, -500.0, "Phase3 boss must not be moved by Phase1 system");
     }
 
     /// No player → boss stays stationary.
@@ -379,6 +457,90 @@ mod tests {
         assert_eq!(x, -500.0, "Phase1 boss must not be moved by Phase2 system");
     }
 
+    /// Phase3 boss is not moved by move_boss_phase2.
+    #[test]
+    fn phase3_boss_not_moved_by_phase2_system() {
+        let mut app = build_app();
+        let boss = spawn_boss(&mut app, 500.0, 5000.0, Vec2::new(-500.0, 0.0));
+        app.world_mut().entity_mut(boss).insert(BossPhase::Phase3);
+        spawn_player(&mut app, Vec2::ZERO);
+
+        advance(&mut app, 1.0 / 60.0);
+        app.world_mut().run_system_once(move_boss_phase2).unwrap();
+
+        let x = app.world().get::<Transform>(boss).unwrap().translation.x;
+        assert_eq!(x, -500.0, "Phase3 boss must not be moved by Phase2 system");
+    }
+
+    // -----------------------------------------------------------------------
+    // move_boss_phase3
+    // -----------------------------------------------------------------------
+
+    /// Phase3 boss moves toward the player faster than Phase2.
+    #[test]
+    fn phase3_boss_moves_faster_than_phase2() {
+        let mut app2 = build_app();
+        let boss2 = spawn_boss(&mut app2, 500.0, 5000.0, Vec2::new(-10000.0, 0.0));
+        app2.world_mut().entity_mut(boss2).insert(BossPhase::Phase2);
+        spawn_player(&mut app2, Vec2::ZERO);
+
+        let mut app3 = build_app();
+        let boss3 = spawn_boss(&mut app3, 500.0, 5000.0, Vec2::new(-10000.0, 0.0));
+        app3.world_mut().entity_mut(boss3).insert(BossPhase::Phase3);
+        spawn_player(&mut app3, Vec2::ZERO);
+
+        let dt = 1.0_f32;
+        advance(&mut app2, dt);
+        advance(&mut app3, dt);
+
+        app2.world_mut().run_system_once(move_boss_phase2).unwrap();
+        app3.world_mut().run_system_once(move_boss_phase3).unwrap();
+
+        let x2 = app2.world().get::<Transform>(boss2).unwrap().translation.x;
+        let x3 = app3.world().get::<Transform>(boss3).unwrap().translation.x;
+        assert!(
+            x3 > x2,
+            "Phase3 boss should move farther than Phase2 in the same time; x2={x2} x3={x3}"
+        );
+    }
+
+    /// Phase3 boss applies the 2.0× speed multiplier (fallback — no config loaded).
+    #[test]
+    fn phase3_boss_applies_speed_multiplier() {
+        let mut app = build_app();
+        let boss = spawn_boss(&mut app, 500.0, 5000.0, Vec2::new(-10000.0, 0.0));
+        app.world_mut().entity_mut(boss).insert(BossPhase::Phase3);
+        spawn_player(&mut app, Vec2::ZERO);
+
+        let dt = 1.0_f32;
+        advance(&mut app, dt);
+        app.world_mut().run_system_once(move_boss_phase3).unwrap();
+
+        let x = app.world().get::<Transform>(boss).unwrap().translation.x;
+        let base_speed = Enemy::from_type(EnemyType::BossDeath, 1.0).move_speed;
+        // Contract: Phase3 speed multiplier is 2.0.
+        let expected = base_speed * 2.0 * dt;
+        let moved = x - (-10000.0);
+        assert!(
+            (moved - expected).abs() < 0.1,
+            "Phase3 speed should be base × 2.0 = {expected} px; moved {moved}"
+        );
+    }
+
+    /// Phase1 boss is not moved by move_boss_phase3.
+    #[test]
+    fn phase1_boss_not_moved_by_phase3_system() {
+        let mut app = build_app();
+        let boss = spawn_boss(&mut app, 5000.0, 5000.0, Vec2::new(-500.0, 0.0));
+        spawn_player(&mut app, Vec2::ZERO);
+
+        advance(&mut app, 1.0 / 60.0);
+        app.world_mut().run_system_once(move_boss_phase3).unwrap();
+
+        let x = app.world().get::<Transform>(boss).unwrap().translation.x;
+        assert_eq!(x, -500.0, "Phase1 boss must not be moved by Phase3 system");
+    }
+
     // -----------------------------------------------------------------------
     // check_boss_phase_transition
     // -----------------------------------------------------------------------
@@ -434,6 +596,42 @@ mod tests {
         );
     }
 
+    /// Phase2 transitions to Phase3 at exactly 30% HP (inclusive threshold).
+    #[test]
+    fn exact_threshold_triggers_phase3() {
+        let mut app = build_app();
+        let boss = spawn_boss(&mut app, 1500.0, 5000.0, Vec2::ZERO); // exactly 30%
+        app.world_mut().entity_mut(boss).insert(BossPhase::Phase2);
+
+        app.world_mut()
+            .run_system_once(check_boss_phase_transition)
+            .unwrap();
+
+        assert_eq!(
+            *app.world().get::<BossPhase>(boss).unwrap(),
+            BossPhase::Phase3,
+            "exactly 30% HP should trigger Phase3 (threshold is inclusive)"
+        );
+    }
+
+    /// Phase2 transitions to Phase3 when HP drops below 30%.
+    #[test]
+    fn transitions_to_phase3_below_threshold() {
+        let mut app = build_app();
+        let boss = spawn_boss(&mut app, 1499.0, 5000.0, Vec2::ZERO); // 29.98%
+        app.world_mut().entity_mut(boss).insert(BossPhase::Phase2);
+
+        app.world_mut()
+            .run_system_once(check_boss_phase_transition)
+            .unwrap();
+
+        assert_eq!(
+            *app.world().get::<BossPhase>(boss).unwrap(),
+            BossPhase::Phase3,
+            "boss should transition to Phase3 below 30% HP"
+        );
+    }
+
     /// Phase2 is not reverted to Phase1 (one-way transition).
     #[test]
     fn phase2_is_not_reverted() {
@@ -478,6 +676,57 @@ mod tests {
         );
     }
 
+    /// Five Mini Deaths are spawned when Phase2 → Phase3 transition fires.
+    /// Contract: spawn count is 5.
+    #[test]
+    fn phase3_transition_spawns_five_mini_deaths() {
+        let mut app = build_app();
+        let boss = spawn_boss(&mut app, 1499.0, 5000.0, Vec2::ZERO); // 29.98%
+        app.world_mut().entity_mut(boss).insert(BossPhase::Phase2);
+
+        app.world_mut()
+            .run_system_once(check_boss_phase_transition)
+            .unwrap();
+        app.world_mut().flush();
+
+        let mut q = app
+            .world_mut()
+            .query_filtered::<&Enemy, With<GameSessionEntity>>();
+        let mini_deaths: Vec<_> = q
+            .iter(app.world())
+            .filter(|e| e.enemy_type == EnemyType::MiniDeath)
+            .collect();
+        assert_eq!(
+            mini_deaths.len(),
+            5, // contract: exactly 5 Mini Deaths spawn at Phase3
+            "exactly 5 Mini Deaths should spawn at Phase3 transition"
+        );
+    }
+
+    /// Phase3 entry resets the boss attack timer to 0.
+    #[test]
+    fn phase3_entry_resets_attack_timer() {
+        let mut app = build_app();
+        let boss = spawn_boss(&mut app, 1499.0, 5000.0, Vec2::ZERO);
+        app.world_mut().entity_mut(boss).insert(BossPhase::Phase2);
+        // Simulate accumulated attack timer.
+        app.world_mut()
+            .entity_mut(boss)
+            .get_mut::<EnemyAI>()
+            .unwrap()
+            .attack_timer = 2.5;
+
+        app.world_mut()
+            .run_system_once(check_boss_phase_transition)
+            .unwrap();
+
+        let ai = app.world().get::<EnemyAI>(boss).unwrap();
+        assert_eq!(
+            ai.attack_timer, 0.0,
+            "attack_timer must be reset to 0 on Phase3 entry"
+        );
+    }
+
     /// Mini Deaths spawn evenly distributed around the boss at 80 px radius.
     /// Contract: spawn radius is 80.0 px.
     #[test]
@@ -515,7 +764,7 @@ mod tests {
         let mut app = build_app();
         let boss = spawn_boss(&mut app, 2999.0, 5000.0, Vec2::ZERO);
 
-        // First call: Phase1 → Phase2, spawns Mini Deaths.
+        // First call: Phase1 → Phase2, spawns 3 Mini Deaths.
         app.world_mut()
             .run_system_once(check_boss_phase_transition)
             .unwrap();
@@ -539,24 +788,6 @@ mod tests {
             mini_deaths.len(),
             3,
             "Mini Deaths must only spawn once at Phase2 transition"
-        );
-    }
-
-    /// Boss stays in Phase2 when HP drops below 30% (Phase3 not yet implemented).
-    #[test]
-    fn boss_stays_phase2_below_phase3_threshold() {
-        let mut app = build_app();
-        let boss = spawn_boss(&mut app, 1499.0, 5000.0, Vec2::ZERO); // 29.98%
-        app.world_mut().entity_mut(boss).insert(BossPhase::Phase2);
-
-        app.world_mut()
-            .run_system_once(check_boss_phase_transition)
-            .unwrap();
-
-        assert_eq!(
-            *app.world().get::<BossPhase>(boss).unwrap(),
-            BossPhase::Phase2,
-            "boss must remain Phase2 until Phase3 behavior is implemented"
         );
     }
 }
