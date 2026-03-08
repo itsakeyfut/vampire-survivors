@@ -24,6 +24,7 @@
 
 pub mod hud;
 pub mod level_up;
+pub mod pause;
 pub mod styles;
 pub mod victory;
 
@@ -42,6 +43,9 @@ pub use hud::{
 };
 pub use level_up::{
     LevelUpScreenConfig, LevelUpScreenConfigHandle, LevelUpScreenParams, hot_reload_level_up_screen,
+};
+pub use pause::{
+    PauseScreenConfig, PauseScreenConfigHandle, PauseScreenParams, hot_reload_pause_screen,
 };
 pub use styles::{
     SrgbColor, SrgbaColor, TitleHeadingText, TitleScreenBg, UiStyleConfig, UiStyleConfigHandle,
@@ -95,6 +99,7 @@ macro_rules! ron_asset_loader {
 // Screen config loaders
 ron_asset_loader!(UiStyleConfigLoader, UiStyleConfig);
 ron_asset_loader!(LevelUpScreenConfigLoader, LevelUpScreenConfig);
+ron_asset_loader!(PauseScreenConfigLoader, PauseScreenConfig);
 ron_asset_loader!(VictoryScreenConfigLoader, VictoryScreenConfig);
 
 // HUD config loaders
@@ -134,6 +139,8 @@ impl Plugin for UiConfigPlugin {
             .register_asset_loader(UiStyleConfigLoader)
             .init_asset::<LevelUpScreenConfig>()
             .register_asset_loader(LevelUpScreenConfigLoader)
+            .init_asset::<PauseScreenConfig>()
+            .register_asset_loader(PauseScreenConfigLoader)
             .init_asset::<VictoryScreenConfig>()
             .register_asset_loader(VictoryScreenConfigLoader);
 
@@ -173,6 +180,8 @@ impl Plugin for UiConfigPlugin {
         let style_handle: Handle<UiStyleConfig> = asset_server.load("config/ui/styles.ron");
         let level_up_handle: Handle<LevelUpScreenConfig> =
             asset_server.load("config/ui/screen/level_up.ron");
+        let pause_handle: Handle<PauseScreenConfig> =
+            asset_server.load("config/ui/screen/pause.ron");
         let victory_handle: Handle<VictoryScreenConfig> =
             asset_server.load("config/ui/screen/victory.ron");
 
@@ -208,6 +217,7 @@ impl Plugin for UiConfigPlugin {
 
         app.insert_resource(UiStyleConfigHandle(style_handle))
             .insert_resource(LevelUpScreenConfigHandle(level_up_handle))
+            .insert_resource(PauseScreenConfigHandle(pause_handle))
             .insert_resource(VictoryScreenConfigHandle(victory_handle))
             .insert_resource(ScreenHeadingHudConfigHandle(screen_heading_handle))
             .insert_resource(MenuButtonHudConfigHandle(menu_button_handle))
@@ -225,6 +235,7 @@ impl Plugin for UiConfigPlugin {
 
         app.add_systems(Update, hot_reload_ui_style)
             .add_systems(Update, hot_reload_level_up_screen)
+            .add_systems(Update, hot_reload_pause_screen)
             .add_systems(Update, hot_reload_victory_screen)
             .add_systems(
                 Update,
