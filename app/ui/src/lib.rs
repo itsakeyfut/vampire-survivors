@@ -18,7 +18,9 @@ use vs_core::systems::xp::choices::generate_level_up_choices;
 pub mod camera;
 pub mod components;
 pub mod config;
+mod fonts;
 pub mod hud;
+pub mod i18n;
 pub mod screens;
 pub mod styles;
 
@@ -34,7 +36,7 @@ impl Plugin for GameUIPlugin {
             // UI style config: asset loading + hot-reload system.
             .add_plugins(config::UiConfigPlugin)
             // Camera is permanent — needed for title / menu rendering too.
-            .add_systems(Startup, camera::setup_camera)
+            .add_systems(Startup, (camera::setup_camera, fonts::preload_fonts))
             // Title screen
             .add_systems(OnEnter(AppState::Title), screens::title::setup_title_screen)
             .add_systems(
@@ -50,6 +52,19 @@ impl Plugin for GameUIPlugin {
             .add_systems(
                 OnEnter(AppState::MetaShop),
                 screens::meta_shop::setup_meta_shop_screen,
+            )
+            // Settings screen
+            .add_systems(
+                OnEnter(AppState::Settings),
+                screens::settings::setup_settings_screen,
+            )
+            .add_systems(
+                Update,
+                (
+                    screens::settings::update_settings_display,
+                    i18n::update_translatable_texts,
+                )
+                    .run_if(in_state(AppState::Settings)),
             )
             // Game-over screen
             .add_systems(

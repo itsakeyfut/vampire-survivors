@@ -9,12 +9,13 @@
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
-use vs_core::resources::LevelUpChoices;
+use vs_core::resources::{GameSettings, LevelUpChoices};
 use vs_core::states::AppState;
 
 use crate::config::{LevelUpScreenParams, ScreenHeadingHudParams, UpgradeCardHudParams};
 use crate::hud::screen_heading::spawn_screen_heading;
 use crate::hud::upgrade_card::spawn_upgrade_card;
+use crate::i18n::{font_for_lang, t};
 
 // ---------------------------------------------------------------------------
 // Fallback constants
@@ -45,6 +46,7 @@ pub struct LevelUpCardRow;
 /// Reads [`LevelUpChoices`] and spawns one interactive card per choice via
 /// [`spawn_upgrade_card`].  Each card is tagged with
 /// [`DespawnOnExit`]`(`[`AppState::LevelUp`]`)` via the root overlay node.
+#[allow(clippy::too_many_arguments)]
 pub fn setup_level_up_screen(
     mut commands: Commands,
     choices: Res<LevelUpChoices>,
@@ -52,6 +54,8 @@ pub fn setup_level_up_screen(
     screen_cfg: LevelUpScreenParams,
     heading_cfg: ScreenHeadingHudParams,
     card_cfg: UpgradeCardHudParams,
+    asset_server: Option<Res<AssetServer>>,
+    settings: Option<Res<GameSettings>>,
 ) {
     // Guard against an empty pool (all items maxed, or player query failed).
     // Without cards there is no way to dismiss the overlay, which would
@@ -60,6 +64,11 @@ pub fn setup_level_up_screen(
         next_state.set(AppState::Playing);
         return;
     }
+
+    let lang = settings.as_deref().map(|s| s.language).unwrap_or_default();
+    let font: Handle<Font> = asset_server
+        .map(|s| s.load(font_for_lang(lang)))
+        .unwrap_or_default();
 
     let overlay_color = screen_cfg
         .get()
@@ -92,7 +101,13 @@ pub fn setup_level_up_screen(
         ))
         .with_children(|root| {
             // "LEVEL UP!" heading — gold; color is screen-specific.
-            spawn_screen_heading(root, "LEVEL UP!", heading_color, heading_cfg.get());
+            spawn_screen_heading(
+                root,
+                t("level_up_title", lang),
+                heading_color,
+                heading_cfg.get(),
+                font.clone(),
+            );
 
             // Row of upgrade cards.
             root.spawn((
@@ -107,7 +122,7 @@ pub fn setup_level_up_screen(
             ))
             .with_children(|row| {
                 for (i, choice) in choices.choices.iter().enumerate() {
-                    spawn_upgrade_card(row, i, choice, card_cfg.get());
+                    spawn_upgrade_card(row, i, choice, card_cfg.get(), font.clone(), lang);
                 }
             });
         });

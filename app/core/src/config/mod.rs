@@ -77,6 +77,26 @@ macro_rules! ron_asset_loader {
     };
 }
 
+// ---------------------------------------------------------------------------
+// Font asset paths and preload resource
+// ---------------------------------------------------------------------------
+
+/// Path to DotGothic16, the game's sole UI font.
+///
+/// DotGothic16 is a Japanese pixel font that covers hiragana, katakana, and
+/// common kanji, providing the dotted game aesthetic for both JP and EN text.
+const FONT_TEXT: &str = "fonts/DotGothic16/DotGothic16-Regular.ttf";
+
+/// Holds a strong font handle so the asset cache is never evicted.
+///
+/// Also used by [`wait_for_configs`] to block the `Loading → Title` transition
+/// until the font is fully loaded — ensuring screens never render with the
+/// built-in fallback font.
+#[derive(Resource)]
+struct FontLoadHandles {
+    game: Handle<Font>,
+}
+
 // Non-weapon config loaders
 ron_asset_loader!(PlayerConfigLoader, PlayerConfig);
 ron_asset_loader!(EnemyConfigLoader, EnemyConfig);
@@ -125,6 +145,8 @@ struct AllConfigs<'w> {
     cross_assets: Res<'w, Assets<CrossConfig>>,
     fire_wand_handle: Res<'w, FireWandConfigHandle>,
     fire_wand_assets: Res<'w, Assets<FireWandConfig>>,
+    font_handles: Res<'w, FontLoadHandles>,
+    font_assets: Res<'w, Assets<Font>>,
 }
 
 // ---------------------------------------------------------------------------
@@ -191,6 +213,8 @@ impl Plugin for GameConfigPlugin {
         let fire_wand_handle: Handle<FireWandConfig> =
             asset_server.load("config/weapons/fire_wand.ron");
 
+        let font_text: Handle<Font> = asset_server.load(FONT_TEXT);
+
         app.insert_resource(PlayerConfigHandle(player_handle))
             .insert_resource(EnemyConfigHandle(enemy_handle))
             .insert_resource(GameConfigHandle(game_handle))
@@ -202,7 +226,8 @@ impl Plugin for GameConfigPlugin {
             .insert_resource(BibleConfigHandle(bible_handle))
             .insert_resource(ThunderRingConfigHandle(thunder_ring_handle))
             .insert_resource(CrossConfigHandle(cross_handle))
-            .insert_resource(FireWandConfigHandle(fire_wand_handle));
+            .insert_resource(FireWandConfigHandle(fire_wand_handle))
+            .insert_resource(FontLoadHandles { game: font_text });
 
         // Hot-reload systems run in all states so live-editing always works.
         app.add_systems(
@@ -258,6 +283,10 @@ fn wait_for_configs(configs: AllConfigs, mut next_state: ResMut<NextState<AppSta
         && configs
             .fire_wand_assets
             .get(&configs.fire_wand_handle.0)
+            .is_some()
+        && configs
+            .font_assets
+            .get(&configs.font_handles.game)
             .is_some();
 
     if all_ready {

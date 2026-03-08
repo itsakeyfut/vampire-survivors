@@ -39,7 +39,11 @@ pub struct HudKillCount;
 ///
 /// `cfg` is `None` while the RON asset is loading; fallback constants are used
 /// in that case.
-pub fn spawn_kill_count(parent: &mut ChildSpawnerCommands, cfg: Option<&KillCountHudConfig>) {
+pub fn spawn_kill_count(
+    parent: &mut ChildSpawnerCommands,
+    cfg: Option<&KillCountHudConfig>,
+    font: Handle<Font>,
+) {
     let font_size = cfg.map(|c| c.font_size).unwrap_or(DEFAULT_FONT_SIZE);
     let text_color = cfg
         .map(|c| Color::from(&c.text_color))
@@ -48,6 +52,7 @@ pub fn spawn_kill_count(parent: &mut ChildSpawnerCommands, cfg: Option<&KillCoun
     parent.spawn((
         Text::new("Kills: 0"),
         TextFont {
+            font,
             font_size,
             ..default()
         },

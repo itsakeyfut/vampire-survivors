@@ -6,7 +6,7 @@
 //! code.
 
 use bevy::prelude::*;
-use vs_core::resources::PendingUpgradeIndex;
+use vs_core::resources::{GameSettings, PendingUpgradeIndex};
 use vs_core::states::AppState;
 
 use crate::config::MenuButtonHudParams;
@@ -49,8 +49,12 @@ pub enum ButtonAction {
     GoToCharacterSelect,
     /// Transition from Title to MetaShop.
     GoToMetaShop,
+    /// Transition from Title to Settings.
+    GoToSettings,
     /// Return to the Title screen from any state.
     GoToTitle,
+    /// Toggle the UI language between Japanese and English.
+    ToggleLanguage,
     /// Confirm the upgrade card at the given index and resume gameplay.
     ///
     /// The index refers to the slot in [`vs_core::resources::LevelUpChoices`]
@@ -77,6 +81,7 @@ pub fn handle_button_interaction(
     mut next_state: ResMut<NextState<AppState>>,
     btn_cfg: MenuButtonHudParams,
     mut pending: Option<ResMut<PendingUpgradeIndex>>,
+    mut settings: Option<ResMut<GameSettings>>,
 ) {
     let color_normal = btn_cfg
         .get()
@@ -95,7 +100,7 @@ pub fn handle_button_interaction(
         match *interaction {
             Interaction::Pressed => {
                 *bg = BackgroundColor(color_pressed);
-                apply_action(button.action, &mut next_state, &mut pending);
+                apply_action(button.action, &mut next_state, &mut pending, &mut settings);
             }
             Interaction::Hovered => {
                 *bg = BackgroundColor(color_hover);
@@ -111,6 +116,7 @@ fn apply_action(
     action: ButtonAction,
     next_state: &mut NextState<AppState>,
     pending: &mut Option<ResMut<PendingUpgradeIndex>>,
+    settings: &mut Option<ResMut<GameSettings>>,
 ) {
     match action {
         ButtonAction::StartGame => {
@@ -122,8 +128,16 @@ fn apply_action(
         ButtonAction::GoToMetaShop => {
             next_state.set(AppState::MetaShop);
         }
+        ButtonAction::GoToSettings => {
+            next_state.set(AppState::Settings);
+        }
         ButtonAction::GoToTitle => {
             next_state.set(AppState::Title);
+        }
+        ButtonAction::ToggleLanguage => {
+            if let Some(s) = settings {
+                s.language = s.language.next();
+            }
         }
         ButtonAction::SelectUpgrade(index) => {
             if let Some(p) = pending {
@@ -166,7 +180,12 @@ mod tests {
 
         {
             let mut next_state = app.world_mut().resource_mut::<NextState<AppState>>();
-            apply_action(ButtonAction::StartGame, &mut next_state, &mut None);
+            apply_action(
+                ButtonAction::StartGame,
+                &mut next_state,
+                &mut None,
+                &mut None,
+            );
         }
         app.update();
 
@@ -191,7 +210,12 @@ mod tests {
 
         {
             let mut next_state = app.world_mut().resource_mut::<NextState<AppState>>();
-            apply_action(ButtonAction::GoToTitle, &mut next_state, &mut None);
+            apply_action(
+                ButtonAction::GoToTitle,
+                &mut next_state,
+                &mut None,
+                &mut None,
+            );
         }
         app.update();
 
@@ -208,7 +232,12 @@ mod tests {
         {
             let mut next_state = app.world_mut().resource_mut::<NextState<AppState>>();
             // None pending — PendingUpgradeIndex not available in this isolated test.
-            apply_action(ButtonAction::SelectUpgrade(1), &mut next_state, &mut None);
+            apply_action(
+                ButtonAction::SelectUpgrade(1),
+                &mut next_state,
+                &mut None,
+                &mut None,
+            );
         }
         app.update();
 

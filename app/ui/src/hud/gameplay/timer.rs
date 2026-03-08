@@ -41,7 +41,11 @@ pub struct HudTimer;
 ///
 /// `cfg` is `None` while the RON asset is loading; fallback constants are used
 /// in that case.
-pub fn spawn_timer(parent: &mut ChildSpawnerCommands, cfg: Option<&TimerHudConfig>) {
+pub fn spawn_timer(
+    parent: &mut ChildSpawnerCommands,
+    cfg: Option<&TimerHudConfig>,
+    font: Handle<Font>,
+) {
     let font_size = cfg.map(|c| c.font_size).unwrap_or(DEFAULT_FONT_SIZE);
     let text_color = cfg
         .map(|c| Color::from(&c.text_color))
@@ -50,6 +54,7 @@ pub fn spawn_timer(parent: &mut ChildSpawnerCommands, cfg: Option<&TimerHudConfi
     parent.spawn((
         Text::new("0:00"),
         TextFont {
+            font,
             font_size,
             ..default()
         },

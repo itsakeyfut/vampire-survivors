@@ -41,6 +41,7 @@ pub fn spawn_screen_heading(
     text: &str,
     color: Color,
     cfg: Option<&ScreenHeadingHudConfig>,
+    font: Handle<Font>,
 ) {
     let font_size = cfg.map(|c| c.font_size).unwrap_or(DEFAULT_FONT_SIZE);
     let margin_bottom = cfg
@@ -50,6 +51,7 @@ pub fn spawn_screen_heading(
     parent.spawn((
         Text::new(text),
         TextFont {
+            font,
             font_size,
             ..default()
         },
@@ -126,7 +128,7 @@ mod tests {
 
         let mut cmds = app.world_mut().commands();
         cmds.spawn(Node::default()).with_children(|parent| {
-            spawn_screen_heading(parent, "TEST", Color::WHITE, None);
+            spawn_screen_heading(parent, "TEST", Color::WHITE, None, Handle::default());
         });
         app.world_mut().flush();
 
