@@ -61,6 +61,8 @@ pub enum ButtonAction {
     /// that was selected.  Gameplay systems that apply upgrades read this
     /// index when re-entering [`AppState::Playing`].
     SelectUpgrade(usize),
+    /// Resume gameplay from the pause screen — transitions Paused → Playing.
+    ResumeGame,
 }
 
 // ---------------------------------------------------------------------------
@@ -143,6 +145,9 @@ fn apply_action(
             if let Some(p) = pending {
                 p.0 = Some(index);
             }
+            next_state.set(AppState::Playing);
+        }
+        ButtonAction::ResumeGame => {
             next_state.set(AppState::Playing);
         }
     }

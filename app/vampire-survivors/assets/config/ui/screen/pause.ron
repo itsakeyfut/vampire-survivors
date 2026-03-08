@@ -1,0 +1,13 @@
+// Pause screen configuration.
+// Controls the visual appearance of the pause overlay.
+//
+// Hot-reload enabled: Edit this file while the game is running to see changes instantly!
+//
+// Parameters:
+// - overlay_color:  Semi-transparent overlay background color (RGBA, 0.0-1.0)
+// - heading_color:  "PAUSED" heading text color (RGB, 0.0-1.0)
+
+PauseScreenConfig(
+    overlay_color: (r: 0.02, g: 0.02, b: 0.06, a: 0.88),
+    heading_color: (r: 1.0,  g: 0.85, b: 0.20),
+)

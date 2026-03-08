@@ -76,6 +76,16 @@ impl Plugin for GameUIPlugin {
                 OnEnter(AppState::Victory),
                 screens::victory::setup_victory_screen,
             )
+            // Pause screen
+            .add_systems(
+                OnEnter(AppState::Paused),
+                screens::pause::setup_pause_screen,
+            )
+            .add_systems(
+                Update,
+                screens::pause::toggle_pause
+                    .run_if(in_state(AppState::Playing).or(in_state(AppState::Paused))),
+            )
             // Level-up card selection overlay.
             // Must run after generate_level_up_choices so LevelUpChoices is
             // already populated when the UI reads it.
