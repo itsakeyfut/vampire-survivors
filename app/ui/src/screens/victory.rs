@@ -144,9 +144,9 @@ pub fn setup_victory_screen(
                 })
                 .with_children(|stats| {
                     for line in [
-                        format!("Clear Time: {clear_time}"),
-                        format!("Level Reached: {level}"),
-                        format!("Enemies Defeated: {kills}"),
+                        format!("{} {clear_time}", t("stat_clear_time", lang)),
+                        format!("{} {level}", t("stat_level_reached", lang)),
+                        format!("{} {kills}", t("stat_enemies_defeated", lang)),
                     ] {
                         stats.spawn((
                             Text::new(line),

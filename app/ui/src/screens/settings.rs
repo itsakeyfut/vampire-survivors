@@ -56,6 +56,13 @@ const DEFAULT_ROW_COLUMN_GAP: f32 = 16.0;
 #[derive(Component, Debug)]
 pub struct LanguageButtonLabel;
 
+/// Marks the "Language:" row label.
+///
+/// [`update_settings_display`] also refreshes this text so the colon
+/// is preserved (e.g. "Language:" / "言語:") after a language toggle.
+#[derive(Component, Debug)]
+pub struct LanguageLabelText;
+
 // ---------------------------------------------------------------------------
 // System: spawn
 // ---------------------------------------------------------------------------
@@ -153,7 +160,7 @@ pub fn setup_settings_screen(
                             ..default()
                         },
                         TextColor(DEFAULT_LABEL_COLOR),
-                        TranslatableText("label_language"),
+                        LanguageLabelText,
                     ));
 
                     // Language toggle button — pressing it cycles JP ↔ EN.
@@ -216,7 +223,11 @@ pub fn setup_settings_screen(
 pub fn update_settings_display(
     settings: Res<GameSettings>,
     asset_server: Option<Res<AssetServer>>,
-    mut label_q: Query<(&mut Text, &mut TextFont), With<LanguageButtonLabel>>,
+    mut button_label_q: Query<(&mut Text, &mut TextFont), With<LanguageButtonLabel>>,
+    mut row_label_q: Query<
+        (&mut Text, &mut TextFont),
+        (With<LanguageLabelText>, Without<LanguageButtonLabel>),
+    >,
 ) {
     if !settings.is_changed() {
         return;
@@ -229,8 +240,12 @@ pub fn update_settings_display(
     let new_font: Handle<Font> = asset_server
         .map(|s| s.load(font_for_lang(lang)))
         .unwrap_or_default();
-    for (mut text, mut text_font) in label_q.iter_mut() {
+    for (mut text, mut text_font) in button_label_q.iter_mut() {
         *text = Text::new(t(lang_key, lang));
+        text_font.font = new_font.clone();
+    }
+    for (mut text, mut text_font) in row_label_q.iter_mut() {
+        *text = Text::new(format!("{}:", t("label_language", lang)));
         text_font.font = new_font.clone();
     }
 }
@@ -335,5 +350,25 @@ mod tests {
 
         let text = app.world().get::<Text>(label).unwrap();
         assert_eq!(text.0, "English");
+    }
+
+    #[test]
+    fn update_settings_display_preserves_colon_on_row_label() {
+        let mut app = build_app();
+        let row_label = app
+            .world_mut()
+            .spawn((Text::new("言語:"), TextFont::default(), LanguageLabelText))
+            .id();
+
+        // Switch to English.
+        app.world_mut().resource_mut::<GameSettings>().language =
+            vs_core::resources::Language::English;
+
+        app.world_mut()
+            .run_system_once(update_settings_display)
+            .unwrap();
+
+        let text = app.world().get::<Text>(row_label).unwrap();
+        assert_eq!(text.0, "Language:", "colon must be preserved after toggle");
     }
 }

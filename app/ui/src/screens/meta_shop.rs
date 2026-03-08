@@ -100,7 +100,7 @@ pub fn setup_meta_shop_screen(
                 ButtonAction::GoToTitle,
                 btn_cfg.get(),
                 font.clone(),
-                None,
+                Some("btn_back"),
             );
         });
 }

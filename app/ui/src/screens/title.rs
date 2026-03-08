@@ -270,6 +270,20 @@ mod tests {
     }
 
     #[test]
+    fn settings_button_goes_to_settings() {
+        let mut app = build_app();
+        app.add_systems(OnEnter(AppState::Title), setup_title_screen);
+        enter_title(&mut app);
+
+        let mut q = app.world_mut().query::<&MenuButton>();
+        let actions: Vec<ButtonAction> = q.iter(app.world()).map(|b| b.action).collect();
+        assert!(
+            actions.contains(&ButtonAction::GoToSettings),
+            "Settings button must use GoToSettings"
+        );
+    }
+
+    #[test]
     fn gold_label_shows_current_gold() {
         let mut app = build_app();
         app.world_mut().resource_mut::<MetaProgress>().total_gold = 42;

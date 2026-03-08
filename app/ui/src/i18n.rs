@@ -102,6 +102,12 @@ pub fn t(key: &'static str, lang: Language) -> &'static str {
         // ── Victory screen ────────────────────────────────────────────────
         ("victory_title", Language::Japanese) => "勝利！",
         ("victory_title", Language::English) => "VICTORY!",
+        ("stat_clear_time", Language::Japanese) => "クリアタイム:",
+        ("stat_clear_time", Language::English) => "Clear Time:",
+        ("stat_level_reached", Language::Japanese) => "到達レベル:",
+        ("stat_level_reached", Language::English) => "Level Reached:",
+        ("stat_enemies_defeated", Language::Japanese) => "撃破数:",
+        ("stat_enemies_defeated", Language::English) => "Enemies Defeated:",
 
         // ── Fallback ──────────────────────────────────────────────────────
         _ => key,
@@ -198,6 +204,9 @@ mod tests {
             "btn_resume",
             "game_over_title",
             "victory_title",
+            "stat_clear_time",
+            "stat_level_reached",
+            "stat_enemies_defeated",
         ];
         for key in &keys {
             assert!(!t(key, Language::Japanese).is_empty(), "JP: {key}");
