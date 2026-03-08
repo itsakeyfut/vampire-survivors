@@ -43,12 +43,12 @@ use bevy::state::state_scoped::DespawnOnExit;
 use vs_core::resources::GameSettings;
 use vs_core::states::AppState;
 
-use crate::i18n::font_for_lang;
 use crate::config::hud::gameplay::{
     GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle, GameplayHudLayoutParams,
     HpBarHudParams, KillCountHudParams, LevelHudParams, TimerHudParams, WeaponSlotsHudParams,
     XpBarHudParams,
 };
+use crate::i18n::font_for_lang;
 
 // ---------------------------------------------------------------------------
 // Fallback constants

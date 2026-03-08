@@ -64,9 +64,7 @@ pub fn choice_subtitle(choice: &UpgradeChoice, lang: Language) -> &'static str {
 /// Returns the item name for a choice in the given language.
 pub fn choice_name(choice: &UpgradeChoice, lang: Language) -> &'static str {
     match choice {
-        UpgradeChoice::NewWeapon(wt) | UpgradeChoice::WeaponUpgrade(wt) => {
-            weapon_name(*wt, lang)
-        }
+        UpgradeChoice::NewWeapon(wt) | UpgradeChoice::WeaponUpgrade(wt) => weapon_name(*wt, lang),
         UpgradeChoice::PassiveItem(pt) | UpgradeChoice::PassiveUpgrade(pt) => {
             passive_name(*pt, lang)
         }
@@ -131,7 +129,9 @@ fn weapon_description(wt: WeaponType, lang: Language) -> &'static str {
         (WeaponType::Bible, Language::Japanese) => "プレイヤーの周りを旋回する飛翔体。",
         (WeaponType::Bible, Language::English) => "Orbiting projectile that circles the player.",
         (WeaponType::ThunderRing, Language::Japanese) => "画面全体にランダムな落雷。",
-        (WeaponType::ThunderRing, Language::English) => "Random lightning strikes across the screen.",
+        (WeaponType::ThunderRing, Language::English) => {
+            "Random lightning strikes across the screen."
+        }
         (WeaponType::Cross, Language::Japanese) => "飛んで戻ってくるブーメラン。",
         (WeaponType::Cross, Language::English) => "Boomerang that flies out and returns.",
         (WeaponType::FireWand, Language::Japanese) => "最大HPの敵を狙う火の玉。",
@@ -145,9 +145,13 @@ fn weapon_description(wt: WeaponType, lang: Language) -> &'static str {
         (WeaponType::SoulEater, Language::Japanese) => "進化形ニンニク — 敵の命を吸収。",
         (WeaponType::SoulEater, Language::English) => "Evolved Garlic — drains life from enemies.",
         (WeaponType::UnholyVespers, Language::Japanese) => "進化形聖書 — 無限に旋回する刃。",
-        (WeaponType::UnholyVespers, Language::English) => "Evolved Bible — infinite orbiting blades.",
+        (WeaponType::UnholyVespers, Language::English) => {
+            "Evolved Bible — infinite orbiting blades."
+        }
         (WeaponType::LightningRing, Language::Japanese) => "進化形サンダーリング — 雷の嵐。",
-        (WeaponType::LightningRing, Language::English) => "Evolved Thunder Ring — storm of lightning.",
+        (WeaponType::LightningRing, Language::English) => {
+            "Evolved Thunder Ring — storm of lightning."
+        }
     }
 }
 
@@ -495,7 +499,14 @@ mod tests {
         let choice = UpgradeChoice::NewWeapon(WeaponType::Whip);
         let mut cmds = app.world_mut().commands();
         cmds.spawn(Node::default()).with_children(|parent| {
-            spawn_upgrade_card(parent, 0, &choice, None, Handle::default(), Language::English);
+            spawn_upgrade_card(
+                parent,
+                0,
+                &choice,
+                None,
+                Handle::default(),
+                Language::English,
+            );
         });
         app.world_mut().flush();
 
