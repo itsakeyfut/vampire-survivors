@@ -9,7 +9,7 @@
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
-use vs_core::resources::{GameSettings, LevelUpChoices};
+use vs_core::resources::{GameData, GameSettings, LevelUpChoices};
 use vs_core::states::AppState;
 
 use crate::config::{LevelUpScreenParams, ScreenHeadingHudParams, UpgradeCardHudParams};
@@ -50,6 +50,7 @@ pub struct LevelUpCardRow;
 pub fn setup_level_up_screen(
     mut commands: Commands,
     choices: Res<LevelUpChoices>,
+    game_data: Res<GameData>,
     mut next_state: ResMut<NextState<AppState>>,
     screen_cfg: LevelUpScreenParams,
     heading_cfg: ScreenHeadingHudParams,
@@ -100,10 +101,16 @@ pub fn setup_level_up_screen(
             LevelUpScreenBg,
         ))
         .with_children(|root| {
-            // "LEVEL UP!" heading — gold; color is screen-specific.
+            // "LEVEL UP! Lv.X" heading — gold; color is screen-specific.
+            // The level number is formatted at spawn time from GameData.
+            let heading_text = format!(
+                "{} Lv.{}",
+                t("level_up_title", lang),
+                game_data.current_level
+            );
             spawn_screen_heading(
                 root,
-                t("level_up_title", lang),
+                &heading_text,
                 heading_color,
                 heading_cfg.get(),
                 font.clone(),
@@ -146,6 +153,7 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin));
         app.init_state::<AppState>();
         app.insert_resource(LevelUpChoices::default());
+        app.insert_resource(GameData::default());
         app
     }
 
@@ -295,6 +303,23 @@ mod tests {
             q.iter(app.world()).count(),
             0,
             "level-up overlay must despawn after leaving LevelUp state"
+        );
+    }
+
+    /// Heading text includes the current level number from GameData.
+    #[test]
+    fn heading_includes_current_level() {
+        let mut app = build_app();
+        app.world_mut().resource_mut::<GameData>().current_level = 7;
+        app.add_systems(OnEnter(AppState::LevelUp), setup_level_up_screen);
+        populate_choices(&mut app, vec![UpgradeChoice::NewWeapon(WeaponType::Whip)]);
+        enter_level_up(&mut app);
+
+        let mut q = app.world_mut().query::<&Text>();
+        let texts: Vec<String> = q.iter(app.world()).map(|t| t.0.clone()).collect();
+        assert!(
+            texts.iter().any(|t| t.contains("Lv.7")),
+            "heading must contain 'Lv.7'; got: {texts:?}"
         );
     }
 }

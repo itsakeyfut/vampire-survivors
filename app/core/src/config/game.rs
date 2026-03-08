@@ -34,6 +34,11 @@ pub struct GameConfig {
     pub xp_level_base: u32,
     pub xp_level_multiplier: f32,
     pub level_up_choice_count: usize,
+    /// Luck value at or above which the player receives one extra upgrade card.
+    ///
+    /// Base luck is 1.0; Clover adds +0.10 per level.  The default (1.5) means
+    /// five levels of Clover unlock a 4th card.
+    pub luck_bonus_choice_threshold: f32,
     // Camera
     pub camera_lerp_speed: f32,
     // Spatial partitioning
@@ -149,6 +154,7 @@ GameConfig(
     xp_level_base: 20,
     xp_level_multiplier: 1.2,
     level_up_choice_count: 3,
+    luck_bonus_choice_threshold: 1.5,
     camera_lerp_speed: 10.0,
     spatial_grid_cell_size: 64.0,
     base_projectile_speed: 300.0,

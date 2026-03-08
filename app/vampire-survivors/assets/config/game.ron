@@ -35,9 +35,10 @@ GameConfig(
     treasure_radius:          20.0,    // collision radius of a chest in pixels
     treasure_gold_reward:     50,      // gold awarded when no weapon can evolve
     // XP / levelling
-    xp_level_base:            20,
-    xp_level_multiplier:      1.2,
-    level_up_choice_count:    3,
+    xp_level_base:               20,
+    xp_level_multiplier:         1.2,
+    level_up_choice_count:       3,
+    luck_bonus_choice_threshold: 1.5,  // 5× Clover (base 1.0 + 5×0.10) unlocks 4th card
     // Camera
     camera_lerp_speed:        10.0,
     // Spatial partitioning

@@ -25,9 +25,16 @@ const DEFAULT_CARD_WIDTH: f32 = 260.0;
 const DEFAULT_CARD_HEIGHT: f32 = 320.0;
 const DEFAULT_PADDING: f32 = 16.0;
 const DEFAULT_INNER_GAP: f32 = 12.0;
-const DEFAULT_FONT_SIZE_NAME: f32 = 32.0;
-const DEFAULT_FONT_SIZE_SUBTITLE: f32 = 24.0;
-const DEFAULT_FONT_SIZE_DESC: f32 = 24.0;
+const DEFAULT_FONT_SIZE_NAME: f32 = 28.0;
+const DEFAULT_FONT_SIZE_SUBTITLE: f32 = 20.0;
+const DEFAULT_FONT_SIZE_DESC: f32 = 18.0;
+const DEFAULT_ICON_SIZE: f32 = 64.0;
+
+// Fallback icon colors per upgrade category (used when config is not yet loaded).
+const DEFAULT_ICON_COLOR_NEW_WEAPON: Color = Color::srgb(0.25, 0.50, 1.00);
+const DEFAULT_ICON_COLOR_WEAPON_UPGRADE: Color = Color::srgb(0.40, 0.70, 1.00);
+const DEFAULT_ICON_COLOR_NEW_PASSIVE: Color = Color::srgb(0.20, 0.75, 0.50);
+const DEFAULT_ICON_COLOR_PASSIVE_UPGRADE: Color = Color::srgb(0.40, 0.90, 0.65);
 
 // ---------------------------------------------------------------------------
 // Marker component
@@ -178,6 +185,28 @@ fn passive_name(pt: PassiveItemType, lang: Language) -> &'static str {
     }
 }
 
+/// Returns the placeholder icon background color for a given upgrade choice.
+///
+/// Reads from `cfg` when available; falls back to the `DEFAULT_ICON_COLOR_*`
+/// constants while the config asset is still loading.  Used until weapon/passive
+/// sprite assets are integrated in Phase 17.
+fn icon_color(choice: &UpgradeChoice, cfg: Option<&UpgradeCardHudConfig>) -> Color {
+    match choice {
+        UpgradeChoice::NewWeapon(_) => cfg
+            .map(|c| Color::from(&c.icon_color_new_weapon))
+            .unwrap_or(DEFAULT_ICON_COLOR_NEW_WEAPON),
+        UpgradeChoice::WeaponUpgrade(_) => cfg
+            .map(|c| Color::from(&c.icon_color_weapon_upgrade))
+            .unwrap_or(DEFAULT_ICON_COLOR_WEAPON_UPGRADE),
+        UpgradeChoice::PassiveItem(_) => cfg
+            .map(|c| Color::from(&c.icon_color_new_passive))
+            .unwrap_or(DEFAULT_ICON_COLOR_NEW_PASSIVE),
+        UpgradeChoice::PassiveUpgrade(_) => cfg
+            .map(|c| Color::from(&c.icon_color_passive_upgrade))
+            .unwrap_or(DEFAULT_ICON_COLOR_PASSIVE_UPGRADE),
+    }
+}
+
 fn passive_description(pt: PassiveItemType, lang: Language) -> &'static str {
     match (pt, lang) {
         (PassiveItemType::Spinach, Language::Japanese) => "LVごとにダメージ+10%。",
@@ -256,6 +285,10 @@ pub fn spawn_upgrade_card(
         .map(|c| c.font_size_desc)
         .unwrap_or(DEFAULT_FONT_SIZE_DESC)
         .max(1.0);
+    let icon_size = cfg
+        .map(|c| c.icon_size)
+        .unwrap_or(DEFAULT_ICON_SIZE)
+        .max(8.0);
 
     parent
         .spawn((
@@ -277,6 +310,18 @@ pub fn spawn_upgrade_card(
             UpgradeCardHud { index },
         ))
         .with_children(|card| {
+            // Icon placeholder — a solid colored square.
+            // Replaced with a real sprite in Phase 17 when weapon/passive
+            // art assets are integrated.
+            card.spawn((
+                Node {
+                    width: Val::Px(icon_size),
+                    height: Val::Px(icon_size),
+                    ..default()
+                },
+                BackgroundColor(icon_color(choice, cfg)),
+            ));
+
             // Subtitle: upgrade type label.
             card.spawn((
                 Text::new(choice_subtitle(choice, lang)),
@@ -517,6 +562,174 @@ mod tests {
             q.iter(app.world()).count(),
             1,
             "spawn_upgrade_card must produce one Button+UpgradeCardHud entity"
+        );
+    }
+
+    /// Icon placeholder node is spawned with the correct size and category color.
+    #[test]
+    fn spawn_upgrade_card_icon_placeholder_has_correct_size_and_color() {
+        use bevy::state::app::StatesPlugin;
+        use vs_core::states::AppState;
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin));
+        app.init_state::<AppState>();
+
+        // Test each upgrade category to verify the fallback color mapping (cfg=None).
+        let cases: &[(&str, UpgradeChoice, Color)] = &[
+            (
+                "NewWeapon",
+                UpgradeChoice::NewWeapon(WeaponType::Whip),
+                DEFAULT_ICON_COLOR_NEW_WEAPON,
+            ),
+            (
+                "WeaponUpgrade",
+                UpgradeChoice::WeaponUpgrade(WeaponType::Whip),
+                DEFAULT_ICON_COLOR_WEAPON_UPGRADE,
+            ),
+            (
+                "PassiveItem",
+                UpgradeChoice::PassiveItem(PassiveItemType::Spinach),
+                DEFAULT_ICON_COLOR_NEW_PASSIVE,
+            ),
+            (
+                "PassiveUpgrade",
+                UpgradeChoice::PassiveUpgrade(PassiveItemType::Spinach),
+                DEFAULT_ICON_COLOR_PASSIVE_UPGRADE,
+            ),
+        ];
+
+        for (label, choice, expected_color) in cases {
+            // Spawn a fresh card for each case.
+            let mut cmds = app.world_mut().commands();
+            cmds.spawn(Node::default()).with_children(|parent| {
+                spawn_upgrade_card(
+                    parent,
+                    0,
+                    choice,
+                    None,
+                    Handle::default(),
+                    Language::English,
+                );
+            });
+            app.world_mut().flush();
+
+            // The icon placeholder is a Node with a BackgroundColor whose size
+            // equals DEFAULT_ICON_SIZE.  Find all background-colored nodes and
+            // verify at least one matches the expected icon dimensions and color.
+            let mut q = app.world_mut().query::<(&Node, &BackgroundColor)>();
+            let icon_found = q.iter(app.world()).any(|(node, bg)| {
+                node.width == Val::Px(DEFAULT_ICON_SIZE.max(8.0))
+                    && node.height == Val::Px(DEFAULT_ICON_SIZE.max(8.0))
+                    && bg.0 == *expected_color
+            });
+            assert!(
+                icon_found,
+                "{label}: icon node with size {}px and expected color not found",
+                DEFAULT_ICON_SIZE
+            );
+
+            // Clean up spawned entities before the next iteration.
+            let entities: Vec<Entity> = app.world_mut().iter_entities().map(|e| e.id()).collect();
+            for e in entities {
+                app.world_mut().despawn(e);
+            }
+            app.world_mut().flush();
+        }
+    }
+
+    /// Supplying a config with a custom `icon_size` exercises the `cfg.map(|c| c.icon_size)` path.
+    #[test]
+    fn spawn_upgrade_card_icon_size_reads_from_config() {
+        use crate::config::SrgbColor;
+
+        let custom_size = 24.0_f32;
+        let cfg = UpgradeCardHudConfig {
+            card_width: 260.0,
+            card_height: 340.0,
+            card_gap: 30.0,
+            padding: 16.0,
+            inner_gap: 12.0,
+            card_normal: SrgbColor {
+                r: 0.12,
+                g: 0.08,
+                b: 0.28,
+            },
+            card_hover: SrgbColor {
+                r: 0.22,
+                g: 0.14,
+                b: 0.48,
+            },
+            card_pressed: SrgbColor {
+                r: 0.08,
+                g: 0.05,
+                b: 0.18,
+            },
+            subtitle_color: SrgbColor {
+                r: 0.85,
+                g: 0.70,
+                b: 0.30,
+            },
+            text_color: SrgbColor {
+                r: 0.95,
+                g: 0.90,
+                b: 0.85,
+            },
+            font_size_name: 28.0,
+            font_size_subtitle: 20.0,
+            font_size_desc: 18.0,
+            icon_size: custom_size,
+            icon_color_new_weapon: SrgbColor {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+            },
+            icon_color_weapon_upgrade: SrgbColor {
+                r: 0.0,
+                g: 1.0,
+                b: 0.0,
+            },
+            icon_color_new_passive: SrgbColor {
+                r: 0.0,
+                g: 0.0,
+                b: 1.0,
+            },
+            icon_color_passive_upgrade: SrgbColor {
+                r: 1.0,
+                g: 1.0,
+                b: 0.0,
+            },
+        };
+
+        use bevy::state::app::StatesPlugin;
+        use vs_core::states::AppState;
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin));
+        app.init_state::<AppState>();
+
+        let choice = UpgradeChoice::NewWeapon(WeaponType::Whip);
+        let mut cmds = app.world_mut().commands();
+        cmds.spawn(Node::default()).with_children(|parent| {
+            spawn_upgrade_card(
+                parent,
+                0,
+                &choice,
+                Some(&cfg),
+                Handle::default(),
+                Language::English,
+            );
+        });
+        app.world_mut().flush();
+
+        let mut q = app.world_mut().query::<(&Node, &BackgroundColor)>();
+        let icon_found = q.iter(app.world()).any(|(node, _bg)| {
+            node.width == Val::Px(custom_size.max(8.0))
+                && node.height == Val::Px(custom_size.max(8.0))
+        });
+        assert!(
+            icon_found,
+            "icon node with config-supplied size {custom_size}px not found"
         );
     }
 }

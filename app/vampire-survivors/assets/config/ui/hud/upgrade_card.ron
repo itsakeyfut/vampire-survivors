@@ -17,10 +17,15 @@
 // - font_size_name:     Font size for the item name text in points
 // - font_size_subtitle: Font size for the subtitle text in points
 // - font_size_desc:     Font size for the description text in points
+// - icon_size:                   Side length of the square icon placeholder in pixels
+// - icon_color_new_weapon:       Placeholder color for "New Weapon" cards (RGB, 0.0-1.0)
+// - icon_color_weapon_upgrade:   Placeholder color for "Weapon Upgrade" cards (RGB, 0.0-1.0)
+// - icon_color_new_passive:      Placeholder color for "New Passive" cards (RGB, 0.0-1.0)
+// - icon_color_passive_upgrade:  Placeholder color for "Passive Upgrade" cards (RGB, 0.0-1.0)
 
 UpgradeCardHudConfig(
     card_width:         260.0,
-    card_height:        320.0,
+    card_height:        340.0,
     card_gap:           30.0,
     padding:            16.0,
     inner_gap:          12.0,
@@ -29,7 +34,12 @@ UpgradeCardHudConfig(
     card_pressed:       (r: 0.08, g: 0.05, b: 0.18),
     subtitle_color:     (r: 0.85, g: 0.70, b: 0.30),
     text_color:         (r: 0.95, g: 0.90, b: 0.85),
-    font_size_name:     32.0,
-    font_size_subtitle: 24.0,
-    font_size_desc:     24.0,
+    font_size_name:     28.0,
+    font_size_subtitle: 20.0,
+    font_size_desc:     18.0,
+    icon_size:                  64.0,
+    icon_color_new_weapon:      (r: 0.25, g: 0.50, b: 1.00),
+    icon_color_weapon_upgrade:  (r: 0.40, g: 0.70, b: 1.00),
+    icon_color_new_passive:     (r: 0.20, g: 0.75, b: 0.50),
+    icon_color_passive_upgrade: (r: 0.40, g: 0.90, b: 0.65),
 )

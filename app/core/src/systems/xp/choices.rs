@@ -23,7 +23,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use crate::{
-    components::{PassiveInventory, Player, WeaponInventory},
+    components::{PassiveInventory, Player, PlayerStats, WeaponInventory},
     config::GameParams,
     resources::LevelUpChoices,
     types::{PassiveItemType, UpgradeChoice, WeaponType},
@@ -37,6 +37,8 @@ const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
 const DEFAULT_MAX_PASSIVE_LEVEL: u8 = 5;
 const DEFAULT_MAX_WEAPONS: usize = 6;
 const DEFAULT_MAX_PASSIVES: usize = 6;
+/// Fallback luck value at which the player receives one extra upgrade card.
+const DEFAULT_LUCK_BONUS_CHOICE_THRESHOLD: f32 = 1.5;
 
 // ---------------------------------------------------------------------------
 // Static item lists
@@ -78,27 +80,36 @@ const DEFAULT_CHOICE_COUNT: usize = 3;
 
 /// Generates random upgrade choices and stores them in [`LevelUpChoices`].
 ///
-/// The number of choices is read from [`GameParams`] (`level_up_choice_count`)
-/// and falls back to [`DEFAULT_CHOICE_COUNT`] when the config asset is not yet
-/// loaded.
+/// The number of choices is read from [`GameParams`] (`level_up_choice_count`).
+/// If the player's `luck` stat meets or exceeds `luck_bonus_choice_threshold`,
+/// one extra card is added.  Both fall back to their respective `DEFAULT_*`
+/// constants when the config asset is not yet loaded.
 ///
 /// Runs on [`OnEnter(AppState::LevelUp)`](crate::states::AppState::LevelUp).
 /// When fewer valid choices exist than the configured count (e.g. all items are
 /// maxed), all remaining options are returned.
 pub fn generate_level_up_choices(
-    player_q: Query<(&WeaponInventory, &PassiveInventory), With<Player>>,
+    player_q: Query<(&WeaponInventory, &PassiveInventory, &PlayerStats), With<Player>>,
     mut level_up_choices: ResMut<LevelUpChoices>,
     game_cfg: GameParams,
 ) {
-    let Ok((weapon_inv, passive_inv)) = player_q.single() else {
+    let Ok((weapon_inv, passive_inv, stats)) = player_q.single() else {
         level_up_choices.choices.clear();
         return;
     };
 
     let cfg = game_cfg.get();
-    let choice_count = cfg
+    let base_count = cfg
         .map(|c| c.level_up_choice_count)
         .unwrap_or(DEFAULT_CHOICE_COUNT);
+    let luck_threshold = cfg
+        .map(|c| c.luck_bonus_choice_threshold)
+        .unwrap_or(DEFAULT_LUCK_BONUS_CHOICE_THRESHOLD);
+    let choice_count = if stats.luck >= luck_threshold {
+        base_count + 1
+    } else {
+        base_count
+    };
     let max_weapon_level = cfg
         .map(|c| c.max_weapon_level)
         .unwrap_or(DEFAULT_MAX_WEAPON_LEVEL);
@@ -182,10 +193,23 @@ mod tests {
     }
 
     fn spawn_player(app: &mut App, weapons: Vec<WeaponState>, passives: Vec<PassiveState>) {
+        spawn_player_with_luck(app, weapons, passives, 1.0);
+    }
+
+    fn spawn_player_with_luck(
+        app: &mut App,
+        weapons: Vec<WeaponState>,
+        passives: Vec<PassiveState>,
+        luck: f32,
+    ) {
+        use crate::components::PlayerStats;
+        let mut stats = PlayerStats::default();
+        stats.luck = luck;
         app.world_mut().spawn((
             Player,
             WeaponInventory { weapons },
             PassiveInventory { items: passives },
+            stats,
         ));
     }
 
@@ -564,6 +588,113 @@ mod tests {
         let mut v: Vec<i32> = (0..10).collect();
         fisher_yates_shuffle(&mut v);
         assert_eq!(v.len(), 10);
+    }
+
+    // --- Luck bonus ---
+
+    /// High luck (≥ 1.5) gives one extra choice beyond the default count.
+    #[test]
+    fn high_luck_grants_extra_choice() {
+        let mut app = build_app();
+        // Player with Whip only and high luck — large pool available.
+        spawn_player_with_luck(
+            &mut app,
+            vec![WeaponState::new(WeaponType::Whip)],
+            vec![],
+            1.5,
+        );
+        run(&mut app);
+        assert_eq!(
+            choices(&app).len(),
+            DEFAULT_CHOICE_COUNT + 1,
+            "luck >= 1.5 should add one bonus choice card"
+        );
+    }
+
+    /// When a non-default `GameConfig` is loaded, the system reads
+    /// `luck_bonus_choice_threshold` from that config rather than the fallback.
+    #[test]
+    fn luck_threshold_reads_from_game_config() {
+        use crate::config::{GameConfig, GameConfigHandle};
+
+        // AssetPlugin is required to initialise Assets<T> and AssetServer.
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, bevy::asset::AssetPlugin::default()));
+        app.insert_resource(LevelUpChoices::default());
+        app.init_asset::<GameConfig>();
+
+        // Insert a config with a high threshold (2.0) so a player with luck=1.5
+        // — which normally triggers the bonus — should NOT get an extra card.
+        let config = GameConfig {
+            window_width: 1280,
+            window_height: 720,
+            max_weapons: 6,
+            max_passives: 6,
+            max_weapon_level: 8,
+            max_passive_level: 5,
+            boss_spawn_time: 1800.0,
+            treasure_spawn_interval: 180.0,
+            treasure_radius: 20.0,
+            treasure_gold_reward: 50,
+            xp_level_base: 20,
+            xp_level_multiplier: 1.2,
+            level_up_choice_count: DEFAULT_CHOICE_COUNT,
+            luck_bonus_choice_threshold: 2.0, // higher than the player's luck
+            camera_lerp_speed: 10.0,
+            spatial_grid_cell_size: 64.0,
+            base_projectile_speed: 300.0,
+            base_projectile_lifetime: 5.0,
+            boss_phase2_hp_threshold: 0.6,
+            boss_phase3_hp_threshold: 0.3,
+            boss_phase2_speed_multiplier: 1.5,
+            mini_death_spawn_count: 3,
+            mini_death_spawn_radius: 80.0,
+            boss_phase3_speed_multiplier: 2.0,
+            mini_death_spawn_count_phase3: 5,
+            boss_scythe_interval: 3.0,
+            boss_scythe_speed: 250.0,
+            boss_scythe_lifetime: 8.0,
+            boss_scythe_damage: 80.0,
+            boss_scythe_radius: 15.0,
+        };
+        let handle = {
+            let mut assets = app.world_mut().resource_mut::<Assets<GameConfig>>();
+            assets.add(config)
+        };
+        app.world_mut().insert_resource(GameConfigHandle(handle));
+
+        // luck=1.5 would trigger the bonus with the fallback threshold (1.5),
+        // but the loaded config raises the bar to 2.0 — so no bonus card.
+        spawn_player_with_luck(
+            &mut app,
+            vec![WeaponState::new(WeaponType::Whip)],
+            vec![],
+            1.5,
+        );
+        run(&mut app);
+        assert_eq!(
+            choices(&app).len(),
+            DEFAULT_CHOICE_COUNT,
+            "luck=1.5 must not give a bonus when config threshold is 2.0"
+        );
+    }
+
+    /// Normal luck (< 1.5) gives exactly DEFAULT_CHOICE_COUNT choices.
+    #[test]
+    fn normal_luck_gives_base_choice_count() {
+        let mut app = build_app();
+        spawn_player_with_luck(
+            &mut app,
+            vec![WeaponState::new(WeaponType::Whip)],
+            vec![],
+            1.0,
+        );
+        run(&mut app);
+        assert_eq!(
+            choices(&app).len(),
+            DEFAULT_CHOICE_COUNT,
+            "luck < 1.5 should give exactly {DEFAULT_CHOICE_COUNT} choices"
+        );
     }
 
     /// `fisher_yates_shuffle` preserves all elements and their counts (multiset equality).
