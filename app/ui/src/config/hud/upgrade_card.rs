@@ -48,6 +48,14 @@ pub struct UpgradeCardHudConfig {
     pub font_size_desc: f32,
     /// Side length of the square icon placeholder in pixels.
     pub icon_size: f32,
+    /// Icon placeholder color for "New Weapon" upgrade cards.
+    pub icon_color_new_weapon: SrgbColor,
+    /// Icon placeholder color for "Weapon Upgrade" cards.
+    pub icon_color_weapon_upgrade: SrgbColor,
+    /// Icon placeholder color for "New Passive" upgrade cards.
+    pub icon_color_new_passive: SrgbColor,
+    /// Icon placeholder color for "Passive Upgrade" cards.
+    pub icon_color_passive_upgrade: SrgbColor,
 }
 
 /// Resource holding the handle to the loaded [`UpgradeCardHudConfig`].
@@ -104,6 +112,10 @@ UpgradeCardHudConfig(
     font_size_subtitle: 24.0,
     font_size_desc:     24.0,
     icon_size:          64.0,
+    icon_color_new_weapon:      (r: 0.25, g: 0.50, b: 1.00),
+    icon_color_weapon_upgrade:  (r: 0.40, g: 0.70, b: 1.00),
+    icon_color_new_passive:     (r: 0.20, g: 0.75, b: 0.50),
+    icon_color_passive_upgrade: (r: 0.40, g: 0.90, b: 0.65),
 )
 "#;
         let cfg: UpgradeCardHudConfig =
@@ -161,6 +173,26 @@ UpgradeCardHudConfig(
             font_size_subtitle: 24.0,
             font_size_desc: 24.0,
             icon_size: 64.0,
+            icon_color_new_weapon: SrgbColor {
+                r: 0.25,
+                g: 0.50,
+                b: 1.00,
+            },
+            icon_color_weapon_upgrade: SrgbColor {
+                r: 0.40,
+                g: 0.70,
+                b: 1.00,
+            },
+            icon_color_new_passive: SrgbColor {
+                r: 0.20,
+                g: 0.75,
+                b: 0.50,
+            },
+            icon_color_passive_upgrade: SrgbColor {
+                r: 0.40,
+                g: 0.90,
+                b: 0.65,
+            },
         };
         assert!(
             cfg.card_width > 32.0,
