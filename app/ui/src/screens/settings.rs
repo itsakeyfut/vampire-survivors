@@ -220,14 +220,18 @@ pub fn setup_settings_screen(
 /// Runs only in [`AppState::Settings`]; early-returns when `GameSettings`
 /// was not modified this frame.  Updates both the text string and the
 /// [`TextFont`] handle so the correct language-appropriate font is applied.
+type RowLabelQuery<'w, 's> = Query<
+    'w,
+    's,
+    (&'static mut Text, &'static mut TextFont),
+    (With<LanguageLabelText>, Without<LanguageButtonLabel>),
+>;
+
 pub fn update_settings_display(
     settings: Res<GameSettings>,
     asset_server: Option<Res<AssetServer>>,
     mut button_label_q: Query<(&mut Text, &mut TextFont), With<LanguageButtonLabel>>,
-    mut row_label_q: Query<
-        (&mut Text, &mut TextFont),
-        (With<LanguageLabelText>, Without<LanguageButtonLabel>),
-    >,
+    mut row_label_q: RowLabelQuery,
 ) {
     if !settings.is_changed() {
         return;
@@ -337,7 +341,11 @@ mod tests {
         let mut app = build_app();
         let label = app
             .world_mut()
-            .spawn((Text::new("日本語"), TextFont::default(), LanguageButtonLabel))
+            .spawn((
+                Text::new("日本語"),
+                TextFont::default(),
+                LanguageButtonLabel,
+            ))
             .id();
 
         // Switch to English.
