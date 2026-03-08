@@ -21,7 +21,7 @@ use crate::config::{
 };
 use crate::hud::menu_button::spawn_large_menu_button;
 use crate::hud::screen_heading::ScreenHeadingHud;
-use crate::i18n::t;
+use crate::i18n::{font_for_lang, t};
 use crate::styles::{DEFAULT_BG_COLOR, DEFAULT_TITLE_COLOR};
 
 // ---------------------------------------------------------------------------
@@ -58,8 +58,12 @@ pub fn setup_title_screen(
     ui_style: UiStyleParams,
     heading_cfg: ScreenHeadingHudParams,
     btn_cfg: MenuButtonHudParams,
+    asset_server: Option<Res<AssetServer>>,
 ) {
     let lang = settings.language;
+    let font: Handle<Font> = asset_server
+        .map(|s| s.load(font_for_lang(lang)))
+        .unwrap_or_default();
     let bg_color = ui_style
         .get()
         .map(|c| Color::from(&c.bg_color))
@@ -100,6 +104,7 @@ pub fn setup_title_screen(
             parent.spawn((
                 Text::new("Vampire Survivors"),
                 TextFont {
+                    font: font.clone(),
                     font_size: heading_font_size,
                     ..default()
                 },
@@ -116,6 +121,7 @@ pub fn setup_title_screen(
             parent.spawn((
                 Text::new(format!("{}: {}", t("gold_display", lang), meta.total_gold)),
                 TextFont {
+                    font: font.clone(),
                     font_size: DEFAULT_GOLD_FONT_SIZE,
                     ..default()
                 },
@@ -129,6 +135,8 @@ pub fn setup_title_screen(
                 t("btn_start_game", lang),
                 ButtonAction::GoToCharacterSelect,
                 btn_cfg.get(),
+                font.clone(),
+                None,
             );
 
             // Gold Shop button — transitions to MetaShop.
@@ -137,6 +145,8 @@ pub fn setup_title_screen(
                 t("btn_gold_shop", lang),
                 ButtonAction::GoToMetaShop,
                 btn_cfg.get(),
+                font.clone(),
+                None,
             );
 
             // Settings button — transitions to Settings.
@@ -145,6 +155,8 @@ pub fn setup_title_screen(
                 t("btn_settings", lang),
                 ButtonAction::GoToSettings,
                 btn_cfg.get(),
+                font.clone(),
+                None,
             );
         });
 }

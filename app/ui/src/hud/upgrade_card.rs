@@ -6,6 +6,7 @@
 //! meta-progression shop).
 
 use bevy::prelude::*;
+use vs_core::resources::Language;
 use vs_core::types::{PassiveItemType, UpgradeChoice, WeaponType};
 
 use crate::components::{ButtonAction, MenuButton};
@@ -46,97 +47,153 @@ pub struct UpgradeCardHud {
 // Display text helpers
 // ---------------------------------------------------------------------------
 
-/// Returns the upgrade-type subtitle (e.g. "New Weapon").
-pub fn choice_subtitle(choice: &UpgradeChoice) -> &'static str {
-    match choice {
-        UpgradeChoice::NewWeapon(_) => "New Weapon",
-        UpgradeChoice::WeaponUpgrade(_) => "Weapon Upgrade",
-        UpgradeChoice::PassiveItem(_) => "New Passive",
-        UpgradeChoice::PassiveUpgrade(_) => "Passive Upgrade",
+/// Returns the upgrade-type subtitle (e.g. "New Weapon") in the given language.
+pub fn choice_subtitle(choice: &UpgradeChoice, lang: Language) -> &'static str {
+    match (choice, lang) {
+        (UpgradeChoice::NewWeapon(_), Language::Japanese) => "新しい武器",
+        (UpgradeChoice::NewWeapon(_), Language::English) => "New Weapon",
+        (UpgradeChoice::WeaponUpgrade(_), Language::Japanese) => "武器強化",
+        (UpgradeChoice::WeaponUpgrade(_), Language::English) => "Weapon Upgrade",
+        (UpgradeChoice::PassiveItem(_), Language::Japanese) => "新しいパッシブ",
+        (UpgradeChoice::PassiveItem(_), Language::English) => "New Passive",
+        (UpgradeChoice::PassiveUpgrade(_), Language::Japanese) => "パッシブ強化",
+        (UpgradeChoice::PassiveUpgrade(_), Language::English) => "Passive Upgrade",
     }
 }
 
-/// Returns the item name for a choice.
-pub fn choice_name(choice: &UpgradeChoice) -> &'static str {
+/// Returns the item name for a choice in the given language.
+pub fn choice_name(choice: &UpgradeChoice, lang: Language) -> &'static str {
     match choice {
-        UpgradeChoice::NewWeapon(wt) | UpgradeChoice::WeaponUpgrade(wt) => weapon_name(*wt),
-        UpgradeChoice::PassiveItem(pt) | UpgradeChoice::PassiveUpgrade(pt) => passive_name(*pt),
-    }
-}
-
-/// Returns the one-line effect description for a choice.
-pub fn choice_description(choice: &UpgradeChoice) -> &'static str {
-    match choice {
-        UpgradeChoice::NewWeapon(wt) | UpgradeChoice::WeaponUpgrade(wt) => weapon_description(*wt),
+        UpgradeChoice::NewWeapon(wt) | UpgradeChoice::WeaponUpgrade(wt) => {
+            weapon_name(*wt, lang)
+        }
         UpgradeChoice::PassiveItem(pt) | UpgradeChoice::PassiveUpgrade(pt) => {
-            passive_description(*pt)
+            passive_name(*pt, lang)
         }
     }
 }
 
-fn weapon_name(wt: WeaponType) -> &'static str {
-    match wt {
-        WeaponType::Whip => "Whip",
-        WeaponType::MagicWand => "Magic Wand",
-        WeaponType::Knife => "Knife",
-        WeaponType::Garlic => "Garlic",
-        WeaponType::Bible => "Bible",
-        WeaponType::ThunderRing => "Thunder Ring",
-        WeaponType::Cross => "Cross",
-        WeaponType::FireWand => "Fire Wand",
-        WeaponType::BloodyTear => "Bloody Tear",
-        WeaponType::HolyWand => "Holy Wand",
-        WeaponType::ThousandEdge => "Thousand Edge",
-        WeaponType::SoulEater => "Soul Eater",
-        WeaponType::UnholyVespers => "Unholy Vespers",
-        WeaponType::LightningRing => "Lightning Ring",
+/// Returns the one-line effect description for a choice in the given language.
+pub fn choice_description(choice: &UpgradeChoice, lang: Language) -> &'static str {
+    match choice {
+        UpgradeChoice::NewWeapon(wt) | UpgradeChoice::WeaponUpgrade(wt) => {
+            weapon_description(*wt, lang)
+        }
+        UpgradeChoice::PassiveItem(pt) | UpgradeChoice::PassiveUpgrade(pt) => {
+            passive_description(*pt, lang)
+        }
     }
 }
 
-fn weapon_description(wt: WeaponType) -> &'static str {
-    match wt {
-        WeaponType::Whip => "Fan-shaped swing, alternating sides.",
-        WeaponType::MagicWand => "Homing projectile toward nearest enemy.",
-        WeaponType::Knife => "Fast piercing shot in movement direction.",
-        WeaponType::Garlic => "Continuous damage aura around player.",
-        WeaponType::Bible => "Orbiting projectile that circles the player.",
-        WeaponType::ThunderRing => "Random lightning strikes across the screen.",
-        WeaponType::Cross => "Boomerang that flies out and returns.",
-        WeaponType::FireWand => "Fireball targeting the highest-HP enemy.",
-        WeaponType::BloodyTear => "Evolved Whip — massive area slash.",
-        WeaponType::HolyWand => "Evolved Magic Wand — rapid homing bolts.",
-        WeaponType::ThousandEdge => "Evolved Knife — endless blade flurry.",
-        WeaponType::SoulEater => "Evolved Garlic — drains life from enemies.",
-        WeaponType::UnholyVespers => "Evolved Bible — infinite orbiting blades.",
-        WeaponType::LightningRing => "Evolved Thunder Ring — storm of lightning.",
+fn weapon_name(wt: WeaponType, lang: Language) -> &'static str {
+    match (wt, lang) {
+        (WeaponType::Whip, Language::Japanese) => "ムチ",
+        (WeaponType::Whip, Language::English) => "Whip",
+        (WeaponType::MagicWand, Language::Japanese) => "魔法の杖",
+        (WeaponType::MagicWand, Language::English) => "Magic Wand",
+        (WeaponType::Knife, Language::Japanese) => "ナイフ",
+        (WeaponType::Knife, Language::English) => "Knife",
+        (WeaponType::Garlic, Language::Japanese) => "ニンニク",
+        (WeaponType::Garlic, Language::English) => "Garlic",
+        (WeaponType::Bible, Language::Japanese) => "聖書",
+        (WeaponType::Bible, Language::English) => "Bible",
+        (WeaponType::ThunderRing, Language::Japanese) => "サンダーリング",
+        (WeaponType::ThunderRing, Language::English) => "Thunder Ring",
+        (WeaponType::Cross, Language::Japanese) => "クロス",
+        (WeaponType::Cross, Language::English) => "Cross",
+        (WeaponType::FireWand, Language::Japanese) => "炎の杖",
+        (WeaponType::FireWand, Language::English) => "Fire Wand",
+        (WeaponType::BloodyTear, Language::Japanese) => "血の涙",
+        (WeaponType::BloodyTear, Language::English) => "Bloody Tear",
+        (WeaponType::HolyWand, Language::Japanese) => "聖なる杖",
+        (WeaponType::HolyWand, Language::English) => "Holy Wand",
+        (WeaponType::ThousandEdge, Language::Japanese) => "千の刃",
+        (WeaponType::ThousandEdge, Language::English) => "Thousand Edge",
+        (WeaponType::SoulEater, Language::Japanese) => "魂喰い",
+        (WeaponType::SoulEater, Language::English) => "Soul Eater",
+        (WeaponType::UnholyVespers, Language::Japanese) => "邪悪な晩課",
+        (WeaponType::UnholyVespers, Language::English) => "Unholy Vespers",
+        (WeaponType::LightningRing, Language::Japanese) => "雷のリング",
+        (WeaponType::LightningRing, Language::English) => "Lightning Ring",
     }
 }
 
-fn passive_name(pt: PassiveItemType) -> &'static str {
-    match pt {
-        PassiveItemType::Spinach => "Spinach",
-        PassiveItemType::Wings => "Wings",
-        PassiveItemType::HollowHeart => "Hollow Heart",
-        PassiveItemType::Clover => "Clover",
-        PassiveItemType::EmptyTome => "Empty Tome",
-        PassiveItemType::Bracer => "Bracer",
-        PassiveItemType::Spellbinder => "Spellbinder",
-        PassiveItemType::Duplicator => "Duplicator",
-        PassiveItemType::Pummarola => "Pummarola",
+fn weapon_description(wt: WeaponType, lang: Language) -> &'static str {
+    match (wt, lang) {
+        (WeaponType::Whip, Language::Japanese) => "左右交互に扇状の斬撃。",
+        (WeaponType::Whip, Language::English) => "Fan-shaped swing, alternating sides.",
+        (WeaponType::MagicWand, Language::Japanese) => "最寄りの敵に向かうホーミング弾。",
+        (WeaponType::MagicWand, Language::English) => "Homing projectile toward nearest enemy.",
+        (WeaponType::Knife, Language::Japanese) => "移動方向へ高速貫通弾。",
+        (WeaponType::Knife, Language::English) => "Fast piercing shot in movement direction.",
+        (WeaponType::Garlic, Language::Japanese) => "プレイヤー周囲に継続ダメージのオーラ。",
+        (WeaponType::Garlic, Language::English) => "Continuous damage aura around player.",
+        (WeaponType::Bible, Language::Japanese) => "プレイヤーの周りを旋回する飛翔体。",
+        (WeaponType::Bible, Language::English) => "Orbiting projectile that circles the player.",
+        (WeaponType::ThunderRing, Language::Japanese) => "画面全体にランダムな落雷。",
+        (WeaponType::ThunderRing, Language::English) => "Random lightning strikes across the screen.",
+        (WeaponType::Cross, Language::Japanese) => "飛んで戻ってくるブーメラン。",
+        (WeaponType::Cross, Language::English) => "Boomerang that flies out and returns.",
+        (WeaponType::FireWand, Language::Japanese) => "最大HPの敵を狙う火の玉。",
+        (WeaponType::FireWand, Language::English) => "Fireball targeting the highest-HP enemy.",
+        (WeaponType::BloodyTear, Language::Japanese) => "進化形ムチ — 広範囲の大斬撃。",
+        (WeaponType::BloodyTear, Language::English) => "Evolved Whip — massive area slash.",
+        (WeaponType::HolyWand, Language::Japanese) => "進化形魔法の杖 — 高速ホーミング弾。",
+        (WeaponType::HolyWand, Language::English) => "Evolved Magic Wand — rapid homing bolts.",
+        (WeaponType::ThousandEdge, Language::Japanese) => "進化形ナイフ — 終わりなき刃の嵐。",
+        (WeaponType::ThousandEdge, Language::English) => "Evolved Knife — endless blade flurry.",
+        (WeaponType::SoulEater, Language::Japanese) => "進化形ニンニク — 敵の命を吸収。",
+        (WeaponType::SoulEater, Language::English) => "Evolved Garlic — drains life from enemies.",
+        (WeaponType::UnholyVespers, Language::Japanese) => "進化形聖書 — 無限に旋回する刃。",
+        (WeaponType::UnholyVespers, Language::English) => "Evolved Bible — infinite orbiting blades.",
+        (WeaponType::LightningRing, Language::Japanese) => "進化形サンダーリング — 雷の嵐。",
+        (WeaponType::LightningRing, Language::English) => "Evolved Thunder Ring — storm of lightning.",
     }
 }
 
-fn passive_description(pt: PassiveItemType) -> &'static str {
-    match pt {
-        PassiveItemType::Spinach => "+10% damage per level.",
-        PassiveItemType::Wings => "+10% move speed per level.",
-        PassiveItemType::HollowHeart => "+20% max HP per level.",
-        PassiveItemType::Clover => "+10% luck per level.",
-        PassiveItemType::EmptyTome => "-8% weapon cooldown per level.",
-        PassiveItemType::Bracer => "+10% projectile speed per level.",
-        PassiveItemType::Spellbinder => "+10% weapon duration per level.",
-        PassiveItemType::Duplicator => "+1 projectile count per level.",
-        PassiveItemType::Pummarola => "+0.5 HP regeneration/s per level.",
+fn passive_name(pt: PassiveItemType, lang: Language) -> &'static str {
+    match (pt, lang) {
+        (PassiveItemType::Spinach, Language::Japanese) => "ほうれん草",
+        (PassiveItemType::Spinach, Language::English) => "Spinach",
+        (PassiveItemType::Wings, Language::Japanese) => "翼",
+        (PassiveItemType::Wings, Language::English) => "Wings",
+        (PassiveItemType::HollowHeart, Language::Japanese) => "虚ろな心",
+        (PassiveItemType::HollowHeart, Language::English) => "Hollow Heart",
+        (PassiveItemType::Clover, Language::Japanese) => "クローバー",
+        (PassiveItemType::Clover, Language::English) => "Clover",
+        (PassiveItemType::EmptyTome, Language::Japanese) => "空の魔導書",
+        (PassiveItemType::EmptyTome, Language::English) => "Empty Tome",
+        (PassiveItemType::Bracer, Language::Japanese) => "ブレーサー",
+        (PassiveItemType::Bracer, Language::English) => "Bracer",
+        (PassiveItemType::Spellbinder, Language::Japanese) => "スペルバインダー",
+        (PassiveItemType::Spellbinder, Language::English) => "Spellbinder",
+        (PassiveItemType::Duplicator, Language::Japanese) => "複製機",
+        (PassiveItemType::Duplicator, Language::English) => "Duplicator",
+        (PassiveItemType::Pummarola, Language::Japanese) => "プンマローラ",
+        (PassiveItemType::Pummarola, Language::English) => "Pummarola",
+    }
+}
+
+fn passive_description(pt: PassiveItemType, lang: Language) -> &'static str {
+    match (pt, lang) {
+        (PassiveItemType::Spinach, Language::Japanese) => "LVごとにダメージ+10%。",
+        (PassiveItemType::Spinach, Language::English) => "+10% damage per level.",
+        (PassiveItemType::Wings, Language::Japanese) => "LVごとに移動速度+10%。",
+        (PassiveItemType::Wings, Language::English) => "+10% move speed per level.",
+        (PassiveItemType::HollowHeart, Language::Japanese) => "LVごとに最大HP+20%。",
+        (PassiveItemType::HollowHeart, Language::English) => "+20% max HP per level.",
+        (PassiveItemType::Clover, Language::Japanese) => "LVごとに幸運+10%。",
+        (PassiveItemType::Clover, Language::English) => "+10% luck per level.",
+        (PassiveItemType::EmptyTome, Language::Japanese) => "LVごとに武器クールダウン-8%。",
+        (PassiveItemType::EmptyTome, Language::English) => "-8% weapon cooldown per level.",
+        (PassiveItemType::Bracer, Language::Japanese) => "LVごとに発射速度+10%。",
+        (PassiveItemType::Bracer, Language::English) => "+10% projectile speed per level.",
+        (PassiveItemType::Spellbinder, Language::Japanese) => "LVごとに武器持続時間+10%。",
+        (PassiveItemType::Spellbinder, Language::English) => "+10% weapon duration per level.",
+        (PassiveItemType::Duplicator, Language::Japanese) => "LVごとに発射数+1。",
+        (PassiveItemType::Duplicator, Language::English) => "+1 projectile count per level.",
+        (PassiveItemType::Pummarola, Language::Japanese) => "LVごとにHP自然回復+0.5/秒。",
+        (PassiveItemType::Pummarola, Language::English) => "+0.5 HP regeneration/s per level.",
     }
 }
 
@@ -158,6 +215,8 @@ pub fn spawn_upgrade_card(
     index: usize,
     choice: &UpgradeChoice,
     cfg: Option<&UpgradeCardHudConfig>,
+    font: Handle<Font>,
+    lang: Language,
 ) {
     let card_width = cfg
         .map(|c| c.card_width)
@@ -216,8 +275,9 @@ pub fn spawn_upgrade_card(
         .with_children(|card| {
             // Subtitle: upgrade type label.
             card.spawn((
-                Text::new(choice_subtitle(choice)),
+                Text::new(choice_subtitle(choice, lang)),
                 TextFont {
+                    font: font.clone(),
                     font_size: font_size_subtitle,
                     ..default()
                 },
@@ -226,8 +286,9 @@ pub fn spawn_upgrade_card(
 
             // Item name.
             card.spawn((
-                Text::new(choice_name(choice)),
+                Text::new(choice_name(choice, lang)),
                 TextFont {
+                    font: font.clone(),
                     font_size: font_size_name,
                     ..default()
                 },
@@ -236,8 +297,9 @@ pub fn spawn_upgrade_card(
 
             // Effect description.
             card.spawn((
-                Text::new(choice_description(choice)),
+                Text::new(choice_description(choice, lang)),
                 TextFont {
+                    font: font.clone(),
                     font_size: font_size_desc,
                     ..default()
                 },
@@ -350,14 +412,16 @@ mod tests {
             WeaponType::LightningRing,
         ];
         for wt in weapons {
-            assert!(
-                !weapon_name(wt).is_empty(),
-                "weapon_name({wt:?}) must not be empty"
-            );
-            assert!(
-                !weapon_description(wt).is_empty(),
-                "weapon_description({wt:?}) must not be empty"
-            );
+            for lang in [Language::English, Language::Japanese] {
+                assert!(
+                    !weapon_name(wt, lang).is_empty(),
+                    "weapon_name({wt:?}, {lang:?}) must not be empty"
+                );
+                assert!(
+                    !weapon_description(wt, lang).is_empty(),
+                    "weapon_description({wt:?}, {lang:?}) must not be empty"
+                );
+            }
         }
     }
 
@@ -375,34 +439,47 @@ mod tests {
             PassiveItemType::Pummarola,
         ];
         for pt in passives {
-            assert!(
-                !passive_name(pt).is_empty(),
-                "passive_name({pt:?}) must not be empty"
-            );
-            assert!(
-                !passive_description(pt).is_empty(),
-                "passive_description({pt:?}) must not be empty"
-            );
+            for lang in [Language::English, Language::Japanese] {
+                assert!(
+                    !passive_name(pt, lang).is_empty(),
+                    "passive_name({pt:?}, {lang:?}) must not be empty"
+                );
+                assert!(
+                    !passive_description(pt, lang).is_empty(),
+                    "passive_description({pt:?}, {lang:?}) must not be empty"
+                );
+            }
         }
     }
 
     #[test]
     fn choice_subtitle_returns_correct_category() {
+        let en = Language::English;
         assert_eq!(
-            choice_subtitle(&UpgradeChoice::NewWeapon(WeaponType::Whip)),
+            choice_subtitle(&UpgradeChoice::NewWeapon(WeaponType::Whip), en),
             "New Weapon"
         );
         assert_eq!(
-            choice_subtitle(&UpgradeChoice::WeaponUpgrade(WeaponType::Whip)),
+            choice_subtitle(&UpgradeChoice::WeaponUpgrade(WeaponType::Whip), en),
             "Weapon Upgrade"
         );
         assert_eq!(
-            choice_subtitle(&UpgradeChoice::PassiveItem(PassiveItemType::Spinach)),
+            choice_subtitle(&UpgradeChoice::PassiveItem(PassiveItemType::Spinach), en),
             "New Passive"
         );
         assert_eq!(
-            choice_subtitle(&UpgradeChoice::PassiveUpgrade(PassiveItemType::Spinach)),
+            choice_subtitle(&UpgradeChoice::PassiveUpgrade(PassiveItemType::Spinach), en),
             "Passive Upgrade"
+        );
+
+        let jp = Language::Japanese;
+        assert_eq!(
+            choice_subtitle(&UpgradeChoice::NewWeapon(WeaponType::Whip), jp),
+            "新しい武器"
+        );
+        assert_eq!(
+            choice_subtitle(&UpgradeChoice::WeaponUpgrade(WeaponType::Whip), jp),
+            "武器強化"
         );
     }
 
@@ -418,7 +495,7 @@ mod tests {
         let choice = UpgradeChoice::NewWeapon(WeaponType::Whip);
         let mut cmds = app.world_mut().commands();
         cmds.spawn(Node::default()).with_children(|parent| {
-            spawn_upgrade_card(parent, 0, &choice, None);
+            spawn_upgrade_card(parent, 0, &choice, None, Handle::default(), Language::English);
         });
         app.world_mut().flush();
 

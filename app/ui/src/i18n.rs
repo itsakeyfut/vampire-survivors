@@ -20,6 +20,8 @@
 use bevy::prelude::*;
 use vs_core::resources::Language;
 
+use crate::styles::{FONT_TEXT_EN, FONT_TEXT_JP};
+
 // ---------------------------------------------------------------------------
 // Marker component
 // ---------------------------------------------------------------------------
@@ -75,6 +77,10 @@ pub fn t(key: &'static str, lang: Language) -> &'static str {
         ("btn_play", Language::Japanese) => "プレイ",
         ("btn_play", Language::English) => "Play",
 
+        // ── Level-up screen ───────────────────────────────────────────────
+        ("level_up_title", Language::Japanese) => "レベルアップ！",
+        ("level_up_title", Language::English) => "LEVEL UP!",
+
         // ── Meta shop screen ──────────────────────────────────────────────
         ("meta_shop_title", Language::Japanese) => "ゴールドショップ",
         ("meta_shop_title", Language::English) => "Gold Shop",
@@ -102,25 +108,49 @@ pub fn t(key: &'static str, lang: Language) -> &'static str {
     }
 }
 
+
+// ---------------------------------------------------------------------------
+// Font selection
+// ---------------------------------------------------------------------------
+
+/// Returns the font asset path for the given language.
+///
+/// Each language group maps to a dedicated font constant so that swapping a
+/// font for a specific script (e.g. adding Cyrillic support for Russian) only
+/// requires updating this function and adding the new asset path in `styles.rs`.
+///
+/// Pass the result to [`AssetServer::load`] to obtain a [`Handle<Font>`].
+pub fn font_for_lang(lang: Language) -> &'static str {
+    match lang {
+        Language::Japanese => FONT_TEXT_JP,
+        Language::English => FONT_TEXT_EN,
+    }
+}
+
 // ---------------------------------------------------------------------------
 // System
 // ---------------------------------------------------------------------------
 
 /// Updates all [`TranslatableText`] nodes whenever [`GameSettings`] changes.
 ///
-/// Queries every text entity tagged with [`TranslatableText`] and re-sets its
-/// text to the localised string for the current language.  Only performs work
-/// on frames where [`GameSettings`] was actually modified.
+/// Queries every text entity tagged with [`TranslatableText`] and re-sets both
+/// its content via [`t`] and its [`TextFont`] handle to the language-appropriate
+/// font.  Only performs work on frames where [`GameSettings`] was modified.
 pub fn update_translatable_texts(
     settings: Res<vs_core::resources::GameSettings>,
-    mut query: Query<(&mut Text, &TranslatableText)>,
+    asset_server: Option<Res<AssetServer>>,
+    mut query: Query<(&mut Text, &mut TextFont, &TranslatableText)>,
 ) {
     if !settings.is_changed() {
         return;
     }
     let lang = settings.language;
-    for (mut text, key) in query.iter_mut() {
+    let new_font: Handle<Font> = asset_server
+        .map(|s| s.load(font_for_lang(lang)))
+        .unwrap_or_default();
+    for (mut text, mut text_font, key) in query.iter_mut() {
         *text = Text::new(t(key.0, lang));
+        text_font.font = new_font.clone();
     }
 }
 
@@ -162,6 +192,7 @@ mod tests {
             "btn_back",
             "character_select_title",
             "btn_play",
+            "level_up_title",
             "meta_shop_title",
             "pause_title",
             "btn_resume",
@@ -171,6 +202,16 @@ mod tests {
         for key in &keys {
             assert!(!t(key, Language::Japanese).is_empty(), "JP: {key}");
             assert!(!t(key, Language::English).is_empty(), "EN: {key}");
+        }
+    }
+
+    #[test]
+    fn font_for_lang_covers_all_variants() {
+        for lang in [Language::Japanese, Language::English] {
+            assert!(
+                !font_for_lang(lang).is_empty(),
+                "font_for_lang({lang:?}) must not be empty"
+            );
         }
     }
 

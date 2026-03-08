@@ -82,7 +82,11 @@ pub struct HudHpBarRoot;
 ///
 /// `cfg` is `None` while the RON asset is loading; fallback constants are used
 /// in that case.
-pub fn spawn_hp_bar(parent: &mut ChildSpawnerCommands, cfg: Option<&HpBarHudConfig>) {
+pub fn spawn_hp_bar(
+    parent: &mut ChildSpawnerCommands,
+    cfg: Option<&HpBarHudConfig>,
+    font: Handle<Font>,
+) {
     let bar_width = cfg.map(|c| c.bar_width).unwrap_or(DEFAULT_BAR_WIDTH);
     let bar_height = cfg.map(|c| c.bar_height).unwrap_or(DEFAULT_BAR_HEIGHT);
     let bar_radius = cfg.map(|c| c.bar_radius).unwrap_or(DEFAULT_BAR_RADIUS);
@@ -114,6 +118,7 @@ pub fn spawn_hp_bar(parent: &mut ChildSpawnerCommands, cfg: Option<&HpBarHudConf
             col.spawn((
                 Text::new("HP"),
                 TextFont {
+                    font,
                     font_size: label_font_size,
                     ..default()
                 },

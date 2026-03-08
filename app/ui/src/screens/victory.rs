@@ -12,7 +12,7 @@
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
-use vs_core::resources::GameData;
+use vs_core::resources::{GameData, GameSettings};
 use vs_core::states::AppState;
 
 use crate::components::ButtonAction;
@@ -22,6 +22,7 @@ use crate::config::{
 use crate::hud::gameplay::timer::format_elapsed;
 use crate::hud::menu_button::spawn_large_menu_button;
 use crate::hud::screen_heading::spawn_screen_heading;
+use crate::i18n::{font_for_lang, t};
 
 // ---------------------------------------------------------------------------
 // Fallback constants (used when VictoryScreenConfig / UiStyleConfig not loaded)
@@ -60,6 +61,7 @@ pub struct VictoryScreenBg;
 /// reached, enemies defeated).  Visual tunables are loaded from
 /// `config/ui/screen/victory.ron` via [`VictoryScreenParams`]; the private
 /// `DEFAULT_*` constants above serve as fallbacks while the file loads.
+#[allow(clippy::too_many_arguments)]
 pub fn setup_victory_screen(
     mut commands: Commands,
     ui_style: UiStyleParams,
@@ -67,7 +69,13 @@ pub fn setup_victory_screen(
     btn_cfg: MenuButtonHudParams,
     victory_cfg: VictoryScreenParams,
     game_data: Res<GameData>,
+    asset_server: Option<Res<AssetServer>>,
+    settings: Option<Res<GameSettings>>,
 ) {
+    let lang = settings.as_deref().map(|s| s.language).unwrap_or_default();
+    let font: Handle<Font> = asset_server
+        .map(|s| s.load(font_for_lang(lang)))
+        .unwrap_or_default();
     let bg_color = ui_style
         .get()
         .map(|c| Color::from(&c.bg_color))
@@ -117,7 +125,13 @@ pub fn setup_victory_screen(
         ))
         .with_children(|parent| {
             // "YOU WIN!" heading — gold.
-            spawn_screen_heading(parent, "YOU WIN!", victory_color, heading_cfg.get());
+            spawn_screen_heading(
+                parent,
+                t("victory_title", lang),
+                victory_color,
+                heading_cfg.get(),
+                font.clone(),
+            );
 
             // Run statistics.
             parent
@@ -137,6 +151,7 @@ pub fn setup_victory_screen(
                         stats.spawn((
                             Text::new(line),
                             TextFont {
+                                font: font.clone(),
                                 font_size: stat_font_size,
                                 ..default()
                             },
@@ -150,7 +165,14 @@ pub fn setup_victory_screen(
                 margin: UiRect::top(Val::Px(button_margin_top)),
                 ..default()
             });
-            spawn_large_menu_button(parent, "Title", ButtonAction::GoToTitle, btn_cfg.get());
+            spawn_large_menu_button(
+                parent,
+                t("btn_to_title", lang),
+                ButtonAction::GoToTitle,
+                btn_cfg.get(),
+                font.clone(),
+                None,
+            );
         });
 }
 

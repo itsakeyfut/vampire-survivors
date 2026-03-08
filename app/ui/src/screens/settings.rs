@@ -31,7 +31,7 @@ use crate::components::ButtonAction;
 use crate::config::{MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams};
 use crate::hud::menu_button::spawn_large_menu_button;
 use crate::hud::screen_heading::ScreenHeadingHud;
-use crate::i18n::{TranslatableText, t};
+use crate::i18n::{TranslatableText, font_for_lang, t};
 use crate::styles::{DEFAULT_BG_COLOR, DEFAULT_TITLE_COLOR};
 
 // ---------------------------------------------------------------------------
@@ -67,8 +67,12 @@ pub fn setup_settings_screen(
     ui_style: UiStyleParams,
     heading_cfg: ScreenHeadingHudParams,
     btn_cfg: MenuButtonHudParams,
+    asset_server: Option<Res<AssetServer>>,
 ) {
     let lang = settings.language;
+    let font: Handle<Font> = asset_server
+        .map(|s| s.load(font_for_lang(lang)))
+        .unwrap_or_default();
 
     let bg_color = ui_style
         .get()
@@ -118,6 +122,7 @@ pub fn setup_settings_screen(
             parent.spawn((
                 Text::new(t("settings_title", lang)),
                 TextFont {
+                    font: font.clone(),
                     font_size: heading_font_size,
                     ..default()
                 },
@@ -143,6 +148,7 @@ pub fn setup_settings_screen(
                     row.spawn((
                         Text::new(format!("{}:", t("label_language", lang))),
                         TextFont {
+                            font: font.clone(),
                             font_size: DEFAULT_LABEL_FONT_SIZE,
                             ..default()
                         },
@@ -174,6 +180,7 @@ pub fn setup_settings_screen(
                         btn.spawn((
                             Text::new(t(lang_key, lang)),
                             TextFont {
+                                font: font.clone(),
                                 font_size: btn_font_size * 0.6,
                                 ..default()
                             },
@@ -185,12 +192,14 @@ pub fn setup_settings_screen(
                     });
                 });
 
-            // Back button.
+            // Back button — TranslatableText enables live language updates.
             spawn_large_menu_button(
                 parent,
                 t("btn_back", lang),
                 ButtonAction::GoToTitle,
                 btn_cfg.get(),
+                font.clone(),
+                Some("btn_back"),
             );
         });
 }
@@ -202,10 +211,12 @@ pub fn setup_settings_screen(
 /// Updates the language button label whenever [`GameSettings`] changes.
 ///
 /// Runs only in [`AppState::Settings`]; early-returns when `GameSettings`
-/// was not modified this frame.
+/// was not modified this frame.  Updates both the text string and the
+/// [`TextFont`] handle so the correct language-appropriate font is applied.
 pub fn update_settings_display(
     settings: Res<GameSettings>,
-    mut label_q: Query<&mut Text, With<LanguageButtonLabel>>,
+    asset_server: Option<Res<AssetServer>>,
+    mut label_q: Query<(&mut Text, &mut TextFont), With<LanguageButtonLabel>>,
 ) {
     if !settings.is_changed() {
         return;
@@ -215,8 +226,12 @@ pub fn update_settings_display(
         vs_core::resources::Language::Japanese => "lang_japanese",
         vs_core::resources::Language::English => "lang_english",
     };
-    for mut text in label_q.iter_mut() {
+    let new_font: Handle<Font> = asset_server
+        .map(|s| s.load(font_for_lang(lang)))
+        .unwrap_or_default();
+    for (mut text, mut text_font) in label_q.iter_mut() {
         *text = Text::new(t(lang_key, lang));
+        text_font.font = new_font.clone();
     }
 }
 
@@ -307,7 +322,7 @@ mod tests {
         let mut app = build_app();
         let label = app
             .world_mut()
-            .spawn((Text::new("日本語"), LanguageButtonLabel))
+            .spawn((Text::new("日本語"), TextFont::default(), LanguageButtonLabel))
             .id();
 
         // Switch to English.

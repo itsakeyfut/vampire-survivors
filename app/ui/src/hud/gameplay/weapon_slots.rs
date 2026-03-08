@@ -88,7 +88,11 @@ pub fn weapon_abbr(wt: WeaponType) -> &'static str {
 ///
 /// `cfg` is `None` while the RON asset is loading; fallback constants are used
 /// in that case.
-pub fn spawn_weapon_slots(parent: &mut ChildSpawnerCommands, cfg: Option<&WeaponSlotsHudConfig>) {
+pub fn spawn_weapon_slots(
+    parent: &mut ChildSpawnerCommands,
+    cfg: Option<&WeaponSlotsHudConfig>,
+    font: Handle<Font>,
+) {
     let slot_size = cfg.map(|c| c.slot_size).unwrap_or(DEFAULT_SLOT_SIZE);
     let slot_gap = cfg.map(|c| c.slot_gap).unwrap_or(DEFAULT_SLOT_GAP);
     let slot_radius = cfg.map(|c| c.slot_radius).unwrap_or(DEFAULT_SLOT_RADIUS);
@@ -130,6 +134,7 @@ pub fn spawn_weapon_slots(parent: &mut ChildSpawnerCommands, cfg: Option<&Weapon
                     slot.spawn((
                         Text::new(""),
                         TextFont {
+                            font: font.clone(),
                             font_size: label_font_size,
                             ..default()
                         },

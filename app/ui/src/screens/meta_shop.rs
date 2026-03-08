@@ -13,10 +13,13 @@ use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
 use vs_core::states::AppState;
 
+use vs_core::resources::GameSettings;
+
 use crate::components::ButtonAction;
 use crate::config::{MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams};
 use crate::hud::menu_button::spawn_large_menu_button;
 use crate::hud::screen_heading::ScreenHeadingHud;
+use crate::i18n::{font_for_lang, t};
 use crate::styles::{DEFAULT_BG_COLOR, DEFAULT_TITLE_COLOR};
 
 // ---------------------------------------------------------------------------
@@ -37,7 +40,13 @@ pub fn setup_meta_shop_screen(
     ui_style: UiStyleParams,
     heading_cfg: ScreenHeadingHudParams,
     btn_cfg: MenuButtonHudParams,
+    asset_server: Option<Res<AssetServer>>,
+    settings: Option<Res<GameSettings>>,
 ) {
+    let lang = settings.as_deref().map(|s| s.language).unwrap_or_default();
+    let font: Handle<Font> = asset_server
+        .map(|s| s.load(font_for_lang(lang)))
+        .unwrap_or_default();
     let bg_color = ui_style
         .get()
         .map(|c| Color::from(&c.bg_color))
@@ -71,8 +80,9 @@ pub fn setup_meta_shop_screen(
         ))
         .with_children(|parent| {
             parent.spawn((
-                Text::new("Gold Shop"),
+                Text::new(t("meta_shop_title", lang)),
                 TextFont {
+                    font: font.clone(),
                     font_size: heading_font_size,
                     ..default()
                 },
@@ -84,7 +94,14 @@ pub fn setup_meta_shop_screen(
                 ScreenHeadingHud,
             ));
 
-            spawn_large_menu_button(parent, "Back", ButtonAction::GoToTitle, btn_cfg.get());
+            spawn_large_menu_button(
+                parent,
+                t("btn_back", lang),
+                ButtonAction::GoToTitle,
+                btn_cfg.get(),
+                font.clone(),
+                None,
+            );
         });
 }
 

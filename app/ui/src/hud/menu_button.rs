@@ -9,6 +9,7 @@ use bevy::prelude::*;
 
 use crate::components::{ButtonAction, MenuButton};
 use crate::config::hud::menu_button::{MenuButtonHudConfig, MenuButtonHudConfigHandle};
+use crate::i18n::TranslatableText;
 
 // ---------------------------------------------------------------------------
 // Fallback constants
@@ -43,15 +44,19 @@ pub struct LargeMenuButtonLabelHud;
 
 /// Spawns a large menu button with a centered text label as a child of `parent`.
 ///
-/// - `label`  — button label text (e.g. "Start", "Title").
-/// - `action` — the [`ButtonAction`] triggered when the button is clicked.
-/// - `cfg`    — layout/color config; pass `menu_button_params.get()`. Falls back
+/// - `label`    — button label text (e.g. "Start", "Title").
+/// - `action`   — the [`ButtonAction`] triggered when the button is clicked.
+/// - `cfg`      — layout/color config; pass `menu_button_params.get()`. Falls back
 ///   to `DEFAULT_*` constants when the asset is not yet loaded.
+/// - `i18n_key` — when `Some`, attaches [`TranslatableText`] to the label so
+///   [`crate::i18n::update_translatable_texts`] updates it live on language change.
 pub fn spawn_large_menu_button(
     parent: &mut ChildSpawnerCommands,
     label: &str,
     action: ButtonAction,
     cfg: Option<&MenuButtonHudConfig>,
+    font: Handle<Font>,
+    i18n_key: Option<&'static str>,
 ) {
     let width = cfg.map(|c| c.width).unwrap_or(DEFAULT_WIDTH);
     let height = cfg.map(|c| c.height).unwrap_or(DEFAULT_HEIGHT);
@@ -67,10 +72,14 @@ pub fn spawn_large_menu_button(
         .spawn((
             Button,
             Node {
-                width: Val::Px(width),
+                // Auto-width so Japanese labels (wider than English) never overflow.
+                // min_width enforces the configured minimum; padding adds side breathing room.
+                width: Val::Auto,
+                min_width: Val::Px(width),
                 height: Val::Px(height),
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
+                padding: UiRect::horizontal(Val::Px(24.0)),
                 ..default()
             },
             BackgroundColor(color_normal),
@@ -78,9 +87,10 @@ pub fn spawn_large_menu_button(
             LargeMenuButtonHud,
         ))
         .with_children(|btn| {
-            btn.spawn((
+            let mut label_cmd = btn.spawn((
                 Text::new(label),
                 TextFont {
+                    font,
                     font_size,
                     ..default()
                 },
@@ -88,6 +98,9 @@ pub fn spawn_large_menu_button(
                 TextLayout::new_with_linebreak(LineBreak::NoWrap),
                 LargeMenuButtonLabelHud,
             ));
+            if let Some(key) = i18n_key {
+                label_cmd.insert(TranslatableText(key));
+            }
         });
 }
 
@@ -130,7 +143,7 @@ pub fn hot_reload_menu_button_hud(
     if needs_apply && let Some(cfg) = cfg_assets.get(&cfg_handle.0) {
         for (mut bg, mut node) in btn_q.iter_mut() {
             *bg = BackgroundColor(Color::from(&cfg.color_normal));
-            node.width = Val::Px(cfg.width);
+            node.min_width = Val::Px(cfg.width);
             node.height = Val::Px(cfg.height);
         }
         for (mut tc, mut font) in label_q.iter_mut() {
@@ -163,7 +176,14 @@ mod tests {
 
         let mut cmds = app.world_mut().commands();
         cmds.spawn(Node::default()).with_children(|parent| {
-            spawn_large_menu_button(parent, "Start", ButtonAction::StartGame, None);
+            spawn_large_menu_button(
+                parent,
+                "Start",
+                ButtonAction::StartGame,
+                None,
+                Handle::default(),
+                None,
+            );
         });
         app.world_mut().flush();
 
@@ -183,7 +203,14 @@ mod tests {
 
         let mut cmds = app.world_mut().commands();
         cmds.spawn(Node::default()).with_children(|parent| {
-            spawn_large_menu_button(parent, "Start", ButtonAction::StartGame, None);
+            spawn_large_menu_button(
+                parent,
+                "Start",
+                ButtonAction::StartGame,
+                None,
+                Handle::default(),
+                None,
+            );
         });
         app.world_mut().flush();
 

@@ -11,12 +11,14 @@
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
+use vs_core::resources::GameSettings;
 use vs_core::states::AppState;
 
 use crate::components::ButtonAction;
 use crate::config::{MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams};
 use crate::hud::menu_button::spawn_large_menu_button;
 use crate::hud::screen_heading::spawn_screen_heading;
+use crate::i18n::{font_for_lang, t};
 use crate::styles::DEFAULT_BG_COLOR;
 
 // ---------------------------------------------------------------------------
@@ -44,7 +46,13 @@ pub fn setup_game_over_screen(
     ui_style: UiStyleParams,
     heading_cfg: ScreenHeadingHudParams,
     btn_cfg: MenuButtonHudParams,
+    asset_server: Option<Res<AssetServer>>,
+    settings: Option<Res<GameSettings>>,
 ) {
+    let lang = settings.as_deref().map(|s| s.language).unwrap_or_default();
+    let font: Handle<Font> = asset_server
+        .map(|s| s.load(font_for_lang(lang)))
+        .unwrap_or_default();
     let bg_color = ui_style
         .get()
         .map(|c| Color::from(&c.bg_color))
@@ -66,10 +74,23 @@ pub fn setup_game_over_screen(
         ))
         .with_children(|parent| {
             // "GAME OVER" heading — red; color is screen-specific.
-            spawn_screen_heading(parent, "GAME OVER", GAME_OVER_COLOR, heading_cfg.get());
+            spawn_screen_heading(
+                parent,
+                t("game_over_title", lang),
+                GAME_OVER_COLOR,
+                heading_cfg.get(),
+                font.clone(),
+            );
 
             // Title button.
-            spawn_large_menu_button(parent, "Title", ButtonAction::GoToTitle, btn_cfg.get());
+            spawn_large_menu_button(
+                parent,
+                t("btn_to_title", lang),
+                ButtonAction::GoToTitle,
+                btn_cfg.get(),
+                font.clone(),
+                None,
+            );
         });
 }
 

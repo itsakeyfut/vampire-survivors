@@ -40,8 +40,10 @@ pub mod xp_bar;
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
+use vs_core::resources::GameSettings;
 use vs_core::states::AppState;
 
+use crate::i18n::font_for_lang;
 use crate::config::hud::gameplay::{
     GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle, GameplayHudLayoutParams,
     HpBarHudParams, KillCountHudParams, LevelHudParams, TimerHudParams, WeaponSlotsHudParams,
@@ -103,7 +105,14 @@ pub fn setup_gameplay_hud(
     level_cfg: LevelHudParams,
     weapon_slots_cfg: WeaponSlotsHudParams,
     kill_count_cfg: KillCountHudParams,
+    asset_server: Option<Res<AssetServer>>,
+    settings: Option<Res<GameSettings>>,
 ) {
+    let lang = settings.as_deref().map(|s| s.language).unwrap_or_default();
+    let font: Handle<Font> = asset_server
+        .map(|s| s.load(font_for_lang(lang)))
+        .unwrap_or_default();
+
     let edge = layout_cfg
         .get()
         .map(|c| c.edge_margin)
@@ -133,7 +142,7 @@ pub fn setup_gameplay_hud(
                 HudHpBarAnchor,
             ))
             .with_children(|anchor| {
-                hp_bar::spawn_hp_bar(anchor, hp_bar_cfg.get());
+                hp_bar::spawn_hp_bar(anchor, hp_bar_cfg.get(), font.clone());
             });
 
             // ------------------------------------------------------------------
@@ -149,7 +158,7 @@ pub fn setup_gameplay_hud(
                 HudLevelAnchor,
             ))
             .with_children(|anchor| {
-                level::spawn_level(anchor, level_cfg.get());
+                level::spawn_level(anchor, level_cfg.get(), font.clone());
             });
 
             // ------------------------------------------------------------------
@@ -165,7 +174,7 @@ pub fn setup_gameplay_hud(
                 HudTimerAnchor,
             ))
             .with_children(|anchor| {
-                timer::spawn_timer(anchor, timer_cfg.get());
+                timer::spawn_timer(anchor, timer_cfg.get(), font.clone());
             });
 
             // ------------------------------------------------------------------
@@ -183,7 +192,7 @@ pub fn setup_gameplay_hud(
                 HudWeaponSlotsAnchor,
             ))
             .with_children(|anchor| {
-                weapon_slots::spawn_weapon_slots(anchor, weapon_slots_cfg.get());
+                weapon_slots::spawn_weapon_slots(anchor, weapon_slots_cfg.get(), font.clone());
             });
 
             // ------------------------------------------------------------------
@@ -199,7 +208,7 @@ pub fn setup_gameplay_hud(
                 HudKillCountAnchor,
             ))
             .with_children(|anchor| {
-                kill_count::spawn_kill_count(anchor, kill_count_cfg.get());
+                kill_count::spawn_kill_count(anchor, kill_count_cfg.get(), font.clone());
             });
 
             // ------------------------------------------------------------------
