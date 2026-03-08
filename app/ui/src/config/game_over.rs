@@ -1,0 +1,132 @@
+//! Game-over screen configuration.
+//!
+//! Loaded from `assets/config/ui/screen/game_over.ron`.
+//! Systems read the current values via [`GameOverScreenParams`] and fall back
+//! to private `DEFAULT_*` constants defined in each consumer module.
+
+use bevy::ecs::system::SystemParam;
+use bevy::prelude::*;
+use serde::Deserialize;
+
+use super::SrgbColor;
+
+// ---------------------------------------------------------------------------
+// Config asset
+// ---------------------------------------------------------------------------
+
+/// Game-over screen style config loaded from `config/ui/screen/game_over.ron`.
+///
+/// Controls the visual appearance of the game-over screen: stat text color
+/// and size, and spacing between sections.
+#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+pub struct GameOverScreenConfig {
+    /// Color of the run-statistics text lines.
+    pub stat_color: SrgbColor,
+    /// Font size of the run-statistics text lines.
+    pub stat_font_size: f32,
+    /// Top margin between the heading and the stats container (pixels).
+    pub stats_margin_top: f32,
+    /// Top margin between the stats container and the buttons (pixels).
+    pub button_margin_top: f32,
+    /// Vertical gap between individual stat lines and between buttons (pixels).
+    pub row_gap: f32,
+}
+
+/// Resource holding the handle to the loaded [`GameOverScreenConfig`].
+#[derive(Resource)]
+pub struct GameOverScreenConfigHandle(pub Handle<GameOverScreenConfig>);
+
+// ---------------------------------------------------------------------------
+// SystemParam bundle
+// ---------------------------------------------------------------------------
+
+/// SystemParam bundle for accessing [`GameOverScreenConfig`].
+///
+/// Returns `None` while the asset is still loading or when
+/// [`super::UiConfigPlugin`] has not been registered (e.g. in unit tests).
+/// Call `.get()` to obtain `Option<&GameOverScreenConfig>`.
+#[derive(SystemParam)]
+pub struct GameOverScreenParams<'w> {
+    handle: Option<Res<'w, GameOverScreenConfigHandle>>,
+    assets: Option<Res<'w, Assets<GameOverScreenConfig>>>,
+}
+
+impl<'w> GameOverScreenParams<'w> {
+    /// Returns the currently loaded [`GameOverScreenConfig`], or `None`.
+    pub fn get(&self) -> Option<&GameOverScreenConfig> {
+        self.handle
+            .as_ref()
+            .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Hot-reload system
+// ---------------------------------------------------------------------------
+
+/// Logs when `config/ui/screen/game_over.ron` is loaded or hot-reloaded.
+pub fn hot_reload_game_over_screen(mut events: MessageReader<AssetEvent<GameOverScreenConfig>>) {
+    for event in events.read() {
+        match event {
+            AssetEvent::Added { .. } => {
+                info!("✅ Game-over screen config loaded");
+            }
+            AssetEvent::Modified { .. } => {
+                info!("🔥 Game-over screen config hot-reloaded");
+            }
+            AssetEvent::Removed { .. } => {
+                warn!("⚠️ Game-over screen config removed");
+            }
+            _ => {}
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn game_over_screen_config_deserialization() {
+        let ron_data = r#"
+GameOverScreenConfig(
+    stat_color:        (r: 0.85, g: 0.85, b: 0.85),
+    stat_font_size:    24.0,
+    stats_margin_top:  16.0,
+    button_margin_top: 48.0,
+    row_gap:           8.0,
+)
+"#;
+        let cfg: GameOverScreenConfig =
+            ron::de::from_str(ron_data).expect("RON parse must succeed");
+
+        assert!((cfg.stat_color.r - 0.85).abs() < 1e-6);
+        assert_eq!(cfg.stat_font_size, 24.0);
+        assert_eq!(cfg.stats_margin_top, 16.0);
+        assert_eq!(cfg.button_margin_top, 48.0);
+        assert_eq!(cfg.row_gap, 8.0);
+    }
+
+    #[test]
+    fn game_over_screen_config_values_are_positive() {
+        let cfg = GameOverScreenConfig {
+            stat_color: SrgbColor {
+                r: 0.85,
+                g: 0.85,
+                b: 0.85,
+            },
+            stat_font_size: 24.0,
+            stats_margin_top: 16.0,
+            button_margin_top: 48.0,
+            row_gap: 8.0,
+        };
+        assert!(cfg.stat_font_size > 0.0);
+        assert!(cfg.stats_margin_top >= 0.0);
+        assert!(cfg.button_margin_top >= 0.0);
+        assert!(cfg.row_gap >= 0.0);
+    }
+}

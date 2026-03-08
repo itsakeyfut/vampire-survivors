@@ -10,6 +10,7 @@
 //! - Background color: [`UiStyleParams`]
 //! - Heading layout: [`ScreenHeadingHudParams`]
 //! - Button dimensions and colors: [`MenuButtonHudParams`]
+//! - Stat text colors and spacing: [`GameOverScreenParams`]
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
@@ -17,7 +18,9 @@ use vs_core::resources::{GameData, GameSettings};
 use vs_core::states::AppState;
 
 use crate::components::ButtonAction;
-use crate::config::{MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams};
+use crate::config::{
+    GameOverScreenParams, MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams,
+};
 use crate::hud::gameplay::timer::format_elapsed;
 use crate::hud::menu_button::spawn_large_menu_button;
 use crate::hud::screen_heading::spawn_screen_heading;
@@ -38,7 +41,7 @@ const DEFAULT_STAT_FONT_SIZE: f32 = 24.0;
 const DEFAULT_STATS_MARGIN_TOP: f32 = 16.0;
 /// Top margin between stats and buttons (pixels).
 const DEFAULT_BUTTON_MARGIN_TOP: f32 = 48.0;
-/// Vertical gap between individual stat lines (pixels).
+/// Vertical gap between individual stat lines and between buttons (pixels).
 const DEFAULT_ROW_GAP: f32 = 8.0;
 
 // ---------------------------------------------------------------------------
@@ -56,13 +59,16 @@ pub struct GameOverScreenBg;
 /// Spawns the game-over screen UI when entering [`AppState::GameOver`].
 ///
 /// Reads [`GameData`] to display run statistics (survival time, level
-/// reached, enemies defeated, gold earned).  Visual tunables fall back to
-/// the private `DEFAULT_*` constants defined above.
+/// reached, enemies defeated, gold earned).  Visual tunables are loaded from
+/// `config/ui/screen/game_over.ron` via [`GameOverScreenParams`]; the private
+/// `DEFAULT_*` constants above serve as fallbacks while the file loads.
+#[allow(clippy::too_many_arguments)]
 pub fn setup_game_over_screen(
     mut commands: Commands,
     ui_style: UiStyleParams,
     heading_cfg: ScreenHeadingHudParams,
     btn_cfg: MenuButtonHudParams,
+    game_over_cfg: GameOverScreenParams,
     game_data: Res<GameData>,
     asset_server: Option<Res<AssetServer>>,
     settings: Option<Res<GameSettings>>,
@@ -75,6 +81,26 @@ pub fn setup_game_over_screen(
         .get()
         .map(|c| Color::from(&c.bg_color))
         .unwrap_or(DEFAULT_BG_COLOR);
+    let stat_color = game_over_cfg
+        .get()
+        .map(|c| Color::from(&c.stat_color))
+        .unwrap_or(DEFAULT_STAT_COLOR);
+    let stat_font_size = game_over_cfg
+        .get()
+        .map(|c| c.stat_font_size)
+        .unwrap_or(DEFAULT_STAT_FONT_SIZE);
+    let stats_margin_top = game_over_cfg
+        .get()
+        .map(|c| c.stats_margin_top)
+        .unwrap_or(DEFAULT_STATS_MARGIN_TOP);
+    let button_margin_top = game_over_cfg
+        .get()
+        .map(|c| c.button_margin_top)
+        .unwrap_or(DEFAULT_BUTTON_MARGIN_TOP);
+    let row_gap = game_over_cfg
+        .get()
+        .map(|c| c.row_gap)
+        .unwrap_or(DEFAULT_ROW_GAP);
 
     let clear_time = format_elapsed(game_data.elapsed_time as u32);
     let level = game_data.current_level;
@@ -110,8 +136,8 @@ pub fn setup_game_over_screen(
                 .spawn(Node {
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Center,
-                    margin: UiRect::top(Val::Px(DEFAULT_STATS_MARGIN_TOP)),
-                    row_gap: Val::Px(DEFAULT_ROW_GAP),
+                    margin: UiRect::top(Val::Px(stats_margin_top)),
+                    row_gap: Val::Px(row_gap),
                     ..default()
                 })
                 .with_children(|stats| {
@@ -125,39 +151,44 @@ pub fn setup_game_over_screen(
                             Text::new(line),
                             TextFont {
                                 font: font.clone(),
-                                font_size: DEFAULT_STAT_FONT_SIZE,
+                                font_size: stat_font_size,
                                 ..default()
                             },
-                            TextColor(DEFAULT_STAT_COLOR),
+                            TextColor(stat_color),
                         ));
                     }
                 });
 
-            // Button row.
-            parent.spawn(Node {
-                margin: UiRect::top(Val::Px(DEFAULT_BUTTON_MARGIN_TOP)),
-                ..default()
-            });
+            // Button column — margin separates it from the stats block.
+            parent
+                .spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    margin: UiRect::top(Val::Px(button_margin_top)),
+                    row_gap: Val::Px(row_gap),
+                    ..default()
+                })
+                .with_children(|buttons| {
+                    // "もう一度" → CharacterSelect (restart run).
+                    spawn_large_menu_button(
+                        buttons,
+                        t("btn_retry", lang),
+                        ButtonAction::GoToCharacterSelect,
+                        btn_cfg.get(),
+                        font.clone(),
+                        Some("btn_retry"),
+                    );
 
-            // "もう一度" → CharacterSelect (restart run).
-            spawn_large_menu_button(
-                parent,
-                t("btn_retry", lang),
-                ButtonAction::GoToCharacterSelect,
-                btn_cfg.get(),
-                font.clone(),
-                Some("btn_retry"),
-            );
-
-            // "タイトルへ" → Title.
-            spawn_large_menu_button(
-                parent,
-                t("btn_to_title", lang),
-                ButtonAction::GoToTitle,
-                btn_cfg.get(),
-                font.clone(),
-                Some("btn_to_title"),
-            );
+                    // "タイトルへ" → Title.
+                    spawn_large_menu_button(
+                        buttons,
+                        t("btn_to_title", lang),
+                        ButtonAction::GoToTitle,
+                        btn_cfg.get(),
+                        font.clone(),
+                        Some("btn_to_title"),
+                    );
+                });
         });
 }
 
