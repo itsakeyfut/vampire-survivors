@@ -25,9 +25,16 @@ const DEFAULT_CARD_WIDTH: f32 = 260.0;
 const DEFAULT_CARD_HEIGHT: f32 = 320.0;
 const DEFAULT_PADDING: f32 = 16.0;
 const DEFAULT_INNER_GAP: f32 = 12.0;
-const DEFAULT_FONT_SIZE_NAME: f32 = 32.0;
-const DEFAULT_FONT_SIZE_SUBTITLE: f32 = 24.0;
-const DEFAULT_FONT_SIZE_DESC: f32 = 24.0;
+const DEFAULT_FONT_SIZE_NAME: f32 = 28.0;
+const DEFAULT_FONT_SIZE_SUBTITLE: f32 = 20.0;
+const DEFAULT_FONT_SIZE_DESC: f32 = 18.0;
+const DEFAULT_ICON_SIZE: f32 = 64.0;
+
+// Icon colors per upgrade category (placeholder until sprite assets are added).
+const ICON_COLOR_NEW_WEAPON: Color = Color::srgb(0.25, 0.50, 1.00);
+const ICON_COLOR_WEAPON_UPGRADE: Color = Color::srgb(0.40, 0.70, 1.00);
+const ICON_COLOR_NEW_PASSIVE: Color = Color::srgb(0.20, 0.75, 0.50);
+const ICON_COLOR_PASSIVE_UPGRADE: Color = Color::srgb(0.40, 0.90, 0.65);
 
 // ---------------------------------------------------------------------------
 // Marker component
@@ -178,6 +185,21 @@ fn passive_name(pt: PassiveItemType, lang: Language) -> &'static str {
     }
 }
 
+/// Returns the placeholder icon background color for a given upgrade choice.
+///
+/// Used until weapon/passive sprite assets are integrated in Phase 17.
+/// Colors are chosen to distinguish the four upgrade categories at a glance:
+/// - New weapon (blue) / Weapon upgrade (light blue)
+/// - New passive (green) / Passive upgrade (light green)
+fn icon_color(choice: &UpgradeChoice) -> Color {
+    match choice {
+        UpgradeChoice::NewWeapon(_) => ICON_COLOR_NEW_WEAPON,
+        UpgradeChoice::WeaponUpgrade(_) => ICON_COLOR_WEAPON_UPGRADE,
+        UpgradeChoice::PassiveItem(_) => ICON_COLOR_NEW_PASSIVE,
+        UpgradeChoice::PassiveUpgrade(_) => ICON_COLOR_PASSIVE_UPGRADE,
+    }
+}
+
 fn passive_description(pt: PassiveItemType, lang: Language) -> &'static str {
     match (pt, lang) {
         (PassiveItemType::Spinach, Language::Japanese) => "LVごとにダメージ+10%。",
@@ -256,6 +278,10 @@ pub fn spawn_upgrade_card(
         .map(|c| c.font_size_desc)
         .unwrap_or(DEFAULT_FONT_SIZE_DESC)
         .max(1.0);
+    let icon_size = cfg
+        .map(|c| c.icon_size)
+        .unwrap_or(DEFAULT_ICON_SIZE)
+        .max(8.0);
 
     parent
         .spawn((
@@ -277,6 +303,18 @@ pub fn spawn_upgrade_card(
             UpgradeCardHud { index },
         ))
         .with_children(|card| {
+            // Icon placeholder — a solid colored square.
+            // Replaced with a real sprite in Phase 17 when weapon/passive
+            // art assets are integrated.
+            card.spawn((
+                Node {
+                    width: Val::Px(icon_size),
+                    height: Val::Px(icon_size),
+                    ..default()
+                },
+                BackgroundColor(icon_color(choice)),
+            ));
+
             // Subtitle: upgrade type label.
             card.spawn((
                 Text::new(choice_subtitle(choice, lang)),

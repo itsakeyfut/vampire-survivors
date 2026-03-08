@@ -46,6 +46,8 @@ pub struct UpgradeCardHudConfig {
     pub font_size_subtitle: f32,
     /// Font size for the description text in points.
     pub font_size_desc: f32,
+    /// Side length of the square icon placeholder in pixels.
+    pub icon_size: f32,
 }
 
 /// Resource holding the handle to the loaded [`UpgradeCardHudConfig`].
@@ -101,6 +103,7 @@ UpgradeCardHudConfig(
     font_size_name:     32.0,
     font_size_subtitle: 24.0,
     font_size_desc:     24.0,
+    icon_size:          64.0,
 )
 "#;
         let cfg: UpgradeCardHudConfig =
@@ -157,6 +160,7 @@ UpgradeCardHudConfig(
             font_size_name: 32.0,
             font_size_subtitle: 24.0,
             font_size_desc: 24.0,
+            icon_size: 64.0,
         };
         assert!(
             cfg.card_width > 32.0,

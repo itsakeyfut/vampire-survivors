@@ -9,7 +9,7 @@
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
-use vs_core::resources::{GameSettings, LevelUpChoices};
+use vs_core::resources::{GameData, GameSettings, LevelUpChoices};
 use vs_core::states::AppState;
 
 use crate::config::{LevelUpScreenParams, ScreenHeadingHudParams, UpgradeCardHudParams};
@@ -50,6 +50,7 @@ pub struct LevelUpCardRow;
 pub fn setup_level_up_screen(
     mut commands: Commands,
     choices: Res<LevelUpChoices>,
+    game_data: Option<Res<GameData>>,
     mut next_state: ResMut<NextState<AppState>>,
     screen_cfg: LevelUpScreenParams,
     heading_cfg: ScreenHeadingHudParams,
@@ -100,10 +101,13 @@ pub fn setup_level_up_screen(
             LevelUpScreenBg,
         ))
         .with_children(|root| {
-            // "LEVEL UP!" heading — gold; color is screen-specific.
+            // "LEVEL UP! Lv.X" heading — gold; color is screen-specific.
+            // The level number is formatted at spawn time from GameData.
+            let level = game_data.as_deref().map(|d| d.current_level).unwrap_or(1);
+            let heading_text = format!("{} Lv.{}", t("level_up_title", lang), level);
             spawn_screen_heading(
                 root,
-                t("level_up_title", lang),
+                &heading_text,
                 heading_color,
                 heading_cfg.get(),
                 font.clone(),

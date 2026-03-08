@@ -23,7 +23,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use crate::{
-    components::{PassiveInventory, Player, WeaponInventory},
+    components::{PassiveInventory, Player, PlayerStats, WeaponInventory},
     config::GameParams,
     resources::LevelUpChoices,
     types::{PassiveItemType, UpgradeChoice, WeaponType},
@@ -78,27 +78,34 @@ const DEFAULT_CHOICE_COUNT: usize = 3;
 
 /// Generates random upgrade choices and stores them in [`LevelUpChoices`].
 ///
-/// The number of choices is read from [`GameParams`] (`level_up_choice_count`)
-/// and falls back to [`DEFAULT_CHOICE_COUNT`] when the config asset is not yet
-/// loaded.
+/// The number of choices is read from [`GameParams`] (`level_up_choice_count`).
+/// If the player's `luck` stat meets or exceeds `luck_bonus_choice_threshold`,
+/// one extra card is added.  Both fall back to their respective `DEFAULT_*`
+/// constants when the config asset is not yet loaded.
 ///
 /// Runs on [`OnEnter(AppState::LevelUp)`](crate::states::AppState::LevelUp).
 /// When fewer valid choices exist than the configured count (e.g. all items are
 /// maxed), all remaining options are returned.
 pub fn generate_level_up_choices(
-    player_q: Query<(&WeaponInventory, &PassiveInventory), With<Player>>,
+    player_q: Query<(&WeaponInventory, &PassiveInventory, &PlayerStats), With<Player>>,
     mut level_up_choices: ResMut<LevelUpChoices>,
     game_cfg: GameParams,
 ) {
-    let Ok((weapon_inv, passive_inv)) = player_q.single() else {
+    let Ok((weapon_inv, passive_inv, stats)) = player_q.single() else {
         level_up_choices.choices.clear();
         return;
     };
 
     let cfg = game_cfg.get();
-    let choice_count = cfg
+    let base_count = cfg
         .map(|c| c.level_up_choice_count)
         .unwrap_or(DEFAULT_CHOICE_COUNT);
+    let luck_threshold = cfg.map(|c| c.luck_bonus_choice_threshold).unwrap_or(1.5);
+    let choice_count = if stats.luck >= luck_threshold {
+        base_count + 1
+    } else {
+        base_count
+    };
     let max_weapon_level = cfg
         .map(|c| c.max_weapon_level)
         .unwrap_or(DEFAULT_MAX_WEAPON_LEVEL);
@@ -182,10 +189,23 @@ mod tests {
     }
 
     fn spawn_player(app: &mut App, weapons: Vec<WeaponState>, passives: Vec<PassiveState>) {
+        spawn_player_with_luck(app, weapons, passives, 1.0);
+    }
+
+    fn spawn_player_with_luck(
+        app: &mut App,
+        weapons: Vec<WeaponState>,
+        passives: Vec<PassiveState>,
+        luck: f32,
+    ) {
+        use crate::components::PlayerStats;
+        let mut stats = PlayerStats::default();
+        stats.luck = luck;
         app.world_mut().spawn((
             Player,
             WeaponInventory { weapons },
             PassiveInventory { items: passives },
+            stats,
         ));
     }
 
@@ -564,6 +584,45 @@ mod tests {
         let mut v: Vec<i32> = (0..10).collect();
         fisher_yates_shuffle(&mut v);
         assert_eq!(v.len(), 10);
+    }
+
+    // --- Luck bonus ---
+
+    /// High luck (≥ 1.5) gives one extra choice beyond the default count.
+    #[test]
+    fn high_luck_grants_extra_choice() {
+        let mut app = build_app();
+        // Player with Whip only and high luck — large pool available.
+        spawn_player_with_luck(
+            &mut app,
+            vec![WeaponState::new(WeaponType::Whip)],
+            vec![],
+            1.5,
+        );
+        run(&mut app);
+        assert_eq!(
+            choices(&app).len(),
+            DEFAULT_CHOICE_COUNT + 1,
+            "luck >= 1.5 should add one bonus choice card"
+        );
+    }
+
+    /// Normal luck (< 1.5) gives exactly DEFAULT_CHOICE_COUNT choices.
+    #[test]
+    fn normal_luck_gives_base_choice_count() {
+        let mut app = build_app();
+        spawn_player_with_luck(
+            &mut app,
+            vec![WeaponState::new(WeaponType::Whip)],
+            vec![],
+            1.0,
+        );
+        run(&mut app);
+        assert_eq!(
+            choices(&app).len(),
+            DEFAULT_CHOICE_COUNT,
+            "luck < 1.5 should give exactly {DEFAULT_CHOICE_COUNT} choices"
+        );
     }
 
     /// `fisher_yates_shuffle` preserves all elements and their counts (multiset equality).
