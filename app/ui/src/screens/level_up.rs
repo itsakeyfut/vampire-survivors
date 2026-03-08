@@ -50,7 +50,7 @@ pub struct LevelUpCardRow;
 pub fn setup_level_up_screen(
     mut commands: Commands,
     choices: Res<LevelUpChoices>,
-    game_data: Option<Res<GameData>>,
+    game_data: Res<GameData>,
     mut next_state: ResMut<NextState<AppState>>,
     screen_cfg: LevelUpScreenParams,
     heading_cfg: ScreenHeadingHudParams,
@@ -103,8 +103,11 @@ pub fn setup_level_up_screen(
         .with_children(|root| {
             // "LEVEL UP! Lv.X" heading — gold; color is screen-specific.
             // The level number is formatted at spawn time from GameData.
-            let level = game_data.as_deref().map(|d| d.current_level).unwrap_or(1);
-            let heading_text = format!("{} Lv.{}", t("level_up_title", lang), level);
+            let heading_text = format!(
+                "{} Lv.{}",
+                t("level_up_title", lang),
+                game_data.current_level
+            );
             spawn_screen_heading(
                 root,
                 &heading_text,
@@ -150,6 +153,7 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin));
         app.init_state::<AppState>();
         app.insert_resource(LevelUpChoices::default());
+        app.insert_resource(GameData::default());
         app
     }
 
@@ -299,6 +303,23 @@ mod tests {
             q.iter(app.world()).count(),
             0,
             "level-up overlay must despawn after leaving LevelUp state"
+        );
+    }
+
+    /// Heading text includes the current level number from GameData.
+    #[test]
+    fn heading_includes_current_level() {
+        let mut app = build_app();
+        app.world_mut().resource_mut::<GameData>().current_level = 7;
+        app.add_systems(OnEnter(AppState::LevelUp), setup_level_up_screen);
+        populate_choices(&mut app, vec![UpgradeChoice::NewWeapon(WeaponType::Whip)]);
+        enter_level_up(&mut app);
+
+        let mut q = app.world_mut().query::<&Text>();
+        let texts: Vec<String> = q.iter(app.world()).map(|t| t.0.clone()).collect();
+        assert!(
+            texts.iter().any(|t| t.contains("Lv.7")),
+            "heading must contain 'Lv.7'; got: {texts:?}"
         );
     }
 }

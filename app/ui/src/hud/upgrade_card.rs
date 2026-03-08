@@ -557,4 +557,77 @@ mod tests {
             "spawn_upgrade_card must produce one Button+UpgradeCardHud entity"
         );
     }
+
+    /// Icon placeholder node is spawned with the correct size and category color.
+    #[test]
+    fn spawn_upgrade_card_icon_placeholder_has_correct_size_and_color() {
+        use bevy::state::app::StatesPlugin;
+        use vs_core::states::AppState;
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin));
+        app.init_state::<AppState>();
+
+        // Test each upgrade category to verify the color mapping.
+        let cases: &[(&str, UpgradeChoice, Color)] = &[
+            (
+                "NewWeapon",
+                UpgradeChoice::NewWeapon(WeaponType::Whip),
+                ICON_COLOR_NEW_WEAPON,
+            ),
+            (
+                "WeaponUpgrade",
+                UpgradeChoice::WeaponUpgrade(WeaponType::Whip),
+                ICON_COLOR_WEAPON_UPGRADE,
+            ),
+            (
+                "PassiveItem",
+                UpgradeChoice::PassiveItem(PassiveItemType::Spinach),
+                ICON_COLOR_NEW_PASSIVE,
+            ),
+            (
+                "PassiveUpgrade",
+                UpgradeChoice::PassiveUpgrade(PassiveItemType::Spinach),
+                ICON_COLOR_PASSIVE_UPGRADE,
+            ),
+        ];
+
+        for (label, choice, expected_color) in cases {
+            // Spawn a fresh card for each case.
+            let mut cmds = app.world_mut().commands();
+            cmds.spawn(Node::default()).with_children(|parent| {
+                spawn_upgrade_card(
+                    parent,
+                    0,
+                    choice,
+                    None,
+                    Handle::default(),
+                    Language::English,
+                );
+            });
+            app.world_mut().flush();
+
+            // The icon placeholder is a Node with a BackgroundColor whose size
+            // equals DEFAULT_ICON_SIZE.  Find all background-colored nodes and
+            // verify at least one matches the expected icon dimensions and color.
+            let mut q = app.world_mut().query::<(&Node, &BackgroundColor)>();
+            let icon_found = q.iter(app.world()).any(|(node, bg)| {
+                node.width == Val::Px(DEFAULT_ICON_SIZE.max(8.0))
+                    && node.height == Val::Px(DEFAULT_ICON_SIZE.max(8.0))
+                    && bg.0 == *expected_color
+            });
+            assert!(
+                icon_found,
+                "{label}: icon node with size {}px and expected color not found",
+                DEFAULT_ICON_SIZE
+            );
+
+            // Clean up spawned entities before the next iteration.
+            let entities: Vec<Entity> = app.world_mut().iter_entities().map(|e| e.id()).collect();
+            for e in entities {
+                app.world_mut().despawn(e);
+            }
+            app.world_mut().flush();
+        }
+    }
 }
