@@ -123,8 +123,14 @@ fn weapon_name_key(wt: WeaponType) -> &'static str {
         WeaponType::ThunderRing => "weapon_thunder_ring",
         WeaponType::Cross => "weapon_cross",
         WeaponType::FireWand => "weapon_fire_wand",
-        // Evolved weapons are not starting weapons; fall back to Whip label.
-        _ => "weapon_whip",
+        // Evolved weapons are never used as starting weapons.
+        // Listed explicitly so adding a new WeaponType causes a compile error here.
+        WeaponType::BloodyTear
+        | WeaponType::HolyWand
+        | WeaponType::ThousandEdge
+        | WeaponType::SoulEater
+        | WeaponType::UnholyVespers
+        | WeaponType::LightningRing => "weapon_whip",
     }
 }
 
@@ -386,8 +392,8 @@ pub fn update_character_select(
     } else {
         DETAIL_LOCKED_COLOR
     };
-    for (mut text, mut color) in detail_q.iter_mut() {
-        *text = Text::new(content.clone());
+    if let Ok((mut text, mut color)) = detail_q.single_mut() {
+        *text = Text::new(content);
         color.0 = text_color;
     }
 
@@ -417,13 +423,21 @@ pub fn update_character_select(
 pub fn handle_character_card_interaction(
     card_q: Query<(&Interaction, &CharacterCardButton), Changed<Interaction>>,
     selected: Option<ResMut<SelectedCharacter>>,
+    meta: Option<Res<MetaProgress>>,
 ) {
     let Some(mut selected) = selected else {
         return;
     };
     for (interaction, card) in card_q.iter() {
         if *interaction == Interaction::Pressed {
-            selected.0 = card.0;
+            // Only allow selecting characters that have been unlocked.
+            let is_unlocked = meta
+                .as_deref()
+                .map(|m| m.unlocked_characters.contains(&card.0))
+                .unwrap_or(false);
+            if is_unlocked {
+                selected.0 = card.0;
+            }
         }
     }
 }
@@ -586,9 +600,35 @@ mod tests {
     // ── handle_character_card_interaction ───────────────────────────────────
 
     #[test]
-    fn card_press_updates_selected_character() {
+    fn card_press_updates_selected_character_when_unlocked() {
         let mut app = build_app();
+        // DefaultCharacter is unlocked by default (MetaProgress::default).
+        let card_entity = app
+            .world_mut()
+            .spawn((
+                Interaction::Pressed,
+                CharacterCardButton(CharacterType::DefaultCharacter),
+            ))
+            .id();
 
+        app.world_mut()
+            .run_system_once(handle_character_card_interaction)
+            .unwrap();
+
+        let selected = app.world().resource::<SelectedCharacter>();
+        assert_eq!(
+            selected.0,
+            CharacterType::DefaultCharacter,
+            "pressing an unlocked card must update SelectedCharacter"
+        );
+
+        app.world_mut().despawn(card_entity);
+    }
+
+    #[test]
+    fn card_press_does_not_select_locked_character() {
+        let mut app = build_app();
+        // Thief is locked in default MetaProgress.
         let card_entity = app
             .world_mut()
             .spawn((
@@ -604,8 +644,8 @@ mod tests {
         let selected = app.world().resource::<SelectedCharacter>();
         assert_eq!(
             selected.0,
-            CharacterType::Thief,
-            "pressing Thief card must update SelectedCharacter"
+            CharacterType::DefaultCharacter,
+            "pressing a locked card must NOT change SelectedCharacter"
         );
 
         app.world_mut().despawn(card_entity);
