@@ -116,3 +116,17 @@ pub struct LevelUpEvent {
     /// The player's new level after the level-up.
     pub new_level: u32,
 }
+
+/// Fired when the player touches a treasure chest and it is opened.
+///
+/// Emitted by
+/// [`open_treasure_chests`](crate::systems::xp::treasure::open_treasure_chests)
+/// immediately before the chest entity is despawned.
+///
+/// Consumers (audio SFX, HUD flash, etc.) use this event to react to the
+/// chest opening without querying the (now-despawned) entity.
+#[derive(Message, Debug, Clone)]
+pub struct TreasureOpenedEvent {
+    /// World-space position of the chest at the moment it was opened.
+    pub position: Vec2,
+}

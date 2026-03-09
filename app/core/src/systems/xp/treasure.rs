@@ -21,6 +21,7 @@ use crate::{
         CircleCollider, GameSessionEntity, PassiveInventory, Player, Treasure, WeaponInventory,
     },
     config::GameParams,
+    events::TreasureOpenedEvent,
     resources::GameData,
     types::WeaponType,
 };
@@ -57,6 +58,7 @@ const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
 pub fn open_treasure_chests(
     mut commands: Commands,
     mut game_data: ResMut<GameData>,
+    mut opened_events: MessageWriter<TreasureOpenedEvent>,
     game_cfg: GameParams,
     player_q: Query<
         (
@@ -88,6 +90,13 @@ pub fn open_treasure_chests(
         if dist > threshold {
             continue;
         }
+
+        let chest_pos = treasure_tf.translation.truncate();
+
+        // Notify listeners (audio, HUD, etc.) before the entity is gone.
+        opened_events.write(TreasureOpenedEvent {
+            position: chest_pos,
+        });
 
         // Despawn the chest immediately.
         commands.entity(treasure_entity).despawn();
@@ -194,6 +203,7 @@ mod tests {
     use super::*;
     use crate::{
         components::{CircleCollider, PassiveInventory, WeaponInventory},
+        events::TreasureOpenedEvent,
         resources::GameData,
         states::AppState,
         types::{PassiveItemType, PassiveState, WeaponState, WeaponType},
@@ -206,6 +216,7 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<AppState>()
             .insert_resource(GameData::default())
+            .add_message::<TreasureOpenedEvent>()
             .add_observer(apply_evolution)
             .add_systems(
                 Update,
@@ -312,6 +323,47 @@ mod tests {
             "Whip should have evolved to BloodyTear"
         );
         assert!(inv.weapons[0].evolved, "evolved flag should be set");
+    }
+
+    /// Opening a chest emits exactly one [`TreasureOpenedEvent`] at the chest
+    /// position.
+    #[test]
+    fn treasure_emits_opened_event_on_collection() {
+        let mut app = build_app();
+        spawn_player_at(&mut app, Vec2::ZERO);
+        let chest_pos = Vec2::new(5.0, 5.0); // inside overlap range
+        spawn_treasure_at(&mut app, chest_pos);
+
+        app.update();
+
+        let messages = app.world().resource::<Messages<TreasureOpenedEvent>>();
+        let events: Vec<_> = messages.get_cursor().read(messages).cloned().collect();
+        assert_eq!(
+            events.len(),
+            1,
+            "exactly one TreasureOpenedEvent should fire"
+        );
+        assert!(
+            (events[0].position - chest_pos).length() < 0.001,
+            "event position must match chest position"
+        );
+    }
+
+    /// When player is out of range, no [`TreasureOpenedEvent`] is emitted.
+    #[test]
+    fn no_event_when_treasure_out_of_range() {
+        let mut app = build_app();
+        spawn_player_at(&mut app, Vec2::ZERO);
+        spawn_treasure_at(&mut app, Vec2::new(500.0, 0.0));
+
+        app.update();
+
+        let messages = app.world().resource::<Messages<TreasureOpenedEvent>>();
+        assert_eq!(
+            messages.get_cursor().read(messages).count(),
+            0,
+            "no TreasureOpenedEvent when chest is out of range"
+        );
     }
 
     /// `spawn_treasure` must produce a yellow `Sprite` of the correct size.
