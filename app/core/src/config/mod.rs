@@ -10,18 +10,21 @@
 //!
 //! | Module      | Contents |
 //! |-------------|----------|
-//! | [`player`]  | `PlayerConfig` + `PlayerParams` SystemParam bundle |
-//! | [`enemy`]   | `EnemyConfig`, `EnemyStatsEntry` + `EnemyParams` SystemParam bundle |
-//! | [`game`]    | `GameConfig` + `GameParams` SystemParam bundle |
-//! | [`weapon`]  | Per-weapon configs (`WhipConfig`, `MagicWandConfig`, `KnifeConfig`, …) |
-//! | [`passive`] | `PassiveConfig` + `PassiveParams` SystemParam bundle |
+//! | [`player`]    | `PlayerConfig` + `PlayerParams` SystemParam bundle |
+//! | [`enemy`]     | `EnemyConfig`, `EnemyStatsEntry` + `EnemyParams` SystemParam bundle |
+//! | [`game`]      | `GameConfig` + `GameParams` SystemParam bundle |
+//! | [`weapon`]    | Per-weapon configs (`WhipConfig`, `MagicWandConfig`, `KnifeConfig`, …) |
+//! | [`passive`]   | `PassiveConfig` + `PassiveParams` SystemParam bundle |
+//! | [`character`] | `CharacterConfig`, `CharacterBaseStats` + `CharacterParams` SystemParam bundle |
 
+pub mod character;
 pub mod enemy;
 pub mod game;
 pub mod passive;
 pub mod player;
 pub mod weapon;
 
+pub use character::*;
 pub use enemy::*;
 pub use game::*;
 pub use passive::*;
@@ -102,6 +105,7 @@ ron_asset_loader!(PlayerConfigLoader, PlayerConfig);
 ron_asset_loader!(EnemyConfigLoader, EnemyConfig);
 ron_asset_loader!(GameConfigLoader, GameConfig);
 ron_asset_loader!(PassiveConfigLoader, PassiveConfig);
+ron_asset_loader!(CharacterConfigLoader, CharacterConfig);
 
 // Per-weapon config loaders
 ron_asset_loader!(WhipConfigLoader, WhipConfig);
@@ -145,6 +149,8 @@ struct AllConfigs<'w> {
     cross_assets: Res<'w, Assets<CrossConfig>>,
     fire_wand_handle: Res<'w, FireWandConfigHandle>,
     fire_wand_assets: Res<'w, Assets<FireWandConfig>>,
+    character_handle: Res<'w, CharacterConfigHandle>,
+    character_assets: Res<'w, Assets<CharacterConfig>>,
     font_handles: Res<'w, FontLoadHandles>,
     font_assets: Res<'w, Assets<Font>>,
 }
@@ -175,7 +181,9 @@ impl Plugin for GameConfigPlugin {
             .init_asset::<GameConfig>()
             .register_asset_loader(GameConfigLoader)
             .init_asset::<PassiveConfig>()
-            .register_asset_loader(PassiveConfigLoader);
+            .register_asset_loader(PassiveConfigLoader)
+            .init_asset::<CharacterConfig>()
+            .register_asset_loader(CharacterConfigLoader);
 
         // Register per-weapon asset types and loaders.
         app.init_asset::<WhipConfig>()
@@ -212,6 +220,7 @@ impl Plugin for GameConfigPlugin {
         let cross_handle: Handle<CrossConfig> = asset_server.load("config/weapons/cross.ron");
         let fire_wand_handle: Handle<FireWandConfig> =
             asset_server.load("config/weapons/fire_wand.ron");
+        let character_handle: Handle<CharacterConfig> = asset_server.load("config/character.ron");
 
         let font_text: Handle<Font> = asset_server.load(FONT_TEXT);
 
@@ -227,6 +236,7 @@ impl Plugin for GameConfigPlugin {
             .insert_resource(ThunderRingConfigHandle(thunder_ring_handle))
             .insert_resource(CrossConfigHandle(cross_handle))
             .insert_resource(FireWandConfigHandle(fire_wand_handle))
+            .insert_resource(CharacterConfigHandle(character_handle))
             .insert_resource(FontLoadHandles { game: font_text });
 
         // Hot-reload systems run in all states so live-editing always works.
@@ -236,6 +246,7 @@ impl Plugin for GameConfigPlugin {
                 hot_reload_player_config,
                 hot_reload_enemy_config,
                 hot_reload_game_config,
+                hot_reload_character_config,
             ),
         );
 
@@ -243,7 +254,7 @@ impl Plugin for GameConfigPlugin {
         app.add_systems(Update, wait_for_configs.run_if(in_state(AppState::Loading)));
 
         info!(
-            "✅ GameConfigPlugin initialized (player, enemy, game, passive, whip, magic_wand, knife, garlic, bible, thunder_ring, cross, fire_wand configs loading)"
+            "✅ GameConfigPlugin initialized (player, enemy, game, passive, character, whip, magic_wand, knife, garlic, bible, thunder_ring, cross, fire_wand configs loading)"
         );
     }
 }
@@ -283,6 +294,10 @@ fn wait_for_configs(configs: AllConfigs, mut next_state: ResMut<NextState<AppSta
         && configs
             .fire_wand_assets
             .get(&configs.fire_wand_handle.0)
+            .is_some()
+        && configs
+            .character_assets
+            .get(&configs.character_handle.0)
             .is_some()
         && configs
             .font_assets

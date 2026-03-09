@@ -1,0 +1,53 @@
+// Character configuration — per-character base stats and starting weapon.
+//
+// These values are the starting point for each run before meta-progression
+// bonuses (MetaProgress) are applied.  Hot-reloading this file takes effect
+// the next time a run starts; in-progress runs are unaffected.
+//
+// Per-character fields:
+// - max_hp:             Maximum hit-points at run start
+// - move_speed:         Base movement speed in pixels per second
+// - starting_weapon:    Weapon variant from WeaponType enum
+// - damage_multiplier:  Flat multiplier on all outgoing damage (1.0 = no change)
+// - cooldown_reduction: Fraction subtracted from weapon cooldowns (0.1 = -10 %)
+// - name:               Short display name (shown on character-select screen)
+// - description:        One-line trait summary (shown below the name)
+
+CharacterConfig(
+    default_character: (
+        max_hp:             100.0,
+        move_speed:         200.0,
+        starting_weapon:    Whip,
+        damage_multiplier:  1.0,
+        cooldown_reduction: 0.0,
+        name:               "Default",
+        description:        "Balanced all-rounder with the Whip.",
+    ),
+    magician: (
+        max_hp:             80.0,
+        move_speed:         200.0,
+        starting_weapon:    MagicWand,
+        damage_multiplier:  1.0,
+        cooldown_reduction: 0.1,
+        name:               "Magician",
+        description:        "-10 % cooldown. Starts with the Magic Wand.",
+    ),
+    thief: (
+        max_hp:             90.0,
+        move_speed:         250.0,
+        starting_weapon:    Knife,
+        damage_multiplier:  1.0,
+        cooldown_reduction: 0.0,
+        name:               "Thief",
+        description:        "+25 % move speed. Starts with the Knife.",
+    ),
+    knight: (
+        max_hp:             150.0,
+        move_speed:         180.0,
+        starting_weapon:    Whip,
+        damage_multiplier:  1.0,
+        cooldown_reduction: 0.0,
+        name:               "Knight",
+        description:        "+50 % max HP, -10 % move speed. Starts with the Whip.",
+    ),
+)
