@@ -145,6 +145,10 @@ fn weapon_name_key(wt: WeaponType) -> &'static str {
 }
 
 /// Builds the formatted multi-line detail string for the given character.
+///
+/// For unlocked characters the detail shows HP, move speed, starting weapon,
+/// and the description line.  For locked characters it shows the lock badge
+/// and the gold cost required to purchase the character in the gold shop.
 fn build_detail_text(
     stats: &vs_core::types::CharacterBaseStats,
     is_unlocked: bool,
@@ -163,7 +167,9 @@ fn build_detail_text(
             stats.description,
         )
     } else {
-        format!("{}\n{}", stats.name, t("label_locked", lang))
+        let cost_str =
+            t("label_unlock_cost", lang).replace("{cost}", &stats.unlock_cost.to_string());
+        format!("{}\n{}\n{}", stats.name, t("label_locked", lang), cost_str)
     }
 }
 
@@ -827,6 +833,14 @@ mod tests {
         assert!(
             text.0.contains('🔒'),
             "locked character detail must contain lock badge; got: {:?}",
+            text.0
+        );
+        // Gold cost must also appear for locked characters (from CharacterBaseStats).
+        let magician_stats = vs_core::types::get_character_stats(CharacterType::Magician);
+        let cost = magician_stats.unlock_cost;
+        assert!(
+            text.0.contains(&cost.to_string()),
+            "locked character detail must show unlock cost {cost}G; got: {:?}",
             text.0
         );
     }

@@ -38,6 +38,10 @@ pub struct CharacterBaseStats {
     pub name: String,
     /// One-line description shown below the character name.
     pub description: String,
+    /// Gold cost to unlock this character in the gold shop.
+    ///
+    /// `0` means always available (i.e. [`CharacterType::DefaultCharacter`]).
+    pub unlock_cost: u32,
 }
 
 /// Returns hardcoded fallback statistics for a given [`CharacterType`].
@@ -57,6 +61,7 @@ pub fn get_character_stats(char_type: CharacterType) -> CharacterBaseStats {
             cooldown_reduction: 0.0,
             name: "Default".to_string(),
             description: "Balanced all-rounder with the Whip.".to_string(),
+            unlock_cost: 0,
         },
         CharacterType::Magician => CharacterBaseStats {
             max_hp: 80.0,
@@ -66,6 +71,7 @@ pub fn get_character_stats(char_type: CharacterType) -> CharacterBaseStats {
             cooldown_reduction: 0.1,
             name: "Magician".to_string(),
             description: "-10 % cooldown. Starts with the Magic Wand.".to_string(),
+            unlock_cost: 500,
         },
         CharacterType::Thief => CharacterBaseStats {
             max_hp: 90.0,
@@ -75,6 +81,7 @@ pub fn get_character_stats(char_type: CharacterType) -> CharacterBaseStats {
             cooldown_reduction: 0.0,
             name: "Thief".to_string(),
             description: "+25 % move speed. Starts with the Knife.".to_string(),
+            unlock_cost: 500,
         },
         CharacterType::Knight => CharacterBaseStats {
             max_hp: 150.0,
@@ -84,6 +91,7 @@ pub fn get_character_stats(char_type: CharacterType) -> CharacterBaseStats {
             cooldown_reduction: 0.0,
             name: "Knight".to_string(),
             description: "+50 % max HP, -10 % move speed. Starts with the Whip.".to_string(),
+            unlock_cost: 1000,
         },
     }
 }
@@ -186,6 +194,28 @@ mod tests {
     }
 
     #[test]
+    fn default_character_unlock_cost_is_zero() {
+        let stats = get_character_stats(CharacterType::DefaultCharacter);
+        assert_eq!(
+            stats.unlock_cost, 0,
+            "DefaultCharacter must be free (always unlocked)"
+        );
+    }
+
+    #[test]
+    fn non_default_characters_have_pinned_unlock_costs() {
+        let magician = get_character_stats(CharacterType::Magician);
+        let thief = get_character_stats(CharacterType::Thief);
+        let knight = get_character_stats(CharacterType::Knight);
+        assert_eq!(
+            magician.unlock_cost, 500,
+            "Magician unlock cost must be 500G"
+        );
+        assert_eq!(thief.unlock_cost, 500, "Thief unlock cost must be 500G");
+        assert_eq!(knight.unlock_cost, 1000, "Knight unlock cost must be 1000G");
+    }
+
+    #[test]
     fn character_base_stats_ron_deserialization() {
         let ron_str = r#"
 (
@@ -196,12 +226,14 @@ mod tests {
     cooldown_reduction: 0.0,
     name: "Default",
     description: "Balanced all-rounder with the Whip.",
+    unlock_cost: 0,
 )
 "#;
         let stats: CharacterBaseStats = ron::de::from_str(ron_str).unwrap();
         assert_eq!(stats.max_hp, 100.0);
         assert_eq!(stats.starting_weapon, WeaponType::Whip);
         assert_eq!(stats.name, "Default");
+        assert_eq!(stats.unlock_cost, 0);
     }
 }
 
