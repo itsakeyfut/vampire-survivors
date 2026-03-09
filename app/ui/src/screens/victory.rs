@@ -1,8 +1,8 @@
 //! Victory screen — shown when the player defeats Boss Death.
 //!
 //! Spawns a full-screen layout containing a "YOU WIN!" heading, run statistics
-//! (clear time, level reached, enemies defeated), and a button to return to the
-//! title.  All entities are tagged with [`DespawnOnExit`]`(`[`AppState::Victory`]`)`
+//! (clear time, level reached, enemies defeated, gold earned), and a button to
+//! return to the title.  All entities are tagged with [`DespawnOnExit`]`(`[`AppState::Victory`]`)`
 //! so Bevy automatically despawns them when the state transitions away.
 //!
 //! - Background color: [`UiStyleParams`]
@@ -58,7 +58,7 @@ pub struct VictoryScreenBg;
 /// Spawns the victory screen UI when entering [`AppState::Victory`].
 ///
 /// Reads [`GameData`] to display the run statistics (clear time, level
-/// reached, enemies defeated).  Visual tunables are loaded from
+/// reached, enemies defeated, gold earned).  Visual tunables are loaded from
 /// `config/ui/screen/victory.ron` via [`VictoryScreenParams`]; the private
 /// `DEFAULT_*` constants above serve as fallbacks while the file loads.
 #[allow(clippy::too_many_arguments)]
@@ -108,6 +108,7 @@ pub fn setup_victory_screen(
     let clear_time = format_elapsed(game_data.elapsed_time as u32);
     let level = game_data.current_level;
     let kills = game_data.kill_count;
+    let gold = game_data.gold_earned;
 
     commands
         .spawn((
@@ -147,6 +148,7 @@ pub fn setup_victory_screen(
                         format!("{} {clear_time}", t("stat_clear_time", lang)),
                         format!("{} {level}", t("stat_level_reached", lang)),
                         format!("{} {kills}", t("stat_enemies_defeated", lang)),
+                        format!("{} {gold}", t("stat_gold_earned", lang)),
                     ] {
                         stats.spawn((
                             Text::new(line),
@@ -160,19 +162,22 @@ pub fn setup_victory_screen(
                     }
                 });
 
-            // Title button.
-            parent.spawn(Node {
-                margin: UiRect::top(Val::Px(button_margin_top)),
-                ..default()
-            });
-            spawn_large_menu_button(
-                parent,
-                t("btn_to_title", lang),
-                ButtonAction::GoToTitle,
-                btn_cfg.get(),
-                font.clone(),
-                None,
-            );
+            // Title button — container carries the top margin.
+            parent
+                .spawn(Node {
+                    margin: UiRect::top(Val::Px(button_margin_top)),
+                    ..default()
+                })
+                .with_children(|btn_row| {
+                    spawn_large_menu_button(
+                        btn_row,
+                        t("btn_to_title", lang),
+                        ButtonAction::GoToTitle,
+                        btn_cfg.get(),
+                        font.clone(),
+                        Some("btn_to_title"),
+                    );
+                });
         });
 }
 
@@ -329,6 +334,7 @@ mod tests {
             gd.elapsed_time = 1865.0; // 31:05
             gd.current_level = 42;
             gd.kill_count = 777;
+            gd.gold_earned = 999;
         }
         app.add_systems(OnEnter(AppState::Victory), setup_victory_screen);
         enter_victory(&mut app);
@@ -348,6 +354,10 @@ mod tests {
         assert!(
             texts.iter().any(|t| t.contains("777")),
             "kill count 777 should appear in a Text node; got: {texts:?}"
+        );
+        assert!(
+            texts.iter().any(|t| t.contains("999")),
+            "gold 999 should appear in a Text node; got: {texts:?}"
         );
     }
 }
