@@ -12,6 +12,7 @@
 // - cooldown_reduction: Fraction subtracted from weapon cooldowns (0.1 = -10 %)
 // - name:               Short display name (shown on character-select screen)
 // - description:        One-line trait summary (shown below the name)
+// - unlock_cost:        Gold required to unlock in the gold shop (0 = always available)
 
 CharacterConfig(
     default_character: (
@@ -22,6 +23,7 @@ CharacterConfig(
         cooldown_reduction: 0.0,
         name:               "Default",
         description:        "Balanced all-rounder with the Whip.",
+        unlock_cost:        0,
     ),
     magician: (
         max_hp:             80.0,
@@ -31,6 +33,7 @@ CharacterConfig(
         cooldown_reduction: 0.1,
         name:               "Magician",
         description:        "-10 % cooldown. Starts with the Magic Wand.",
+        unlock_cost:        500,
     ),
     thief: (
         max_hp:             90.0,
@@ -40,6 +43,7 @@ CharacterConfig(
         cooldown_reduction: 0.0,
         name:               "Thief",
         description:        "+25 % move speed. Starts with the Knife.",
+        unlock_cost:        500,
     ),
     knight: (
         max_hp:             150.0,
@@ -49,5 +53,6 @@ CharacterConfig(
         cooldown_reduction: 0.0,
         name:               "Knight",
         description:        "+50 % max HP, -10 % move speed. Starts with the Whip.",
+        unlock_cost:        1000,
     ),
 )

@@ -118,6 +118,7 @@ CharacterConfig(
         cooldown_reduction: 0.0,
         name: "Default",
         description: "Balanced all-rounder with the Whip.",
+        unlock_cost: 0,
     ),
     magician: (
         max_hp: 80.0,
@@ -127,6 +128,7 @@ CharacterConfig(
         cooldown_reduction: 0.1,
         name: "Magician",
         description: "-10 % cooldown. Starts with the Magic Wand.",
+        unlock_cost: 500,
     ),
     thief: (
         max_hp: 90.0,
@@ -136,6 +138,7 @@ CharacterConfig(
         cooldown_reduction: 0.0,
         name: "Thief",
         description: "+25 % move speed. Starts with the Knife.",
+        unlock_cost: 500,
     ),
     knight: (
         max_hp: 150.0,
@@ -145,6 +148,7 @@ CharacterConfig(
         cooldown_reduction: 0.0,
         name: "Knight",
         description: "+50 % max HP, -10 % move speed. Starts with the Whip.",
+        unlock_cost: 1000,
     ),
 )
 "#
@@ -155,12 +159,16 @@ CharacterConfig(
         let config: CharacterConfig = ron::de::from_str(sample_ron()).unwrap();
         assert_eq!(config.default_character.max_hp, 100.0);
         assert_eq!(config.default_character.starting_weapon, WeaponType::Whip);
+        assert_eq!(config.default_character.unlock_cost, 0);
         assert_eq!(config.magician.starting_weapon, WeaponType::MagicWand);
         assert_eq!(config.magician.cooldown_reduction, 0.1);
+        assert_eq!(config.magician.unlock_cost, 500);
         assert_eq!(config.thief.starting_weapon, WeaponType::Knife);
         assert_eq!(config.thief.move_speed, 250.0);
+        assert_eq!(config.thief.unlock_cost, 500);
         assert_eq!(config.knight.max_hp, 150.0);
         assert_eq!(config.knight.starting_weapon, WeaponType::Whip);
+        assert_eq!(config.knight.unlock_cost, 1000);
     }
 
     #[test]

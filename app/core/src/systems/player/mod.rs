@@ -232,8 +232,8 @@ mod tests {
     use bevy::ecs::system::RunSystemOnce as _;
 
     use super::*;
-    use crate::types::{CharacterType, WeaponType};
     use crate::states::AppState;
+    use crate::types::{CharacterType, WeaponType};
 
     // -----------------------------------------------------------------------
     // Unit tests (pure logic, no ECS App)
