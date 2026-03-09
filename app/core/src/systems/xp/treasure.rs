@@ -165,10 +165,20 @@ pub fn apply_evolution(
 /// `GameConfig::treasure_radius` (falling back to `DEFAULT_TREASURE_RADIUS`
 /// when config is not yet loaded).
 ///
+/// The chest uses a yellow square placeholder sprite (replace with pixel-art
+/// chest sprite in Phase 17).  z = 6.0 places it above enemies (z = 5.0) so
+/// it is always visible.
+///
 /// Called by the spawner system when a treasure drop is triggered.
 pub fn spawn_treasure(commands: &mut Commands, position: Vec2, radius: f32) {
     commands.spawn((
-        Transform::from_xyz(position.x, position.y, 0.0),
+        // Yellow square placeholder; Phase 17 will replace with a real sprite.
+        Sprite {
+            color: Color::srgb(1.0, 0.85, 0.1),
+            custom_size: Some(Vec2::splat(radius * 2.0)),
+            ..default()
+        },
+        Transform::from_xyz(position.x, position.y, 6.0),
         CircleCollider { radius },
         Treasure,
         GameSessionEntity,
@@ -302,5 +312,77 @@ mod tests {
             "Whip should have evolved to BloodyTear"
         );
         assert!(inv.weapons[0].evolved, "evolved flag should be set");
+    }
+
+    /// `spawn_treasure` must produce a yellow `Sprite` of the correct size.
+    #[test]
+    fn spawn_treasure_has_yellow_sprite() {
+        use bevy::ecs::system::RunSystemOnce as _;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+
+        let radius = DEFAULT_TREASURE_RADIUS;
+        app.world_mut()
+            .run_system_once(move |mut commands: Commands| {
+                spawn_treasure(&mut commands, Vec2::ZERO, radius);
+            })
+            .unwrap();
+
+        app.update();
+
+        let mut q = app
+            .world_mut()
+            .query_filtered::<(&Sprite, &CircleCollider), With<Treasure>>();
+        let (sprite, collider) = q.single(app.world()).expect("treasure entity must exist");
+
+        assert_eq!(
+            collider.radius, radius,
+            "CircleCollider radius must match spawn argument"
+        );
+        assert_eq!(
+            sprite.custom_size,
+            Some(Vec2::splat(radius * 2.0)),
+            "sprite size must be diameter"
+        );
+        // Yellow: R ≈ 1.0, G ≈ 0.85, B ≈ 0.1.
+        let [r, g, b, _] = sprite.color.to_srgba().to_f32_array();
+        assert!(r > 0.9, "red channel must be high for yellow sprite");
+        assert!(g > 0.7, "green channel must be moderate for yellow sprite");
+        assert!(b < 0.3, "blue channel must be low for yellow sprite");
+    }
+
+    /// `spawn_treasure` z-coordinate must be above enemies (z > 5.0).
+    #[test]
+    fn spawn_treasure_z_above_enemies() {
+        use bevy::ecs::system::RunSystemOnce as _;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+
+        app.world_mut()
+            .run_system_once(|mut commands: Commands| {
+                spawn_treasure(
+                    &mut commands,
+                    Vec2::new(10.0, 20.0),
+                    DEFAULT_TREASURE_RADIUS,
+                );
+            })
+            .unwrap();
+
+        app.update();
+
+        let mut q = app
+            .world_mut()
+            .query_filtered::<&Transform, With<Treasure>>();
+        let tf = q.single(app.world()).expect("treasure entity must exist");
+
+        assert!(
+            tf.translation.z > 5.0,
+            "treasure z ({}) must be above enemies (z = 5.0)",
+            tf.translation.z
+        );
+        assert_eq!(tf.translation.x, 10.0, "x position must match");
+        assert_eq!(tf.translation.y, 20.0, "y position must match");
     }
 }
