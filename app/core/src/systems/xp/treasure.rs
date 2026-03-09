@@ -166,7 +166,7 @@ pub fn apply_evolution(
 /// when config is not yet loaded).
 ///
 /// The chest uses a yellow square placeholder sprite (replace with pixel-art
-/// chest sprite in Phase 17).  z = 1.5 places it above enemies (z ≈ 1) so
+/// chest sprite in Phase 17).  z = 6.0 places it above enemies (z = 5.0) so
 /// it is always visible.
 ///
 /// Called by the spawner system when a treasure drop is triggered.
@@ -178,7 +178,7 @@ pub fn spawn_treasure(commands: &mut Commands, position: Vec2, radius: f32) {
             custom_size: Some(Vec2::splat(radius * 2.0)),
             ..default()
         },
-        Transform::from_xyz(position.x, position.y, 1.5),
+        Transform::from_xyz(position.x, position.y, 6.0),
         CircleCollider { radius },
         Treasure,
         GameSessionEntity,
@@ -352,7 +352,7 @@ mod tests {
         assert!(b < 0.3, "blue channel must be low for yellow sprite");
     }
 
-    /// `spawn_treasure` z-coordinate must be above enemies (z > 1).
+    /// `spawn_treasure` z-coordinate must be above enemies (z > 5.0).
     #[test]
     fn spawn_treasure_z_above_enemies() {
         use bevy::ecs::system::RunSystemOnce as _;
@@ -378,8 +378,8 @@ mod tests {
         let tf = q.single(app.world()).expect("treasure entity must exist");
 
         assert!(
-            tf.translation.z > 1.0,
-            "treasure z ({}) must be above enemies (z ≈ 1)",
+            tf.translation.z > 5.0,
+            "treasure z ({}) must be above enemies (z = 5.0)",
             tf.translation.z
         );
         assert_eq!(tf.translation.x, 10.0, "x position must match");
