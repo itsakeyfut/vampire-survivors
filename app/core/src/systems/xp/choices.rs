@@ -163,6 +163,36 @@ pub fn generate_level_up_choices(
     level_up_choices.choices = pool;
 }
 
+/// Builds the pool of upgrade choices for items the player **already owns**
+/// that are still below their maximum level.
+///
+/// Used both by [`generate_level_up_choices`] and by the treasure reward system
+/// so upgrade eligibility rules stay in one place.
+///
+/// # Rules
+/// - [`UpgradeChoice::WeaponUpgrade`] — owned weapon below `max_weapon_level`,
+///   not evolved.
+/// - [`UpgradeChoice::PassiveUpgrade`] — owned passive below `max_passive_level`.
+pub(crate) fn build_owned_upgrade_pool(
+    weapon_inv: &WeaponInventory,
+    passive_inv: &PassiveInventory,
+    max_weapon_level: u8,
+    max_passive_level: u8,
+) -> Vec<UpgradeChoice> {
+    let mut pool = Vec::new();
+    for weapon in &weapon_inv.weapons {
+        if weapon.level < max_weapon_level && !weapon.evolved {
+            pool.push(UpgradeChoice::WeaponUpgrade(weapon.weapon_type));
+        }
+    }
+    for passive in &passive_inv.items {
+        if passive.level < max_passive_level {
+            pool.push(UpgradeChoice::PassiveUpgrade(passive.item_type));
+        }
+    }
+    pool
+}
+
 /// In-place Fisher-Yates shuffle using the thread-local RNG.
 fn fisher_yates_shuffle<T>(items: &mut [T]) {
     let mut rng = rand::rng();

@@ -32,6 +32,7 @@ use crate::{
 };
 
 use super::apply::apply_passive_bonus;
+use super::choices::build_owned_upgrade_pool;
 use super::evolution::find_evolution;
 
 // ---------------------------------------------------------------------------
@@ -175,17 +176,8 @@ pub(crate) fn pick_reward(
     max_weapon_level: u8,
     max_passive_level: u8,
 ) -> Reward {
-    let mut upgrade_pool: Vec<UpgradeChoice> = Vec::new();
-    for weapon in &weapon_inv.weapons {
-        if weapon.level < max_weapon_level && !weapon.evolved {
-            upgrade_pool.push(UpgradeChoice::WeaponUpgrade(weapon.weapon_type));
-        }
-    }
-    for passive in &passive_inv.items {
-        if passive.level < max_passive_level {
-            upgrade_pool.push(UpgradeChoice::PassiveUpgrade(passive.item_type));
-        }
-    }
+    let upgrade_pool =
+        build_owned_upgrade_pool(weapon_inv, passive_inv, max_weapon_level, max_passive_level);
 
     let mut rng = rand::rng();
 
@@ -237,8 +229,9 @@ pub(crate) fn apply_reward(
                     info!("Treasure: upgraded {pt:?} to level {}", p.level);
                 }
             }
-            // pick_reward only produces WeaponUpgrade / PassiveUpgrade variants.
-            _ => {}
+            other => unreachable!(
+                "Reward::Upgrade must carry WeaponUpgrade or PassiveUpgrade, got {other:?}"
+            ),
         },
         Reward::HpRecovery => {
             let heal = (stats.max_hp * hp_recovery_pct).max(0.0);
