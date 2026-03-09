@@ -16,10 +16,11 @@ use crate::i18n::TranslatableText;
 // ---------------------------------------------------------------------------
 
 const DEFAULT_WIDTH: f32 = 280.0;
-const DEFAULT_HEIGHT: f32 = 80.0;
-const DEFAULT_FONT_SIZE: f32 = 48.0;
-const DEFAULT_COLOR_NORMAL: Color = Color::srgb(0.30, 0.05, 0.05);
-const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
+const DEFAULT_HEIGHT: f32 = 60.0;
+const DEFAULT_FONT_SIZE: f32 = 32.0;
+// Button colors per docs/04_ui_ux.md: #223366 normal, white text.
+const DEFAULT_COLOR_NORMAL: Color = Color::srgb(0.133, 0.200, 0.400);
+const DEFAULT_TEXT_COLOR: Color = Color::srgb(1.0, 1.0, 1.0);
 
 // ---------------------------------------------------------------------------
 // Marker components

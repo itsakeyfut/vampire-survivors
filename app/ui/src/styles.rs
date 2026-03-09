@@ -15,11 +15,11 @@ use bevy::prelude::*;
 // Screen-level palette
 // ---------------------------------------------------------------------------
 
-/// Background color — near-black used as the base for all screens.
-pub const DEFAULT_BG_COLOR: Color = Color::srgb(0.05, 0.05, 0.08);
+/// Background color — dark purple (#1a0a2e) per docs/04_ui_ux.md.
+pub const DEFAULT_BG_COLOR: Color = Color::srgb(0.102, 0.039, 0.180);
 
-/// Title color — blood red used for the game title heading.
-pub const DEFAULT_TITLE_COLOR: Color = Color::srgb(0.85, 0.15, 0.15);
+/// Title color — gold (#ffd700) for the game title heading per docs/04_ui_ux.md.
+pub const DEFAULT_TITLE_COLOR: Color = Color::srgb(1.0, 0.843, 0.0);
 
 // ---------------------------------------------------------------------------
 // Font paths

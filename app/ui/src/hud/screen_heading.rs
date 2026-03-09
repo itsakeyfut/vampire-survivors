@@ -12,8 +12,9 @@ use crate::config::hud::screen_heading::{ScreenHeadingHudConfig, ScreenHeadingHu
 // Fallback constants
 // ---------------------------------------------------------------------------
 
-const DEFAULT_FONT_SIZE: f32 = 72.0;
-const DEFAULT_MARGIN_BOTTOM: f32 = 80.0;
+// Heading font size per docs/04_ui_ux.md: "Headings: 48px".
+const DEFAULT_FONT_SIZE: f32 = 48.0;
+const DEFAULT_MARGIN_BOTTOM: f32 = 40.0;
 
 // ---------------------------------------------------------------------------
 // Marker component
