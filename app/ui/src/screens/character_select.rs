@@ -1,21 +1,33 @@
-//! Character select screen — minimal stub.
+//! Character select screen.
 //!
-//! Displays a heading and a "Play" button that starts the run.
-//! A full character-selection UI (with per-character cards and stats) will be
-//! implemented in a later phase; this stub keeps the Title → CharacterSelect →
-//! Playing flow functional.
+//! Displays four character cards in a row.  Unlocked characters can be
+//! selected by clicking their card; locked characters are greyed out with a
+//! lock badge and show unlock instructions in the detail panel.  Below the
+//! cards a detail panel displays the selected character's stats.  Two buttons
+//! at the bottom confirm the selection (→ Playing) or return to the Title.
 //!
-//! All entities are tagged with [`DespawnOnExit`]`(AppState::CharacterSelect)`
-//! so they are cleaned up automatically on any state transition.
+//! ## Systems
+//!
+//! | System | Schedule | Purpose |
+//! |--------|----------|---------|
+//! | [`setup_character_select_screen`] | `OnEnter(CharacterSelect)` | Spawn all UI entities |
+//! | [`handle_character_card_interaction`] | `Update` | Set [`SelectedCharacter`] on card press |
+//! | [`update_character_select`] | `Update` | Refresh card colors and detail panel |
+//!
+//! All entities carry [`DespawnOnExit`]`(AppState::CharacterSelect)` and are
+//! cleaned up automatically when the state transitions away.
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
+use vs_core::config::CharacterParams;
+use vs_core::resources::{GameSettings, MetaProgress, SelectedCharacter};
 use vs_core::states::AppState;
-
-use vs_core::resources::GameSettings;
+use vs_core::types::{CharacterType, WeaponType};
 
 use crate::components::ButtonAction;
-use crate::config::{MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams};
+use crate::config::{
+    CharacterSelectScreenParams, MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams,
+};
 use crate::hud::menu_button::spawn_large_menu_button;
 use crate::hud::screen_heading::ScreenHeadingHud;
 use crate::i18n::{font_for_lang, t};
@@ -28,22 +40,154 @@ use crate::i18n::{font_for_lang, t};
 const DEFAULT_BG_COLOR: Color = Color::srgb(0.102, 0.039, 0.180);
 /// Gold title color (#ffd700) per docs/04_ui_ux.md.
 const DEFAULT_TITLE_COLOR: Color = Color::srgb(1.0, 0.843, 0.0);
-const DEFAULT_FONT_SIZE: f32 = 48.0;
-const DEFAULT_MARGIN_BOTTOM: f32 = 60.0;
-const DEFAULT_ROW_GAP: f32 = 16.0;
+const DEFAULT_HEADING_FONT_SIZE: f32 = 48.0;
+const DEFAULT_HEADING_MARGIN: f32 = 32.0;
+const DEFAULT_ROOT_ROW_GAP: f32 = 24.0;
+
+/// Width of each character card in pixels.
+const DEFAULT_CARD_W: f32 = 160.0;
+/// Height of each character card in pixels.
+const DEFAULT_CARD_H: f32 = 140.0;
+/// Horizontal gap between cards.
+const DEFAULT_CARD_GAP: f32 = 16.0;
+/// Font size for the character name inside each card.
+const DEFAULT_CARD_NAME_FONT_SIZE: f32 = 18.0;
+
+/// Card background when unlocked and not selected.
+const DEFAULT_CARD_COLOR_UNLOCKED: Color = Color::srgb(0.133, 0.200, 0.400);
+/// Card background when unlocked and selected.
+const DEFAULT_CARD_COLOR_SELECTED: Color = Color::srgb(0.300, 0.500, 0.900);
+/// Card background when hovered (unlocked).
+const DEFAULT_CARD_COLOR_HOVER: Color = Color::srgb(0.200, 0.350, 0.650);
+/// Card background when pressed.
+const DEFAULT_CARD_COLOR_PRESSED: Color = Color::srgb(0.086, 0.133, 0.267);
+/// Card background for locked characters.
+const DEFAULT_CARD_COLOR_LOCKED: Color = Color::srgb(0.10, 0.10, 0.15);
+/// Hover color for locked cards.
+const DEFAULT_CARD_COLOR_LOCKED_HOVER: Color = Color::srgb(0.13, 0.13, 0.18);
+
+/// Card name text color when unlocked.
+const DEFAULT_CARD_TEXT_COLOR: Color = Color::srgb(1.0, 1.0, 1.0);
+/// Card name text color when locked.
+const DEFAULT_CARD_TEXT_LOCKED_COLOR: Color = Color::srgb(0.5, 0.5, 0.55);
+
+/// Detail panel background color.
+const DEFAULT_DETAIL_BG_COLOR: Color = Color::srgb(0.08, 0.04, 0.16);
+/// Detail panel text color for unlocked characters.
+const DEFAULT_DETAIL_TEXT_COLOR: Color = Color::srgb(0.90, 0.90, 0.90);
+/// Detail panel text color when a locked character is selected.
+const DEFAULT_DETAIL_LOCKED_COLOR: Color = Color::srgb(0.50, 0.50, 0.55);
+/// Font size for the detail panel text.
+const DEFAULT_DETAIL_FONT_SIZE: f32 = 20.0;
+/// Width of the detail panel.
+const DEFAULT_DETAIL_PANEL_W: f32 = 580.0;
 
 // ---------------------------------------------------------------------------
-// System
+// Marker components
 // ---------------------------------------------------------------------------
 
-/// Spawns the character select screen when entering [`AppState::CharacterSelect`].
+/// Marks a character-card [`Button`].
+///
+/// Stores the associated [`CharacterType`] so that
+/// [`handle_character_card_interaction`] and [`update_character_select`] can
+/// match this card to the currently selected character.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct CharacterCardButton(pub CharacterType);
+
+/// Marks the [`Text`] entity inside the character detail panel.
+///
+/// [`update_character_select`] queries this marker to refresh the displayed
+/// stats whenever [`SelectedCharacter`] changes.
+#[derive(Component, Debug)]
+pub struct CharacterDetailText;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Returns the base background color for a card given its locked/selected state.
+fn card_base_color(
+    unlocked: bool,
+    selected: bool,
+    selected_color: Color,
+    unlocked_color: Color,
+    locked_color: Color,
+) -> Color {
+    match (unlocked, selected) {
+        (_, true) => selected_color,
+        (true, false) => unlocked_color,
+        (false, false) => locked_color,
+    }
+}
+
+/// Returns the i18n key for a given [`WeaponType`] name.
+fn weapon_name_key(wt: WeaponType) -> &'static str {
+    match wt {
+        WeaponType::Whip => "weapon_whip",
+        WeaponType::MagicWand => "weapon_magic_wand",
+        WeaponType::Knife => "weapon_knife",
+        WeaponType::Garlic => "weapon_garlic",
+        WeaponType::Bible => "weapon_bible",
+        WeaponType::ThunderRing => "weapon_thunder_ring",
+        WeaponType::Cross => "weapon_cross",
+        WeaponType::FireWand => "weapon_fire_wand",
+        // Evolved weapons are never used as starting weapons; map each to its
+        // base weapon's i18n key so the detail panel shows a recognisable name
+        // if the RON config ever assigns one.  Listed explicitly so adding a
+        // new WeaponType causes a compile error here.
+        WeaponType::BloodyTear => "weapon_whip",
+        WeaponType::HolyWand => "weapon_magic_wand",
+        WeaponType::ThousandEdge => "weapon_knife",
+        WeaponType::SoulEater => "weapon_garlic",
+        WeaponType::UnholyVespers => "weapon_bible",
+        WeaponType::LightningRing => "weapon_thunder_ring",
+    }
+}
+
+/// Builds the formatted multi-line detail string for the given character.
+fn build_detail_text(
+    stats: &vs_core::types::CharacterBaseStats,
+    is_unlocked: bool,
+    lang: vs_core::resources::Language,
+) -> String {
+    if is_unlocked {
+        format!(
+            "{}\n{}: {}  |  {}: {}\n{}: {}\n{}",
+            stats.name,
+            t("label_hp", lang),
+            stats.max_hp as u32,
+            t("label_speed", lang),
+            stats.move_speed as u32,
+            t("label_weapon", lang),
+            t(weapon_name_key(stats.starting_weapon), lang),
+            stats.description,
+        )
+    } else {
+        format!("{}\n{}", stats.name, t("label_locked", lang))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Systems
+// ---------------------------------------------------------------------------
+
+/// Spawns the character-select screen when entering [`AppState::CharacterSelect`].
+///
+/// Reads [`MetaProgress`] to determine which characters are unlocked and
+/// [`SelectedCharacter`] to highlight the initially selected card.
+/// [`CharacterParams`] provides RON-backed stats with hardcoded fallbacks.
+#[allow(clippy::too_many_arguments)]
 pub fn setup_character_select_screen(
     mut commands: Commands,
     ui_style: UiStyleParams,
     heading_cfg: ScreenHeadingHudParams,
     btn_cfg: MenuButtonHudParams,
+    char_params: CharacterParams,
+    cs_params: CharacterSelectScreenParams,
     asset_server: Option<Res<AssetServer>>,
     settings: Option<Res<GameSettings>>,
+    meta: Option<Res<MetaProgress>>,
+    selected: Option<Res<SelectedCharacter>>,
 ) {
     let lang = settings.as_deref().map(|s| s.language).unwrap_or_default();
     let font: Handle<Font> = asset_server
@@ -60,11 +204,66 @@ pub fn setup_character_select_screen(
     let heading_font_size = heading_cfg
         .get()
         .map(|c| c.font_size)
-        .unwrap_or(DEFAULT_FONT_SIZE);
+        .unwrap_or(DEFAULT_HEADING_FONT_SIZE);
     let heading_margin = heading_cfg
         .get()
         .map(|c| c.margin_bottom)
-        .unwrap_or(DEFAULT_MARGIN_BOTTOM);
+        .unwrap_or(DEFAULT_HEADING_MARGIN);
+
+    // Card and detail values from RON config with hardcoded fallbacks.
+    let cs = cs_params.get();
+    let card_w = cs.map(|c| c.card_width).unwrap_or(DEFAULT_CARD_W);
+    let card_h = cs.map(|c| c.card_height).unwrap_or(DEFAULT_CARD_H);
+    let card_gap = cs.map(|c| c.card_gap).unwrap_or(DEFAULT_CARD_GAP);
+    let card_name_font_size = cs
+        .map(|c| c.card_name_font_size)
+        .unwrap_or(DEFAULT_CARD_NAME_FONT_SIZE);
+    let color_selected = cs
+        .map(|c| Color::from(&c.card_color_selected))
+        .unwrap_or(DEFAULT_CARD_COLOR_SELECTED);
+    let color_unlocked = cs
+        .map(|c| Color::from(&c.card_color_unlocked))
+        .unwrap_or(DEFAULT_CARD_COLOR_UNLOCKED);
+    let color_locked = cs
+        .map(|c| Color::from(&c.card_color_locked))
+        .unwrap_or(DEFAULT_CARD_COLOR_LOCKED);
+    let card_text_color = cs
+        .map(|c| Color::from(&c.card_text_color))
+        .unwrap_or(DEFAULT_CARD_TEXT_COLOR);
+    let card_text_locked_color = cs
+        .map(|c| Color::from(&c.card_text_locked_color))
+        .unwrap_or(DEFAULT_CARD_TEXT_LOCKED_COLOR);
+    let detail_bg_color = cs
+        .map(|c| Color::from(&c.detail_bg_color))
+        .unwrap_or(DEFAULT_DETAIL_BG_COLOR);
+    let detail_text_color = cs
+        .map(|c| Color::from(&c.detail_text_color))
+        .unwrap_or(DEFAULT_DETAIL_TEXT_COLOR);
+    let detail_locked_color = cs
+        .map(|c| Color::from(&c.detail_locked_color))
+        .unwrap_or(DEFAULT_DETAIL_LOCKED_COLOR);
+    let detail_font_size = cs
+        .map(|c| c.detail_font_size)
+        .unwrap_or(DEFAULT_DETAIL_FONT_SIZE);
+    let detail_panel_w = cs
+        .map(|c| c.detail_panel_width)
+        .unwrap_or(DEFAULT_DETAIL_PANEL_W);
+
+    let current_selected = selected
+        .as_deref()
+        .map(|s| s.0)
+        .unwrap_or(CharacterType::DefaultCharacter);
+    let unlocked: Vec<CharacterType> = meta
+        .as_deref()
+        .map(|m| m.unlocked_characters.clone())
+        .unwrap_or_else(|| vec![CharacterType::DefaultCharacter]);
+
+    let all_chars = [
+        CharacterType::DefaultCharacter,
+        CharacterType::Magician,
+        CharacterType::Thief,
+        CharacterType::Knight,
+    ];
 
     commands
         .spawn((
@@ -74,14 +273,15 @@ pub fn setup_character_select_screen(
                 flex_direction: FlexDirection::Column,
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
-                row_gap: Val::Px(DEFAULT_ROW_GAP),
+                row_gap: Val::Px(DEFAULT_ROOT_ROW_GAP),
                 ..default()
             },
             BackgroundColor(bg_color),
             DespawnOnExit(AppState::CharacterSelect),
         ))
-        .with_children(|parent| {
-            parent.spawn((
+        .with_children(|root| {
+            // ── Heading ───────────────────────────────────────────────────
+            root.spawn((
                 Text::new(t("character_select_title", lang)),
                 TextFont {
                     font: font.clone(),
@@ -96,24 +296,240 @@ pub fn setup_character_select_screen(
                 ScreenHeadingHud,
             ));
 
-            spawn_large_menu_button(
-                parent,
-                t("btn_play", lang),
-                ButtonAction::StartGame,
-                btn_cfg.get(),
-                font.clone(),
-                None,
-            );
+            // ── Character card row ────────────────────────────────────────
+            root.spawn(Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(card_gap),
+                ..default()
+            })
+            .with_children(|row| {
+                for char_type in all_chars {
+                    let is_unlocked = unlocked.contains(&char_type);
+                    let is_selected = char_type == current_selected;
+                    let stats = char_params.stats_for(char_type);
 
-            spawn_large_menu_button(
-                parent,
-                t("btn_back", lang),
-                ButtonAction::GoToTitle,
-                btn_cfg.get(),
-                font.clone(),
-                None,
-            );
+                    let card_color = card_base_color(
+                        is_unlocked,
+                        is_selected,
+                        color_selected,
+                        color_unlocked,
+                        color_locked,
+                    );
+                    let text_color = if is_unlocked {
+                        card_text_color
+                    } else {
+                        card_text_locked_color
+                    };
+                    let label = if is_unlocked {
+                        stats.name.clone()
+                    } else {
+                        format!("🔒 {}", stats.name)
+                    };
+
+                    row.spawn((
+                        Button,
+                        Node {
+                            width: Val::Px(card_w),
+                            height: Val::Px(card_h),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            flex_direction: FlexDirection::Column,
+                            ..default()
+                        },
+                        BackgroundColor(card_color),
+                        CharacterCardButton(char_type),
+                    ))
+                    .with_children(|card| {
+                        card.spawn((
+                            Text::new(label),
+                            TextFont {
+                                font: font.clone(),
+                                font_size: card_name_font_size,
+                                ..default()
+                            },
+                            TextColor(text_color),
+                            TextLayout::new_with_linebreak(LineBreak::WordBoundary),
+                        ));
+                    });
+                }
+            });
+
+            // ── Detail panel ──────────────────────────────────────────────
+            let init_stats = char_params.stats_for(current_selected);
+            let init_unlocked = unlocked.contains(&current_selected);
+            let detail_content = build_detail_text(&init_stats, init_unlocked, lang);
+            let init_detail_text_color = if init_unlocked {
+                detail_text_color
+            } else {
+                detail_locked_color
+            };
+
+            root.spawn((
+                Node {
+                    width: Val::Px(detail_panel_w),
+                    padding: UiRect::all(Val::Px(16.0)),
+                    flex_direction: FlexDirection::Column,
+                    ..default()
+                },
+                BackgroundColor(detail_bg_color),
+            ))
+            .with_children(|panel| {
+                panel.spawn((
+                    Text::new(detail_content),
+                    TextFont {
+                        font: font.clone(),
+                        font_size: detail_font_size,
+                        ..default()
+                    },
+                    TextColor(init_detail_text_color),
+                    CharacterDetailText,
+                ));
+            });
+
+            // ── Action buttons ────────────────────────────────────────────
+            root.spawn(Node {
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                row_gap: Val::Px(12.0),
+                margin: UiRect::top(Val::Px(8.0)),
+                ..default()
+            })
+            .with_children(|btns| {
+                spawn_large_menu_button(
+                    btns,
+                    t("btn_start_with_char", lang),
+                    ButtonAction::StartGame,
+                    btn_cfg.get(),
+                    font.clone(),
+                    Some("btn_start_with_char"),
+                );
+                spawn_large_menu_button(
+                    btns,
+                    t("btn_back", lang),
+                    ButtonAction::GoToTitle,
+                    btn_cfg.get(),
+                    font.clone(),
+                    Some("btn_back"),
+                );
+            });
         });
+}
+
+/// Updates the detail panel text and card background colors every frame.
+///
+/// Reads [`SelectedCharacter`] and [`MetaProgress`] to rebuild the detail
+/// string and recompute each card's background.  Running unconditionally keeps
+/// card hover state consistent with the latest selection at minimal cost (only
+/// four card entities per screen).
+pub fn update_character_select(
+    selected: Option<Res<SelectedCharacter>>,
+    meta: Option<Res<MetaProgress>>,
+    settings: Option<Res<GameSettings>>,
+    char_params: CharacterParams,
+    cs_params: CharacterSelectScreenParams,
+    mut detail_q: Query<(&mut Text, &mut TextColor), With<CharacterDetailText>>,
+    mut card_q: Query<(&CharacterCardButton, &Interaction, &mut BackgroundColor)>,
+) {
+    let Some(selected) = selected else {
+        return;
+    };
+    let Some(meta) = meta else {
+        return;
+    };
+    let lang = settings.as_deref().map(|s| s.language).unwrap_or_default();
+
+    // Extract card/detail colors from config with hardcoded fallbacks.
+    let cs = cs_params.get();
+    let color_selected = cs
+        .map(|c| Color::from(&c.card_color_selected))
+        .unwrap_or(DEFAULT_CARD_COLOR_SELECTED);
+    let color_unlocked = cs
+        .map(|c| Color::from(&c.card_color_unlocked))
+        .unwrap_or(DEFAULT_CARD_COLOR_UNLOCKED);
+    let color_locked = cs
+        .map(|c| Color::from(&c.card_color_locked))
+        .unwrap_or(DEFAULT_CARD_COLOR_LOCKED);
+    let color_hover = cs
+        .map(|c| Color::from(&c.card_color_hover))
+        .unwrap_or(DEFAULT_CARD_COLOR_HOVER);
+    let color_pressed = cs
+        .map(|c| Color::from(&c.card_color_pressed))
+        .unwrap_or(DEFAULT_CARD_COLOR_PRESSED);
+    let color_locked_hover = cs
+        .map(|c| Color::from(&c.card_color_locked_hover))
+        .unwrap_or(DEFAULT_CARD_COLOR_LOCKED_HOVER);
+    let detail_text_color = cs
+        .map(|c| Color::from(&c.detail_text_color))
+        .unwrap_or(DEFAULT_DETAIL_TEXT_COLOR);
+    let detail_locked_color = cs
+        .map(|c| Color::from(&c.detail_locked_color))
+        .unwrap_or(DEFAULT_DETAIL_LOCKED_COLOR);
+
+    let char_type = selected.0;
+    let stats = char_params.stats_for(char_type);
+    let is_unlocked = meta.unlocked_characters.contains(&char_type);
+
+    // Rebuild detail panel text.
+    let content = build_detail_text(&stats, is_unlocked, lang);
+    let text_color = if is_unlocked {
+        detail_text_color
+    } else {
+        detail_locked_color
+    };
+    if let Ok((mut text, mut color)) = detail_q.single_mut() {
+        *text = Text::new(content);
+        color.0 = text_color;
+    }
+
+    // Update card background colors (respects current hover/pressed state).
+    for (card, interaction, mut bg) in card_q.iter_mut() {
+        let card_unlocked = meta.unlocked_characters.contains(&card.0);
+        let card_selected = card.0 == char_type;
+        let color = match interaction {
+            Interaction::Pressed => color_pressed,
+            Interaction::Hovered => {
+                if card_unlocked {
+                    color_hover
+                } else {
+                    color_locked_hover
+                }
+            }
+            Interaction::None => card_base_color(
+                card_unlocked,
+                card_selected,
+                color_selected,
+                color_unlocked,
+                color_locked,
+            ),
+        };
+        *bg = BackgroundColor(color);
+    }
+}
+
+/// Sets [`SelectedCharacter`] to the pressed card's character type.
+///
+/// Uses `Changed<Interaction>` to only run on frames where a card is
+/// actually interacted with.
+pub fn handle_character_card_interaction(
+    card_q: Query<(&Interaction, &CharacterCardButton), Changed<Interaction>>,
+    selected: Option<ResMut<SelectedCharacter>>,
+    meta: Option<Res<MetaProgress>>,
+) {
+    let Some(mut selected) = selected else {
+        return;
+    };
+    for (interaction, card) in card_q.iter() {
+        if *interaction == Interaction::Pressed {
+            // Only allow selecting characters that have been unlocked.
+            let is_unlocked = meta
+                .as_deref()
+                .map(|m| m.unlocked_characters.contains(&card.0))
+                .unwrap_or(false);
+            if is_unlocked {
+                selected.0 = card.0;
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -122,14 +538,19 @@ pub fn setup_character_select_screen(
 
 #[cfg(test)]
 mod tests {
+    use bevy::ecs::system::RunSystemOnce as _;
     use bevy::state::app::StatesPlugin;
 
     use super::*;
+    use crate::components::MenuButton;
 
     fn build_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin));
         app.init_state::<AppState>();
+        app.insert_resource(SelectedCharacter::default());
+        app.insert_resource(MetaProgress::default());
+        app.insert_resource(GameSettings::default());
         app
     }
 
@@ -140,8 +561,10 @@ mod tests {
         app.update();
     }
 
+    // ── setup ────────────────────────────────────────────────────────────────
+
     #[test]
-    fn setup_spawns_nodes() {
+    fn setup_spawns_heading() {
         let mut app = build_app();
         app.add_systems(
             OnEnter(AppState::CharacterSelect),
@@ -149,12 +572,18 @@ mod tests {
         );
         enter_character_select(&mut app);
 
-        let mut q = app.world_mut().query_filtered::<Entity, With<Node>>();
-        assert!(q.iter(app.world()).count() > 0);
+        let mut q = app
+            .world_mut()
+            .query_filtered::<Entity, With<ScreenHeadingHud>>();
+        assert_eq!(
+            q.iter(app.world()).count(),
+            1,
+            "exactly one ScreenHeadingHud expected"
+        );
     }
 
     #[test]
-    fn has_two_buttons() {
+    fn setup_spawns_four_character_cards() {
         let mut app = build_app();
         app.add_systems(
             OnEnter(AppState::CharacterSelect),
@@ -162,7 +591,243 @@ mod tests {
         );
         enter_character_select(&mut app);
 
-        let mut q = app.world_mut().query_filtered::<Entity, With<Button>>();
-        assert_eq!(q.iter(app.world()).count(), 2);
+        let mut q = app
+            .world_mut()
+            .query_filtered::<Entity, With<CharacterCardButton>>();
+        assert_eq!(
+            q.iter(app.world()).count(),
+            4,
+            "one card per CharacterType expected"
+        );
+    }
+
+    #[test]
+    fn setup_spawns_detail_text() {
+        let mut app = build_app();
+        app.add_systems(
+            OnEnter(AppState::CharacterSelect),
+            setup_character_select_screen,
+        );
+        enter_character_select(&mut app);
+
+        let mut q = app
+            .world_mut()
+            .query_filtered::<Entity, With<CharacterDetailText>>();
+        assert_eq!(
+            q.iter(app.world()).count(),
+            1,
+            "exactly one CharacterDetailText expected"
+        );
+    }
+
+    #[test]
+    fn setup_spawns_start_and_back_buttons() {
+        let mut app = build_app();
+        app.add_systems(
+            OnEnter(AppState::CharacterSelect),
+            setup_character_select_screen,
+        );
+        enter_character_select(&mut app);
+
+        let mut q = app.world_mut().query::<&MenuButton>();
+        let actions: Vec<ButtonAction> = q.iter(app.world()).map(|b| b.action).collect();
+        assert!(
+            actions.contains(&ButtonAction::StartGame),
+            "Start button must exist"
+        );
+        assert!(
+            actions.contains(&ButtonAction::GoToTitle),
+            "Back button must exist"
+        );
+    }
+
+    #[test]
+    fn default_card_is_highlighted_on_spawn() {
+        let mut app = build_app();
+        app.add_systems(
+            OnEnter(AppState::CharacterSelect),
+            setup_character_select_screen,
+        );
+        enter_character_select(&mut app);
+
+        let mut q = app
+            .world_mut()
+            .query::<(&CharacterCardButton, &BackgroundColor)>();
+        let default_bg = q
+            .iter(app.world())
+            .find(|(card, _)| card.0 == CharacterType::DefaultCharacter)
+            .map(|(_, bg)| bg.0)
+            .expect("DefaultCharacter card must exist");
+        assert_eq!(
+            default_bg, DEFAULT_CARD_COLOR_SELECTED,
+            "initially selected card must use DEFAULT_CARD_COLOR_SELECTED"
+        );
+    }
+
+    #[test]
+    fn locked_card_uses_locked_color_on_spawn() {
+        let mut app = build_app();
+        app.add_systems(
+            OnEnter(AppState::CharacterSelect),
+            setup_character_select_screen,
+        );
+        enter_character_select(&mut app);
+
+        let mut q = app
+            .world_mut()
+            .query::<(&CharacterCardButton, &BackgroundColor)>();
+        let magician_bg = q
+            .iter(app.world())
+            .find(|(card, _)| card.0 == CharacterType::Magician)
+            .map(|(_, bg)| bg.0)
+            .expect("Magician card must exist");
+        assert_eq!(
+            magician_bg, DEFAULT_CARD_COLOR_LOCKED,
+            "locked Magician card must use DEFAULT_CARD_COLOR_LOCKED"
+        );
+    }
+
+    // ── handle_character_card_interaction ───────────────────────────────────
+
+    #[test]
+    fn card_press_updates_selected_character_when_unlocked() {
+        let mut app = build_app();
+        // DefaultCharacter is unlocked by default (MetaProgress::default).
+        let card_entity = app
+            .world_mut()
+            .spawn((
+                Interaction::Pressed,
+                CharacterCardButton(CharacterType::DefaultCharacter),
+            ))
+            .id();
+
+        app.world_mut()
+            .run_system_once(handle_character_card_interaction)
+            .unwrap();
+
+        let selected = app.world().resource::<SelectedCharacter>();
+        assert_eq!(
+            selected.0,
+            CharacterType::DefaultCharacter,
+            "pressing an unlocked card must update SelectedCharacter"
+        );
+
+        app.world_mut().despawn(card_entity);
+    }
+
+    #[test]
+    fn card_press_does_not_select_locked_character() {
+        let mut app = build_app();
+        // Thief is locked in default MetaProgress.
+        let card_entity = app
+            .world_mut()
+            .spawn((
+                Interaction::Pressed,
+                CharacterCardButton(CharacterType::Thief),
+            ))
+            .id();
+
+        app.world_mut()
+            .run_system_once(handle_character_card_interaction)
+            .unwrap();
+
+        let selected = app.world().resource::<SelectedCharacter>();
+        assert_eq!(
+            selected.0,
+            CharacterType::DefaultCharacter,
+            "pressing a locked card must NOT change SelectedCharacter"
+        );
+
+        app.world_mut().despawn(card_entity);
+    }
+
+    #[test]
+    fn hover_does_not_change_selected_character() {
+        let mut app = build_app();
+
+        let card_entity = app
+            .world_mut()
+            .spawn((
+                Interaction::Hovered,
+                CharacterCardButton(CharacterType::Knight),
+            ))
+            .id();
+
+        app.world_mut()
+            .run_system_once(handle_character_card_interaction)
+            .unwrap();
+
+        let selected = app.world().resource::<SelectedCharacter>();
+        assert_eq!(
+            selected.0,
+            CharacterType::DefaultCharacter,
+            "hovering must not change SelectedCharacter"
+        );
+
+        app.world_mut().despawn(card_entity);
+    }
+
+    // ── update_character_select ─────────────────────────────────────────────
+
+    #[test]
+    fn update_shows_knight_stats_when_knight_selected() {
+        let mut app = build_app();
+        // Unlock Knight so detail shows stats (not locked message).
+        app.world_mut()
+            .resource_mut::<MetaProgress>()
+            .unlocked_characters
+            .push(CharacterType::Knight);
+        app.world_mut().resource_mut::<SelectedCharacter>().0 = CharacterType::Knight;
+
+        app.world_mut()
+            .spawn((Text::new(""), TextColor::default(), CharacterDetailText));
+        app.world_mut().spawn((
+            Interaction::None,
+            CharacterCardButton(CharacterType::DefaultCharacter),
+            BackgroundColor::default(),
+        ));
+
+        app.world_mut()
+            .run_system_once(update_character_select)
+            .unwrap();
+
+        let mut q = app
+            .world_mut()
+            .query_filtered::<&Text, With<CharacterDetailText>>();
+        let text = q.single(app.world()).expect("detail text must exist");
+        assert!(
+            text.0.contains("150"),
+            "Knight HP 150 must appear in detail; got: {:?}",
+            text.0
+        );
+    }
+
+    #[test]
+    fn update_shows_lock_badge_for_locked_character() {
+        let mut app = build_app();
+        // Magician is locked by default.
+        app.world_mut().resource_mut::<SelectedCharacter>().0 = CharacterType::Magician;
+
+        app.world_mut()
+            .spawn((Text::new(""), TextColor::default(), CharacterDetailText));
+        app.world_mut().spawn((
+            Interaction::None,
+            CharacterCardButton(CharacterType::Magician),
+            BackgroundColor::default(),
+        ));
+
+        app.world_mut()
+            .run_system_once(update_character_select)
+            .unwrap();
+
+        let mut q = app
+            .world_mut()
+            .query_filtered::<&Text, With<CharacterDetailText>>();
+        let text = q.single(app.world()).expect("detail text must exist");
+        assert!(
+            text.0.contains('🔒'),
+            "locked character detail must contain lock badge; got: {:?}",
+            text.0
+        );
     }
 }
