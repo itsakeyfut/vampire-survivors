@@ -35,9 +35,9 @@ use crate::{
         BasePlayerStats, CircleCollider, GameSessionEntity, PassiveInventory, Player,
         PlayerFacingDirection, PlayerStats, PlayerWhipSide, WeaponInventory,
     },
-    config::PlayerParams,
+    config::{CharacterParams, PlayerParams},
     resources::SelectedCharacter,
-    types::{CharacterType, WeaponState, WeaponType, WhipSide},
+    types::{WeaponState, WhipSide},
 };
 
 // ---------------------------------------------------------------------------
@@ -51,16 +51,6 @@ const DEFAULT_COLLIDER_PLAYER: f32 = 12.0;
 // Spawn
 // ---------------------------------------------------------------------------
 
-/// Returns the starting weapon type for a given character.
-fn starting_weapon_for(character: CharacterType) -> WeaponType {
-    match character {
-        CharacterType::DefaultCharacter => WeaponType::Whip,
-        CharacterType::Magician => WeaponType::MagicWand,
-        CharacterType::Thief => WeaponType::Knife,
-        CharacterType::Knight => WeaponType::Whip,
-    }
-}
-
 /// Spawns the player entity when entering [`AppState::Playing`].
 ///
 /// The player persists through [`AppState::LevelUp`] and [`AppState::Paused`]
@@ -72,13 +62,15 @@ fn starting_weapon_for(character: CharacterType) -> WeaponType {
 /// double-spawning when the state re-enters `Playing` after a `LevelUp` or
 /// `Paused` round-trip.
 ///
-/// Stats and collider radius are read from [`PlayerParams`] when the config
-/// is loaded; otherwise falls back to [`PlayerStats::default()`] and
-/// [`DEFAULT_COLLIDER_PLAYER`]. The starting weapon is determined by
-/// [`SelectedCharacter`].
+/// Character-specific stats (`max_hp`, `move_speed`, `damage_multiplier`,
+/// `cooldown_reduction`, `starting_weapon`) are read from [`CharacterParams`].
+/// Non-character stats (pickup radius, gem speeds, projectile modifiers, …)
+/// come from [`PlayerParams`].  Both fall back to hardcoded defaults while
+/// their RON assets are still loading.
 pub fn spawn_player(
     mut commands: Commands,
     player_cfg: PlayerParams,
+    char_params: CharacterParams,
     selected_character: Res<SelectedCharacter>,
     existing_player: Query<Entity, With<Player>>,
 ) {
@@ -86,14 +78,21 @@ pub fn spawn_player(
     if !existing_player.is_empty() {
         return;
     }
-    // Derive stats and collider radius from config when available.
+
+    // Character-specific stats (from character.ron or hardcoded fallback).
+    let char_type = selected_character.0;
+    let char_stats = char_params.stats_for(char_type);
+
+    // Non-character stats and collider radius (from player.ron or fallback).
     let (stats, collider_radius) = if let Some(cfg) = player_cfg.get() {
         let stats = PlayerStats {
-            max_hp: cfg.base_hp,
-            current_hp: cfg.base_hp,
-            move_speed: cfg.base_speed,
-            damage_multiplier: cfg.base_damage_mult,
-            cooldown_reduction: cfg.base_cooldown_reduction,
+            // Character-specific overrides:
+            max_hp: char_stats.max_hp,
+            current_hp: char_stats.max_hp,
+            move_speed: char_stats.move_speed,
+            damage_multiplier: char_stats.damage_multiplier,
+            cooldown_reduction: char_stats.cooldown_reduction,
+            // Non-character values from player.ron:
             projectile_speed_mult: cfg.base_projectile_speed,
             duration_multiplier: cfg.base_duration_mult,
             area_multiplier: cfg.base_area_mult,
@@ -106,7 +105,16 @@ pub fn spawn_player(
         };
         (stats, cfg.collider_radius)
     } else {
-        (PlayerStats::default(), DEFAULT_COLLIDER_PLAYER)
+        // Full fallback: character-specific values + component defaults for the rest.
+        let stats = PlayerStats {
+            max_hp: char_stats.max_hp,
+            current_hp: char_stats.max_hp,
+            move_speed: char_stats.move_speed,
+            damage_multiplier: char_stats.damage_multiplier,
+            cooldown_reduction: char_stats.cooldown_reduction,
+            ..PlayerStats::default()
+        };
+        (stats, DEFAULT_COLLIDER_PLAYER)
     };
 
     // Player entity: cyan circle sprite + all required ECS components.
@@ -127,7 +135,7 @@ pub fn spawn_player(
             radius: collider_radius,
         },
         WeaponInventory {
-            weapons: vec![WeaponState::new(starting_weapon_for(selected_character.0))],
+            weapons: vec![WeaponState::new(char_stats.starting_weapon)],
         },
         PassiveInventory::default(),
         // Whip starts on the right side; flips each swing.
@@ -224,6 +232,7 @@ mod tests {
     use bevy::ecs::system::RunSystemOnce as _;
 
     use super::*;
+    use crate::types::{CharacterType, WeaponType};
     use crate::states::AppState;
 
     // -----------------------------------------------------------------------
@@ -391,19 +400,118 @@ mod tests {
         );
     }
 
-    /// `starting_weapon_for` returns the correct weapon for each character.
+    /// Magician spawns with MagicWand and character-specific stats (lower HP, cooldown reduction).
     #[test]
-    fn starting_weapon_for_all_characters() {
+    fn magician_spawns_with_magic_wand_and_correct_stats() {
+        let mut app = build_playing_app();
+        app.insert_resource(SelectedCharacter(CharacterType::Magician));
+        app.add_systems(Update, spawn_player);
+        app.update();
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).expect("player entity should exist");
+
+        let inv = app.world().get::<WeaponInventory>(entity).unwrap();
+        assert_eq!(inv.weapons[0].weapon_type, WeaponType::MagicWand);
+
+        let stats = app.world().get::<PlayerStats>(entity).unwrap();
+        assert_eq!(stats.max_hp, 80.0, "Magician max_hp must be 80");
+        assert!(
+            stats.cooldown_reduction > 0.0,
+            "Magician must have positive cooldown_reduction"
+        );
+    }
+
+    /// Thief spawns with Knife and higher move speed than the default character.
+    #[test]
+    fn thief_spawns_with_knife_and_higher_speed() {
+        let mut app = build_playing_app();
+        app.insert_resource(SelectedCharacter(CharacterType::Thief));
+        app.add_systems(Update, spawn_player);
+        app.update();
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).expect("player entity should exist");
+
+        let inv = app.world().get::<WeaponInventory>(entity).unwrap();
+        assert_eq!(inv.weapons[0].weapon_type, WeaponType::Knife);
+
+        let stats = app.world().get::<PlayerStats>(entity).unwrap();
+        assert_eq!(stats.max_hp, 90.0, "Thief max_hp must be 90");
+        assert!(
+            stats.move_speed > 200.0,
+            "Thief move_speed must exceed 200 (DefaultCharacter base); got {}",
+            stats.move_speed
+        );
+    }
+
+    /// Knight spawns with Whip and higher HP than the default character.
+    #[test]
+    fn knight_spawns_with_whip_and_higher_hp() {
+        let mut app = build_playing_app();
+        app.insert_resource(SelectedCharacter(CharacterType::Knight));
+        app.add_systems(Update, spawn_player);
+        app.update();
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).expect("player entity should exist");
+
+        let inv = app.world().get::<WeaponInventory>(entity).unwrap();
+        assert_eq!(inv.weapons[0].weapon_type, WeaponType::Whip);
+
+        let stats = app.world().get::<PlayerStats>(entity).unwrap();
+        assert!(
+            stats.max_hp > 100.0,
+            "Knight max_hp must exceed 100 (DefaultCharacter base); got {}",
+            stats.max_hp
+        );
+    }
+
+    /// `current_hp` at spawn must equal `max_hp` for all characters.
+    #[test]
+    fn spawn_player_current_hp_equals_max_hp() {
+        for char_type in [
+            CharacterType::DefaultCharacter,
+            CharacterType::Magician,
+            CharacterType::Thief,
+            CharacterType::Knight,
+        ] {
+            let mut app = build_playing_app();
+            app.insert_resource(SelectedCharacter(char_type));
+            app.add_systems(Update, spawn_player);
+            app.update();
+
+            let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+            let entity = q.single(app.world()).expect("player entity should exist");
+            let stats = app.world().get::<PlayerStats>(entity).unwrap();
+            assert_eq!(
+                stats.current_hp, stats.max_hp,
+                "{char_type:?} current_hp must equal max_hp at spawn"
+            );
+        }
+    }
+
+    /// Each character's starting weapon is read from `CharacterParams` (fallback
+    /// values) so the `WeaponInventory` always contains the correct weapon type.
+    #[test]
+    fn starting_weapon_matches_character_params_fallback() {
+        use crate::types::get_character_stats;
         assert_eq!(
-            starting_weapon_for(CharacterType::DefaultCharacter),
+            get_character_stats(CharacterType::DefaultCharacter).starting_weapon,
             WeaponType::Whip
         );
         assert_eq!(
-            starting_weapon_for(CharacterType::Magician),
+            get_character_stats(CharacterType::Magician).starting_weapon,
             WeaponType::MagicWand
         );
-        assert_eq!(starting_weapon_for(CharacterType::Thief), WeaponType::Knife);
-        assert_eq!(starting_weapon_for(CharacterType::Knight), WeaponType::Whip);
+        assert_eq!(
+            get_character_stats(CharacterType::Thief).starting_weapon,
+            WeaponType::Knife
+        );
+        assert_eq!(
+            get_character_stats(CharacterType::Knight).starting_weapon,
+            WeaponType::Whip
+        );
     }
 
     /// No movement should occur when no keys are pressed.
