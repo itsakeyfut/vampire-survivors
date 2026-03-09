@@ -10,7 +10,7 @@ use bevy::prelude::*;
 
 use events::{
     BossSpawnedEvent, DamageEnemyEvent, EnemyDiedEvent, GameOverEvent, LevelUpEvent,
-    PlayerDamagedEvent, VictoryEvent, WeaponFiredEvent,
+    PlayerDamagedEvent, TreasureOpenedEvent, VictoryEvent, WeaponFiredEvent,
 };
 use resources::{
     EnemySpawner, GameData, GameSettings, LevelUpChoices, MetaProgress, PendingUpgradeIndex,
@@ -87,6 +87,7 @@ impl Plugin for GameCorePlugin {
             .add_message::<VictoryEvent>()
             .add_message::<LevelUpEvent>()
             .add_message::<BossSpawnedEvent>()
+            .add_message::<TreasureOpenedEvent>()
             // ---------------------------------------------------------------
             // Per-run reset: fires only when a brand-new run begins.
             // Covers both entry paths — Title → Playing (when CharacterSelect
