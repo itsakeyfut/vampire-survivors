@@ -25,7 +25,9 @@ use vs_core::states::AppState;
 use vs_core::types::{CharacterType, WeaponType};
 
 use crate::components::ButtonAction;
-use crate::config::{MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams};
+use crate::config::{
+    CharacterSelectScreenParams, MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams,
+};
 use crate::hud::menu_button::spawn_large_menu_button;
 use crate::hud::screen_heading::ScreenHeadingHud;
 use crate::i18n::{font_for_lang, t};
@@ -43,42 +45,42 @@ const DEFAULT_HEADING_MARGIN: f32 = 32.0;
 const DEFAULT_ROOT_ROW_GAP: f32 = 24.0;
 
 /// Width of each character card in pixels.
-const CARD_W: f32 = 160.0;
+const DEFAULT_CARD_W: f32 = 160.0;
 /// Height of each character card in pixels.
-const CARD_H: f32 = 140.0;
+const DEFAULT_CARD_H: f32 = 140.0;
 /// Horizontal gap between cards.
-const CARD_GAP: f32 = 16.0;
+const DEFAULT_CARD_GAP: f32 = 16.0;
 /// Font size for the character name inside each card.
-const CARD_NAME_FONT_SIZE: f32 = 18.0;
+const DEFAULT_CARD_NAME_FONT_SIZE: f32 = 18.0;
 
 /// Card background when unlocked and not selected.
-const CARD_COLOR_UNLOCKED: Color = Color::srgb(0.133, 0.200, 0.400);
+const DEFAULT_CARD_COLOR_UNLOCKED: Color = Color::srgb(0.133, 0.200, 0.400);
 /// Card background when unlocked and selected.
-pub(crate) const CARD_COLOR_SELECTED: Color = Color::srgb(0.300, 0.500, 0.900);
+const DEFAULT_CARD_COLOR_SELECTED: Color = Color::srgb(0.300, 0.500, 0.900);
 /// Card background when hovered (unlocked).
-const CARD_COLOR_HOVER: Color = Color::srgb(0.200, 0.350, 0.650);
+const DEFAULT_CARD_COLOR_HOVER: Color = Color::srgb(0.200, 0.350, 0.650);
 /// Card background when pressed.
-const CARD_COLOR_PRESSED: Color = Color::srgb(0.086, 0.133, 0.267);
+const DEFAULT_CARD_COLOR_PRESSED: Color = Color::srgb(0.086, 0.133, 0.267);
 /// Card background for locked characters.
-pub(crate) const CARD_COLOR_LOCKED: Color = Color::srgb(0.10, 0.10, 0.15);
+const DEFAULT_CARD_COLOR_LOCKED: Color = Color::srgb(0.10, 0.10, 0.15);
 /// Hover color for locked cards.
-const CARD_COLOR_LOCKED_HOVER: Color = Color::srgb(0.13, 0.13, 0.18);
+const DEFAULT_CARD_COLOR_LOCKED_HOVER: Color = Color::srgb(0.13, 0.13, 0.18);
 
 /// Card name text color when unlocked.
-const CARD_TEXT_COLOR: Color = Color::srgb(1.0, 1.0, 1.0);
+const DEFAULT_CARD_TEXT_COLOR: Color = Color::srgb(1.0, 1.0, 1.0);
 /// Card name text color when locked.
-const CARD_TEXT_LOCKED_COLOR: Color = Color::srgb(0.5, 0.5, 0.55);
+const DEFAULT_CARD_TEXT_LOCKED_COLOR: Color = Color::srgb(0.5, 0.5, 0.55);
 
 /// Detail panel background color.
-const DETAIL_BG_COLOR: Color = Color::srgb(0.08, 0.04, 0.16);
+const DEFAULT_DETAIL_BG_COLOR: Color = Color::srgb(0.08, 0.04, 0.16);
 /// Detail panel text color for unlocked characters.
-const DETAIL_TEXT_COLOR: Color = Color::srgb(0.90, 0.90, 0.90);
+const DEFAULT_DETAIL_TEXT_COLOR: Color = Color::srgb(0.90, 0.90, 0.90);
 /// Detail panel text color when a locked character is selected.
-const DETAIL_LOCKED_COLOR: Color = Color::srgb(0.50, 0.50, 0.55);
+const DEFAULT_DETAIL_LOCKED_COLOR: Color = Color::srgb(0.50, 0.50, 0.55);
 /// Font size for the detail panel text.
-const DETAIL_FONT_SIZE: f32 = 20.0;
+const DEFAULT_DETAIL_FONT_SIZE: f32 = 20.0;
 /// Width of the detail panel.
-const DETAIL_PANEL_W: f32 = 580.0;
+const DEFAULT_DETAIL_PANEL_W: f32 = 580.0;
 
 // ---------------------------------------------------------------------------
 // Marker components
@@ -104,11 +106,17 @@ pub struct CharacterDetailText;
 // ---------------------------------------------------------------------------
 
 /// Returns the base background color for a card given its locked/selected state.
-fn card_base_color(unlocked: bool, selected: bool) -> Color {
+fn card_base_color(
+    unlocked: bool,
+    selected: bool,
+    selected_color: Color,
+    unlocked_color: Color,
+    locked_color: Color,
+) -> Color {
     match (unlocked, selected) {
-        (_, true) => CARD_COLOR_SELECTED,
-        (true, false) => CARD_COLOR_UNLOCKED,
-        (false, false) => CARD_COLOR_LOCKED,
+        (_, true) => selected_color,
+        (true, false) => unlocked_color,
+        (false, false) => locked_color,
     }
 }
 
@@ -123,14 +131,16 @@ fn weapon_name_key(wt: WeaponType) -> &'static str {
         WeaponType::ThunderRing => "weapon_thunder_ring",
         WeaponType::Cross => "weapon_cross",
         WeaponType::FireWand => "weapon_fire_wand",
-        // Evolved weapons are never used as starting weapons.
-        // Listed explicitly so adding a new WeaponType causes a compile error here.
-        WeaponType::BloodyTear
-        | WeaponType::HolyWand
-        | WeaponType::ThousandEdge
-        | WeaponType::SoulEater
-        | WeaponType::UnholyVespers
-        | WeaponType::LightningRing => "weapon_whip",
+        // Evolved weapons are never used as starting weapons; map each to its
+        // base weapon's i18n key so the detail panel shows a recognisable name
+        // if the RON config ever assigns one.  Listed explicitly so adding a
+        // new WeaponType causes a compile error here.
+        WeaponType::BloodyTear => "weapon_whip",
+        WeaponType::HolyWand => "weapon_magic_wand",
+        WeaponType::ThousandEdge => "weapon_knife",
+        WeaponType::SoulEater => "weapon_garlic",
+        WeaponType::UnholyVespers => "weapon_bible",
+        WeaponType::LightningRing => "weapon_thunder_ring",
     }
 }
 
@@ -173,6 +183,7 @@ pub fn setup_character_select_screen(
     heading_cfg: ScreenHeadingHudParams,
     btn_cfg: MenuButtonHudParams,
     char_params: CharacterParams,
+    cs_params: CharacterSelectScreenParams,
     asset_server: Option<Res<AssetServer>>,
     settings: Option<Res<GameSettings>>,
     meta: Option<Res<MetaProgress>>,
@@ -198,6 +209,45 @@ pub fn setup_character_select_screen(
         .get()
         .map(|c| c.margin_bottom)
         .unwrap_or(DEFAULT_HEADING_MARGIN);
+
+    // Card and detail values from RON config with hardcoded fallbacks.
+    let cs = cs_params.get();
+    let card_w = cs.map(|c| c.card_width).unwrap_or(DEFAULT_CARD_W);
+    let card_h = cs.map(|c| c.card_height).unwrap_or(DEFAULT_CARD_H);
+    let card_gap = cs.map(|c| c.card_gap).unwrap_or(DEFAULT_CARD_GAP);
+    let card_name_font_size = cs
+        .map(|c| c.card_name_font_size)
+        .unwrap_or(DEFAULT_CARD_NAME_FONT_SIZE);
+    let color_selected = cs
+        .map(|c| Color::from(&c.card_color_selected))
+        .unwrap_or(DEFAULT_CARD_COLOR_SELECTED);
+    let color_unlocked = cs
+        .map(|c| Color::from(&c.card_color_unlocked))
+        .unwrap_or(DEFAULT_CARD_COLOR_UNLOCKED);
+    let color_locked = cs
+        .map(|c| Color::from(&c.card_color_locked))
+        .unwrap_or(DEFAULT_CARD_COLOR_LOCKED);
+    let card_text_color = cs
+        .map(|c| Color::from(&c.card_text_color))
+        .unwrap_or(DEFAULT_CARD_TEXT_COLOR);
+    let card_text_locked_color = cs
+        .map(|c| Color::from(&c.card_text_locked_color))
+        .unwrap_or(DEFAULT_CARD_TEXT_LOCKED_COLOR);
+    let detail_bg_color = cs
+        .map(|c| Color::from(&c.detail_bg_color))
+        .unwrap_or(DEFAULT_DETAIL_BG_COLOR);
+    let detail_text_color = cs
+        .map(|c| Color::from(&c.detail_text_color))
+        .unwrap_or(DEFAULT_DETAIL_TEXT_COLOR);
+    let detail_locked_color = cs
+        .map(|c| Color::from(&c.detail_locked_color))
+        .unwrap_or(DEFAULT_DETAIL_LOCKED_COLOR);
+    let detail_font_size = cs
+        .map(|c| c.detail_font_size)
+        .unwrap_or(DEFAULT_DETAIL_FONT_SIZE);
+    let detail_panel_w = cs
+        .map(|c| c.detail_panel_width)
+        .unwrap_or(DEFAULT_DETAIL_PANEL_W);
 
     let current_selected = selected
         .as_deref()
@@ -249,7 +299,7 @@ pub fn setup_character_select_screen(
             // ── Character card row ────────────────────────────────────────
             root.spawn(Node {
                 flex_direction: FlexDirection::Row,
-                column_gap: Val::Px(CARD_GAP),
+                column_gap: Val::Px(card_gap),
                 ..default()
             })
             .with_children(|row| {
@@ -258,11 +308,17 @@ pub fn setup_character_select_screen(
                     let is_selected = char_type == current_selected;
                     let stats = char_params.stats_for(char_type);
 
-                    let card_color = card_base_color(is_unlocked, is_selected);
+                    let card_color = card_base_color(
+                        is_unlocked,
+                        is_selected,
+                        color_selected,
+                        color_unlocked,
+                        color_locked,
+                    );
                     let text_color = if is_unlocked {
-                        CARD_TEXT_COLOR
+                        card_text_color
                     } else {
-                        CARD_TEXT_LOCKED_COLOR
+                        card_text_locked_color
                     };
                     let label = if is_unlocked {
                         stats.name.clone()
@@ -273,8 +329,8 @@ pub fn setup_character_select_screen(
                     row.spawn((
                         Button,
                         Node {
-                            width: Val::Px(CARD_W),
-                            height: Val::Px(CARD_H),
+                            width: Val::Px(card_w),
+                            height: Val::Px(card_h),
                             justify_content: JustifyContent::Center,
                             align_items: AlignItems::Center,
                             flex_direction: FlexDirection::Column,
@@ -288,7 +344,7 @@ pub fn setup_character_select_screen(
                             Text::new(label),
                             TextFont {
                                 font: font.clone(),
-                                font_size: CARD_NAME_FONT_SIZE,
+                                font_size: card_name_font_size,
                                 ..default()
                             },
                             TextColor(text_color),
@@ -302,30 +358,30 @@ pub fn setup_character_select_screen(
             let init_stats = char_params.stats_for(current_selected);
             let init_unlocked = unlocked.contains(&current_selected);
             let detail_content = build_detail_text(&init_stats, init_unlocked, lang);
-            let detail_text_color = if init_unlocked {
-                DETAIL_TEXT_COLOR
+            let init_detail_text_color = if init_unlocked {
+                detail_text_color
             } else {
-                DETAIL_LOCKED_COLOR
+                detail_locked_color
             };
 
             root.spawn((
                 Node {
-                    width: Val::Px(DETAIL_PANEL_W),
+                    width: Val::Px(detail_panel_w),
                     padding: UiRect::all(Val::Px(16.0)),
                     flex_direction: FlexDirection::Column,
                     ..default()
                 },
-                BackgroundColor(DETAIL_BG_COLOR),
+                BackgroundColor(detail_bg_color),
             ))
             .with_children(|panel| {
                 panel.spawn((
                     Text::new(detail_content),
                     TextFont {
                         font: font.clone(),
-                        font_size: DETAIL_FONT_SIZE,
+                        font_size: detail_font_size,
                         ..default()
                     },
-                    TextColor(detail_text_color),
+                    TextColor(init_detail_text_color),
                     CharacterDetailText,
                 ));
             });
@@ -370,6 +426,7 @@ pub fn update_character_select(
     meta: Option<Res<MetaProgress>>,
     settings: Option<Res<GameSettings>>,
     char_params: CharacterParams,
+    cs_params: CharacterSelectScreenParams,
     mut detail_q: Query<(&mut Text, &mut TextColor), With<CharacterDetailText>>,
     mut card_q: Query<(&CharacterCardButton, &Interaction, &mut BackgroundColor)>,
 ) {
@@ -381,6 +438,33 @@ pub fn update_character_select(
     };
     let lang = settings.as_deref().map(|s| s.language).unwrap_or_default();
 
+    // Extract card/detail colors from config with hardcoded fallbacks.
+    let cs = cs_params.get();
+    let color_selected = cs
+        .map(|c| Color::from(&c.card_color_selected))
+        .unwrap_or(DEFAULT_CARD_COLOR_SELECTED);
+    let color_unlocked = cs
+        .map(|c| Color::from(&c.card_color_unlocked))
+        .unwrap_or(DEFAULT_CARD_COLOR_UNLOCKED);
+    let color_locked = cs
+        .map(|c| Color::from(&c.card_color_locked))
+        .unwrap_or(DEFAULT_CARD_COLOR_LOCKED);
+    let color_hover = cs
+        .map(|c| Color::from(&c.card_color_hover))
+        .unwrap_or(DEFAULT_CARD_COLOR_HOVER);
+    let color_pressed = cs
+        .map(|c| Color::from(&c.card_color_pressed))
+        .unwrap_or(DEFAULT_CARD_COLOR_PRESSED);
+    let color_locked_hover = cs
+        .map(|c| Color::from(&c.card_color_locked_hover))
+        .unwrap_or(DEFAULT_CARD_COLOR_LOCKED_HOVER);
+    let detail_text_color = cs
+        .map(|c| Color::from(&c.detail_text_color))
+        .unwrap_or(DEFAULT_DETAIL_TEXT_COLOR);
+    let detail_locked_color = cs
+        .map(|c| Color::from(&c.detail_locked_color))
+        .unwrap_or(DEFAULT_DETAIL_LOCKED_COLOR);
+
     let char_type = selected.0;
     let stats = char_params.stats_for(char_type);
     let is_unlocked = meta.unlocked_characters.contains(&char_type);
@@ -388,9 +472,9 @@ pub fn update_character_select(
     // Rebuild detail panel text.
     let content = build_detail_text(&stats, is_unlocked, lang);
     let text_color = if is_unlocked {
-        DETAIL_TEXT_COLOR
+        detail_text_color
     } else {
-        DETAIL_LOCKED_COLOR
+        detail_locked_color
     };
     if let Ok((mut text, mut color)) = detail_q.single_mut() {
         *text = Text::new(content);
@@ -402,15 +486,21 @@ pub fn update_character_select(
         let card_unlocked = meta.unlocked_characters.contains(&card.0);
         let card_selected = card.0 == char_type;
         let color = match interaction {
-            Interaction::Pressed => CARD_COLOR_PRESSED,
+            Interaction::Pressed => color_pressed,
             Interaction::Hovered => {
                 if card_unlocked {
-                    CARD_COLOR_HOVER
+                    color_hover
                 } else {
-                    CARD_COLOR_LOCKED_HOVER
+                    color_locked_hover
                 }
             }
-            Interaction::None => card_base_color(card_unlocked, card_selected),
+            Interaction::None => card_base_color(
+                card_unlocked,
+                card_selected,
+                color_selected,
+                color_unlocked,
+                color_locked,
+            ),
         };
         *bg = BackgroundColor(color);
     }
@@ -569,8 +659,8 @@ mod tests {
             .map(|(_, bg)| bg.0)
             .expect("DefaultCharacter card must exist");
         assert_eq!(
-            default_bg, CARD_COLOR_SELECTED,
-            "initially selected card must use CARD_COLOR_SELECTED"
+            default_bg, DEFAULT_CARD_COLOR_SELECTED,
+            "initially selected card must use DEFAULT_CARD_COLOR_SELECTED"
         );
     }
 
@@ -592,8 +682,8 @@ mod tests {
             .map(|(_, bg)| bg.0)
             .expect("Magician card must exist");
         assert_eq!(
-            magician_bg, CARD_COLOR_LOCKED,
-            "locked Magician card must use CARD_COLOR_LOCKED"
+            magician_bg, DEFAULT_CARD_COLOR_LOCKED,
+            "locked Magician card must use DEFAULT_CARD_COLOR_LOCKED"
         );
     }
 

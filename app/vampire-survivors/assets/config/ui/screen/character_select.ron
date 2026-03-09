@@ -1,0 +1,43 @@
+// Character-select screen configuration.
+// Controls card dimensions, colors, and detail panel appearance.
+//
+// Note: changes take effect the next time the character-select screen is entered
+// (the screen is rebuilt on each OnEnter(CharacterSelect) transition).
+//
+// Parameters:
+// - card_width/height:       Character card size in pixels
+// - card_gap:                Horizontal gap between cards in pixels
+// - card_name_font_size:     Font size for name labels inside cards
+// - card_color_unlocked:     Card background — unlocked, not selected
+// - card_color_selected:     Card background — unlocked and selected
+// - card_color_hover:        Card background — hovered (unlocked)
+// - card_color_pressed:      Card background — pressed
+// - card_color_locked:       Card background — locked character
+// - card_color_locked_hover: Card background — hovered (locked)
+// - card_text_color:         Card name text color for unlocked characters
+// - card_text_locked_color:  Card name text color for locked characters
+// - detail_bg_color:         Detail panel background color
+// - detail_text_color:       Detail panel text for unlocked characters
+// - detail_locked_color:     Detail panel text for locked characters
+// - detail_font_size:        Font size for the detail panel text
+// - detail_panel_width:      Width of the detail panel in pixels
+
+CharacterSelectScreenConfig(
+    card_width:              160.0,
+    card_height:             140.0,
+    card_gap:                16.0,
+    card_name_font_size:     18.0,
+    card_color_unlocked:     (r: 0.133, g: 0.200, b: 0.400),
+    card_color_selected:     (r: 0.300, g: 0.500, b: 0.900),
+    card_color_hover:        (r: 0.200, g: 0.350, b: 0.650),
+    card_color_pressed:      (r: 0.086, g: 0.133, b: 0.267),
+    card_color_locked:       (r: 0.100, g: 0.100, b: 0.150),
+    card_color_locked_hover: (r: 0.130, g: 0.130, b: 0.180),
+    card_text_color:         (r: 1.000, g: 1.000, b: 1.000),
+    card_text_locked_color:  (r: 0.500, g: 0.500, b: 0.550),
+    detail_bg_color:         (r: 0.080, g: 0.040, b: 0.160),
+    detail_text_color:       (r: 0.900, g: 0.900, b: 0.900),
+    detail_locked_color:     (r: 0.500, g: 0.500, b: 0.550),
+    detail_font_size:        20.0,
+    detail_panel_width:      580.0,
+)

@@ -6,6 +6,7 @@
 //! | File                                              | Config type                  | Controls                           |
 //! |---------------------------------------------------|------------------------------|------------------------------------|
 //! | `config/ui/styles.ron`                            | [`UiStyleConfig`]            | Shared background and title colors |
+//! | `config/ui/screen/character_select.ron`           | [`CharacterSelectScreenConfig`] | Character-select card layout and colors |
 //! | `config/ui/screen/level_up.ron`                   | [`LevelUpScreenConfig`]      | Level-up overlay and heading color |
 //! | `config/ui/screen/victory.ron`                    | [`VictoryScreenConfig`]      | Victory screen colors and spacing  |
 //! | `config/ui/hud/screen_heading.ron`                | [`ScreenHeadingHudConfig`]   | Heading font size and margin       |
@@ -22,6 +23,7 @@
 //! All files are watched by Bevy's asset server, so edits take effect while
 //! the game is running (hot-reload).
 
+pub mod character_select;
 pub mod game_over;
 pub mod hud;
 pub mod level_up;
@@ -29,6 +31,10 @@ pub mod pause;
 pub mod styles;
 pub mod victory;
 
+pub use character_select::{
+    CharacterSelectScreenConfig, CharacterSelectScreenConfigHandle, CharacterSelectScreenParams,
+    hot_reload_character_select_screen,
+};
 pub use game_over::{
     GameOverScreenConfig, GameOverScreenConfigHandle, GameOverScreenParams,
     hot_reload_game_over_screen,
@@ -103,6 +109,10 @@ macro_rules! ron_asset_loader {
 
 // Screen config loaders
 ron_asset_loader!(UiStyleConfigLoader, UiStyleConfig);
+ron_asset_loader!(
+    CharacterSelectScreenConfigLoader,
+    CharacterSelectScreenConfig
+);
 ron_asset_loader!(GameOverScreenConfigLoader, GameOverScreenConfig);
 ron_asset_loader!(LevelUpScreenConfigLoader, LevelUpScreenConfig);
 ron_asset_loader!(PauseScreenConfigLoader, PauseScreenConfig);
@@ -143,6 +153,8 @@ impl Plugin for UiConfigPlugin {
         // Screen configs
         app.init_asset::<UiStyleConfig>()
             .register_asset_loader(UiStyleConfigLoader)
+            .init_asset::<CharacterSelectScreenConfig>()
+            .register_asset_loader(CharacterSelectScreenConfigLoader)
             .init_asset::<GameOverScreenConfig>()
             .register_asset_loader(GameOverScreenConfigLoader)
             .init_asset::<LevelUpScreenConfig>()
@@ -186,6 +198,8 @@ impl Plugin for UiConfigPlugin {
 
         // Load screen configs
         let style_handle: Handle<UiStyleConfig> = asset_server.load("config/ui/styles.ron");
+        let character_select_handle: Handle<CharacterSelectScreenConfig> =
+            asset_server.load("config/ui/screen/character_select.ron");
         let game_over_handle: Handle<GameOverScreenConfig> =
             asset_server.load("config/ui/screen/game_over.ron");
         let level_up_handle: Handle<LevelUpScreenConfig> =
@@ -226,6 +240,7 @@ impl Plugin for UiConfigPlugin {
             asset_server.load("config/ui/hud/gameplay/weapon_slots.ron");
 
         app.insert_resource(UiStyleConfigHandle(style_handle))
+            .insert_resource(CharacterSelectScreenConfigHandle(character_select_handle))
             .insert_resource(GameOverScreenConfigHandle(game_over_handle))
             .insert_resource(LevelUpScreenConfigHandle(level_up_handle))
             .insert_resource(PauseScreenConfigHandle(pause_handle))
@@ -245,6 +260,7 @@ impl Plugin for UiConfigPlugin {
             .insert_resource(WeaponSlotsHudConfigHandle(weapon_slots_handle));
 
         app.add_systems(Update, hot_reload_ui_style)
+            .add_systems(Update, hot_reload_character_select_screen)
             .add_systems(Update, hot_reload_game_over_screen)
             .add_systems(Update, hot_reload_level_up_screen)
             .add_systems(Update, hot_reload_pause_screen)

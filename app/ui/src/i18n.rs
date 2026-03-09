@@ -251,8 +251,8 @@ mod tests {
             "stat_gold_earned",
         ];
         for key in &keys {
-            assert!(!t(key, Language::Japanese).is_empty(), "JP: {key}");
-            assert!(!t(key, Language::English).is_empty(), "EN: {key}");
+            assert_ne!(t(key, Language::Japanese), *key, "JP: {key}");
+            assert_ne!(t(key, Language::English), *key, "EN: {key}");
         }
     }
 
