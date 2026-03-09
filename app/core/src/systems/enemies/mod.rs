@@ -6,6 +6,7 @@ pub mod cull;
 pub mod difficulty;
 pub mod dragon;
 pub mod medusa;
+pub mod mini_boss_spawn;
 pub mod spawn;
 
 use bevy::prelude::*;
@@ -32,6 +33,7 @@ impl Plugin for EnemiesPlugin {
         use crate::systems::enemies::medusa::{
             medusa_projectile_player_collision, move_medusa_projectiles, tick_medusa_attack,
         };
+        use crate::systems::enemies::mini_boss_spawn::spawn_mini_boss;
         use crate::systems::enemies::spawn::spawn_enemies;
         use crate::systems::game_timer::update_game_timer;
         use crate::systems::player::collision::enemy_player_collision;
@@ -59,6 +61,7 @@ impl Plugin for EnemiesPlugin {
                     .after(update_game_timer)
                     .before(spawn_enemies),
                 spawn_enemies.after(update_difficulty),
+                spawn_mini_boss.after(update_game_timer),
                 cull_distant_enemies
                     .after(move_enemies)
                     .after(spawn_enemies),

@@ -102,6 +102,17 @@ EnemyConfig(
         collider_radius: 20.0,
         spawn_weight:    0.0,
     ),
+    // Mini-boss — spawns every 3 minutes throughout the run.
+    // Drops a treasure chest on defeat instead of gold (gold_chance: 0.0).
+    mini_boss: (
+        base_hp:         400.0,
+        speed:           70.0,
+        damage:          20.0,
+        xp_value:        30,
+        gold_chance:     0.0,
+        collider_radius: 22.0,
+        spawn_weight:    0.0,
+    ),
     // Spawn / difficulty parameters
     spawn_base_interval: 0.5,
     max_count:           500,

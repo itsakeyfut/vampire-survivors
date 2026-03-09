@@ -21,6 +21,9 @@ pub enum EnemyType {
     BossDeath,
     /// Summoned by Boss Death at Phase2 (HP < 60%). Low HP, normal speed.
     MiniDeath,
+    /// Spawns every 3 minutes throughout the run. High HP mini-boss that drops
+    /// a treasure chest on defeat.
+    MiniBoss,
 }
 
 /// Enemy AI behavior mode.
@@ -64,7 +67,7 @@ mod tests {
     }
 
     #[test]
-    fn enemy_type_all_nine_variants_exist() {
+    fn enemy_type_all_ten_variants_exist() {
         // Ensure every variant listed in the spec compiles and is distinct.
         let variants = [
             EnemyType::Bat,
@@ -76,8 +79,9 @@ mod tests {
             EnemyType::Dragon,
             EnemyType::BossDeath,
             EnemyType::MiniDeath,
+            EnemyType::MiniBoss,
         ];
-        assert_eq!(variants.len(), 9);
+        assert_eq!(variants.len(), 10);
         // All variants must be distinct (PartialEq).
         for i in 0..variants.len() {
             for j in 0..variants.len() {

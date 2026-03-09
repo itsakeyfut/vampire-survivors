@@ -86,6 +86,8 @@ pub struct EnemyConfig {
     pub dragon: EnemyStatsEntry,
     pub boss_death: EnemyStatsEntry,
     pub mini_death: EnemyStatsEntry,
+    /// Mini-boss that spawns every 3 minutes and drops a treasure chest on defeat.
+    pub mini_boss: EnemyStatsEntry,
     // Spawning parameters
     pub spawn_base_interval: f32,
     pub max_count: usize,
@@ -122,6 +124,7 @@ impl EnemyConfig {
             EnemyType::Dragon => &self.dragon,
             EnemyType::BossDeath => &self.boss_death,
             EnemyType::MiniDeath => &self.mini_death,
+            EnemyType::MiniBoss => &self.mini_boss,
         }
     }
 }
@@ -202,6 +205,7 @@ EnemyConfig(
     dragon: (base_hp: 150.0, speed: 90.0, damage: 25.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0, spawn_weight: 0.3),
     boss_death: (base_hp: 5000.0, speed: 30.0, damage: 50.0, xp_value: 500, gold_chance: 1.0, collider_radius: 30.0, spawn_weight: 0.0),
     mini_death: (base_hp: 800.0, speed: 80.0, damage: 30.0, xp_value: 50, gold_chance: 0.5, collider_radius: 20.0, spawn_weight: 0.0),
+    mini_boss: (base_hp: 400.0, speed: 70.0, damage: 20.0, xp_value: 30, gold_chance: 0.0, collider_radius: 22.0, spawn_weight: 0.0),
     spawn_base_interval: 0.5,
     max_count: 500,
     cull_distance: 2000.0,
@@ -269,6 +273,7 @@ EnemyConfig(
     dragon: (base_hp: 150.0, speed: 90.0, damage: 25.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0, spawn_weight: 0.3),
     boss_death: (base_hp: 5000.0, speed: 30.0, damage: 50.0, xp_value: 500, gold_chance: 1.0, collider_radius: 30.0, spawn_weight: 0.0),
     mini_death: (base_hp: 800.0, speed: 80.0, damage: 30.0, xp_value: 50, gold_chance: 0.5, collider_radius: 20.0, spawn_weight: 0.0),
+    mini_boss: (base_hp: 400.0, speed: 70.0, damage: 20.0, xp_value: 30, gold_chance: 0.0, collider_radius: 22.0, spawn_weight: 0.0),
     spawn_base_interval: 0.5,
     max_count: 500,
     cull_distance: 2000.0,
@@ -302,5 +307,7 @@ EnemyConfig(
         assert_eq!(config.stats_for(EnemyType::BossDeath).collider_radius, 30.0);
         assert_eq!(config.stats_for(EnemyType::MiniDeath).base_hp, 800.0);
         assert_eq!(config.stats_for(EnemyType::MiniDeath).collider_radius, 20.0);
+        assert_eq!(config.stats_for(EnemyType::MiniBoss).base_hp, 400.0);
+        assert_eq!(config.stats_for(EnemyType::MiniBoss).gold_chance, 0.0);
     }
 }

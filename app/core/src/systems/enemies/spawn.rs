@@ -64,6 +64,8 @@ const DEFAULT_COLLIDER_DRAGON: f32 = 20.0;
 const DEFAULT_COLLIDER_BOSS_DEATH: f32 = 60.0;
 /// Collider radius for Mini Death enemies (pixels).
 const DEFAULT_COLLIDER_MINI_DEATH: f32 = 20.0;
+/// Collider radius for MiniBoss enemies (pixels).
+pub(crate) const DEFAULT_COLLIDER_MINI_BOSS: f32 = 22.0;
 /// Elapsed seconds before Dragon is added to the spawn table (25 minutes).
 const DEFAULT_DRAGON_UNLOCK_SECS: f32 = 1500.0;
 /// Fallback spawn weight for Bat (used when config is not loaded).
@@ -335,6 +337,8 @@ fn enemy_color(enemy_type: EnemyType) -> Color {
         EnemyType::BossDeath => Color::srgb(1.0, 0.1, 0.1),
         // Dark purple for Mini Deaths — matches boss_ai.rs spawn_mini_deaths.
         EnemyType::MiniDeath => Color::srgb(0.7, 0.1, 0.7),
+        // Orange for MiniBoss — distinct from the final boss red.
+        EnemyType::MiniBoss => Color::srgb(1.0, 0.5, 0.0),
     }
 }
 
@@ -350,6 +354,7 @@ fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
         EnemyType::Dragon => DEFAULT_COLLIDER_DRAGON,
         EnemyType::BossDeath => DEFAULT_COLLIDER_BOSS_DEATH,
         EnemyType::MiniDeath => DEFAULT_COLLIDER_MINI_DEATH,
+        EnemyType::MiniBoss => DEFAULT_COLLIDER_MINI_BOSS,
     }
 }
 
@@ -360,7 +365,7 @@ fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
 /// Falls back to compile-time `DEFAULT_ENEMY_STATS_*` constants otherwise.
 /// Ghost enemies additionally receive [`PhaseThrough`].
 /// Medusa enemies use [`AIType::KeepDistance`] instead of `ChasePlayer`.
-fn spawn_enemy(
+pub(crate) fn spawn_enemy(
     commands: &mut Commands,
     enemy_type: EnemyType,
     position: Vec2,
@@ -1214,6 +1219,7 @@ mod tests {
             dragon: stats(0.0),
             boss_death: stats(0.0),
             mini_death: stats(0.0),
+            mini_boss: stats(0.0),
             spawn_base_interval: 0.5,
             max_count: 500,
             cull_distance: 2000.0,

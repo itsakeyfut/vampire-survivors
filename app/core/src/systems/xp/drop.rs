@@ -1,7 +1,11 @@
-//! XP gem drop system.
+//! Drop systems: XP gems and treasure chests.
 //!
 //! [`spawn_xp_gems`] listens for [`EnemyDiedEvent`] and spawns an
 //! [`ExperienceGem`] entity at the enemy's last known position.
+//!
+//! [`drop_treasure_on_mini_boss_death`] listens for the same event and, when
+//! the dead enemy is [`EnemyType::MiniBoss`], spawns a treasure chest at the
+//! death position via [`spawn_treasure`].
 //!
 //! The gem value is taken directly from [`EnemyDiedEvent::xp_value`], which
 //! is populated by [`apply_damage_to_enemies`] from the enemy's
@@ -12,11 +16,16 @@ use bevy::prelude::*;
 
 use crate::{
     components::{ExperienceGem, GameSessionEntity},
+    config::GameParams,
     events::EnemyDiedEvent,
+    systems::xp::treasure::spawn_treasure,
+    types::EnemyType,
 };
 
 /// Gem visual radius in pixels (placeholder; replace with real sprite later).
 const GEM_RADIUS: f32 = 6.0;
+/// Treasure collider radius fallback (pixels) used before `game.ron` loads.
+const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
 
 // ---------------------------------------------------------------------------
 // System
@@ -49,6 +58,29 @@ pub fn spawn_xp_gems(mut commands: Commands, mut died_events: MessageReader<Enem
             // z = 0.5 — above ground (z = 0) but below enemies (z ≈ 1).
             Transform::from_xyz(event.position.x, event.position.y, 0.5),
         ));
+    }
+}
+
+/// Spawns a treasure chest at the position where a [`EnemyType::MiniBoss`]
+/// died.
+///
+/// Reads every [`EnemyDiedEvent`] this frame; ignores all non-`MiniBoss`
+/// enemies.  The chest radius is sourced from `GameConfig::treasure_radius`
+/// with a constant fallback so the drop works even before `game.ron` loads.
+pub fn drop_treasure_on_mini_boss_death(
+    mut commands: Commands,
+    mut died_events: MessageReader<EnemyDiedEvent>,
+    game_cfg: GameParams,
+) {
+    let radius = game_cfg
+        .get()
+        .map(|c| c.treasure_radius)
+        .unwrap_or(DEFAULT_TREASURE_RADIUS);
+
+    for event in died_events.read() {
+        if event.enemy_type == EnemyType::MiniBoss {
+            spawn_treasure(&mut commands, event.position, radius);
+        }
     }
 }
 
