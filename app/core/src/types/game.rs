@@ -14,7 +14,7 @@ pub enum TreasureContent {
 }
 
 /// One option shown on the level-up card selection screen.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UpgradeChoice {
     /// Acquire a new weapon.
     NewWeapon(WeaponType),
