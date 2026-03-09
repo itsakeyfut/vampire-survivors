@@ -16,6 +16,9 @@ const DEFAULT_ENEMY_STATS_MEDUSA: (f32, f32, f32, u32, f32) = (60.0, 60.0, 12.0,
 const DEFAULT_ENEMY_STATS_DRAGON: (f32, f32, f32, u32, f32) = (150.0, 90.0, 25.0, 15, 0.15);
 const DEFAULT_ENEMY_STATS_BOSS_DEATH: (f32, f32, f32, u32, f32) = (5000.0, 30.0, 50.0, 500, 1.0);
 const DEFAULT_ENEMY_STATS_MINI_DEATH: (f32, f32, f32, u32, f32) = (800.0, 80.0, 30.0, 50, 0.5);
+/// Mini-boss: tougher than normal enemies, drops treasure on defeat.
+/// gold_chance = 0.0 because it always drops a treasure chest instead.
+const DEFAULT_ENEMY_STATS_MINI_BOSS: (f32, f32, f32, u32, f32) = (400.0, 70.0, 20.0, 30, 0.0);
 
 /// Core enemy stats. Attached to every enemy entity.
 #[derive(Component, Debug, Clone)]
@@ -73,6 +76,7 @@ impl Enemy {
             Dragon => DEFAULT_ENEMY_STATS_DRAGON,
             BossDeath => DEFAULT_ENEMY_STATS_BOSS_DEATH,
             MiniDeath => DEFAULT_ENEMY_STATS_MINI_DEATH,
+            MiniBoss => DEFAULT_ENEMY_STATS_MINI_BOSS,
         };
         let max_hp = base_hp * difficulty.max(1.0);
         Self {
@@ -193,7 +197,7 @@ mod tests {
     fn enemy_from_type_all_variants_construct() {
         use crate::types::EnemyType::*;
         for et in [
-            Bat, Skeleton, Zombie, Ghost, Demon, Medusa, Dragon, BossDeath, MiniDeath,
+            Bat, Skeleton, MiniBoss, Zombie, Ghost, Demon, Medusa, Dragon, BossDeath, MiniDeath,
         ] {
             let e = Enemy::from_type(et, 1.0);
             assert!(e.max_hp > 0.0, "{et:?} must have positive HP");

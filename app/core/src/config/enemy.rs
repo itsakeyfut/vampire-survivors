@@ -86,6 +86,8 @@ pub struct EnemyConfig {
     pub dragon: EnemyStatsEntry,
     pub boss_death: EnemyStatsEntry,
     pub mini_death: EnemyStatsEntry,
+    /// Mini-boss that spawns every 3 minutes and drops a treasure chest on defeat.
+    pub mini_boss: EnemyStatsEntry,
     // Spawning parameters
     pub spawn_base_interval: f32,
     pub max_count: usize,
@@ -103,6 +105,8 @@ pub struct EnemyConfig {
     pub medusa_unlock_secs: f32,
     /// Seconds into the run before Dragons are added to the spawn table.
     pub dragon_unlock_secs: f32,
+    /// Seconds between each mini-boss spawn (default 180 = 3 minutes).
+    pub mini_boss_interval: f32,
     /// Medusa-specific AI and projectile behavior parameters.
     pub medusa_behavior: MedusaBehaviorConfig,
     /// Dragon-specific fireball behavior parameters.
@@ -122,6 +126,7 @@ impl EnemyConfig {
             EnemyType::Dragon => &self.dragon,
             EnemyType::BossDeath => &self.boss_death,
             EnemyType::MiniDeath => &self.mini_death,
+            EnemyType::MiniBoss => &self.mini_boss,
         }
     }
 }
@@ -202,6 +207,7 @@ EnemyConfig(
     dragon: (base_hp: 150.0, speed: 90.0, damage: 25.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0, spawn_weight: 0.3),
     boss_death: (base_hp: 5000.0, speed: 30.0, damage: 50.0, xp_value: 500, gold_chance: 1.0, collider_radius: 30.0, spawn_weight: 0.0),
     mini_death: (base_hp: 800.0, speed: 80.0, damage: 30.0, xp_value: 50, gold_chance: 0.5, collider_radius: 20.0, spawn_weight: 0.0),
+    mini_boss: (base_hp: 400.0, speed: 70.0, damage: 20.0, xp_value: 30, gold_chance: 0.0, collider_radius: 22.0, spawn_weight: 0.0),
     spawn_base_interval: 0.5,
     max_count: 500,
     cull_distance: 2000.0,
@@ -212,6 +218,7 @@ EnemyConfig(
     demon_unlock_secs: 900.0,
     medusa_unlock_secs: 1200.0,
     dragon_unlock_secs: 1500.0,
+    mini_boss_interval: 180.0,
     medusa_behavior: (
         keep_min_dist: 150.0,
         keep_max_dist: 250.0,
@@ -247,6 +254,7 @@ EnemyConfig(
         assert_eq!(config.demon_unlock_secs, 900.0);
         assert_eq!(config.medusa_unlock_secs, 1200.0);
         assert_eq!(config.dragon_unlock_secs, 1500.0);
+        assert_eq!(config.mini_boss_interval, 180.0);
         assert_eq!(config.medusa_behavior.keep_min_dist, 150.0);
         assert_eq!(config.medusa_behavior.keep_max_dist, 250.0);
         assert_eq!(config.medusa_behavior.attack_interval, 2.0);
@@ -269,6 +277,7 @@ EnemyConfig(
     dragon: (base_hp: 150.0, speed: 90.0, damage: 25.0, xp_value: 15, gold_chance: 0.15, collider_radius: 20.0, spawn_weight: 0.3),
     boss_death: (base_hp: 5000.0, speed: 30.0, damage: 50.0, xp_value: 500, gold_chance: 1.0, collider_radius: 30.0, spawn_weight: 0.0),
     mini_death: (base_hp: 800.0, speed: 80.0, damage: 30.0, xp_value: 50, gold_chance: 0.5, collider_radius: 20.0, spawn_weight: 0.0),
+    mini_boss: (base_hp: 400.0, speed: 70.0, damage: 20.0, xp_value: 30, gold_chance: 0.0, collider_radius: 22.0, spawn_weight: 0.0),
     spawn_base_interval: 0.5,
     max_count: 500,
     cull_distance: 2000.0,
@@ -279,6 +288,7 @@ EnemyConfig(
     demon_unlock_secs: 900.0,
     medusa_unlock_secs: 1200.0,
     dragon_unlock_secs: 1500.0,
+    mini_boss_interval: 180.0,
     medusa_behavior: (
         keep_min_dist: 150.0,
         keep_max_dist: 250.0,
@@ -302,5 +312,7 @@ EnemyConfig(
         assert_eq!(config.stats_for(EnemyType::BossDeath).collider_radius, 30.0);
         assert_eq!(config.stats_for(EnemyType::MiniDeath).base_hp, 800.0);
         assert_eq!(config.stats_for(EnemyType::MiniDeath).collider_radius, 20.0);
+        assert_eq!(config.stats_for(EnemyType::MiniBoss).base_hp, 400.0);
+        assert_eq!(config.stats_for(EnemyType::MiniBoss).gold_chance, 0.0);
     }
 }

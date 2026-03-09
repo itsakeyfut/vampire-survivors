@@ -1,7 +1,11 @@
-//! XP gem drop system.
+//! Drop systems: XP gems and treasure chests.
 //!
 //! [`spawn_xp_gems`] listens for [`EnemyDiedEvent`] and spawns an
 //! [`ExperienceGem`] entity at the enemy's last known position.
+//!
+//! [`drop_treasure_on_mini_boss_death`] listens for the same event and, when
+//! the dead enemy is [`EnemyType::MiniBoss`], spawns a treasure chest at the
+//! death position via [`spawn_treasure`].
 //!
 //! The gem value is taken directly from [`EnemyDiedEvent::xp_value`], which
 //! is populated by [`apply_damage_to_enemies`] from the enemy's
@@ -12,11 +16,16 @@ use bevy::prelude::*;
 
 use crate::{
     components::{ExperienceGem, GameSessionEntity},
+    config::GameParams,
     events::EnemyDiedEvent,
+    systems::xp::treasure::spawn_treasure,
+    types::EnemyType,
 };
 
 /// Gem visual radius in pixels (placeholder; replace with real sprite later).
 const GEM_RADIUS: f32 = 6.0;
+/// Treasure collider radius fallback (pixels) used before `game.ron` loads.
+const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
 
 // ---------------------------------------------------------------------------
 // System
@@ -49,6 +58,29 @@ pub fn spawn_xp_gems(mut commands: Commands, mut died_events: MessageReader<Enem
             // z = 0.5 — above ground (z = 0) but below enemies (z ≈ 1).
             Transform::from_xyz(event.position.x, event.position.y, 0.5),
         ));
+    }
+}
+
+/// Spawns a treasure chest at the position where a [`EnemyType::MiniBoss`]
+/// died.
+///
+/// Reads every [`EnemyDiedEvent`] this frame; ignores all non-`MiniBoss`
+/// enemies.  The chest radius is sourced from `GameConfig::treasure_radius`
+/// with a constant fallback so the drop works even before `game.ron` loads.
+pub fn drop_treasure_on_mini_boss_death(
+    mut commands: Commands,
+    mut died_events: MessageReader<EnemyDiedEvent>,
+    game_cfg: GameParams,
+) {
+    let radius = game_cfg
+        .get()
+        .map(|c| c.treasure_radius)
+        .unwrap_or(DEFAULT_TREASURE_RADIUS);
+
+    for event in died_events.read() {
+        if event.enemy_type == EnemyType::MiniBoss {
+            spawn_treasure(&mut commands, event.position, radius);
+        }
     }
 }
 
@@ -167,6 +199,55 @@ mod tests {
 
         let gs = gems(&mut app);
         assert_eq!(gs[0].0.value, 15);
+    }
+
+    /// MiniBoss death spawns a treasure chest entity.
+    #[test]
+    fn mini_boss_death_spawns_treasure() {
+        use crate::components::Treasure;
+
+        let mut app = build_app();
+        send_died(&mut app, EnemyType::MiniBoss, Vec2::new(10.0, 20.0), 30);
+
+        app.world_mut()
+            .run_system_once(drop_treasure_on_mini_boss_death)
+            .expect("drop_treasure_on_mini_boss_death should run");
+        app.world_mut().flush();
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Treasure>>();
+        assert_eq!(
+            q.iter(app.world()).count(),
+            1,
+            "MiniBoss death must spawn exactly one treasure chest"
+        );
+    }
+
+    /// Non-MiniBoss death must NOT spawn a treasure chest.
+    #[test]
+    fn non_mini_boss_death_does_not_spawn_treasure() {
+        use crate::components::Treasure;
+
+        let mut app = build_app();
+        for et in [
+            EnemyType::Bat,
+            EnemyType::Skeleton,
+            EnemyType::Dragon,
+            EnemyType::BossDeath,
+        ] {
+            send_died(&mut app, et, Vec2::ZERO, 5);
+        }
+
+        app.world_mut()
+            .run_system_once(drop_treasure_on_mini_boss_death)
+            .expect("drop_treasure_on_mini_boss_death should run");
+        app.world_mut().flush();
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Treasure>>();
+        assert_eq!(
+            q.iter(app.world()).count(),
+            0,
+            "non-MiniBoss enemies must not drop a treasure chest"
+        );
     }
 
     /// Gem has a Sprite component (placeholder visual).

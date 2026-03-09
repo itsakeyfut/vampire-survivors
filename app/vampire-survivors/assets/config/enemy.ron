@@ -102,6 +102,17 @@ EnemyConfig(
         collider_radius: 20.0,
         spawn_weight:    0.0,
     ),
+    // Mini-boss — spawns every 3 minutes throughout the run.
+    // Drops a treasure chest on defeat instead of gold (gold_chance: 0.0).
+    mini_boss: (
+        base_hp:         400.0,
+        speed:           70.0,
+        damage:          20.0,
+        xp_value:        30,
+        gold_chance:     0.0,
+        collider_radius: 22.0,
+        spawn_weight:    0.0,
+    ),
     // Spawn / difficulty parameters
     spawn_base_interval: 0.5,
     max_count:           500,
@@ -113,6 +124,7 @@ EnemyConfig(
     demon_unlock_secs:   900.0,
     medusa_unlock_secs:  1200.0,
     dragon_unlock_secs:  1500.0,
+    mini_boss_interval:  180.0,
     medusa_behavior: (
         keep_min_dist:       150.0,
         keep_max_dist:       250.0,
