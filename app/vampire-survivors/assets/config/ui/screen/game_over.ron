@@ -1,0 +1,22 @@
+// Game-over screen configuration.
+// Controls heading color, stat text color/size, and section spacing.
+//
+// Note: changes take effect the next time the game-over screen is entered
+// (the screen is rebuilt on each OnEnter(GameOver) transition).
+//
+// Parameters:
+// - heading_color:     "GAME OVER" heading text color (RGB, 0.0-1.0)
+// - stat_color:        Run-statistics text color (RGB, 0.0-1.0)
+// - stat_font_size:    Font size for stat lines in points
+// - stats_margin_top:  Top margin between heading and stats (pixels)
+// - button_margin_top: Top margin between stats and buttons (pixels)
+// - row_gap:           Vertical gap between stat lines and between buttons (pixels)
+
+GameOverScreenConfig(
+    heading_color:     (r: 0.8,  g: 0.2,  b: 0.2),
+    stat_color:        (r: 0.85, g: 0.85, b: 0.85),
+    stat_font_size:    24.0,
+    stats_margin_top:  16.0,
+    button_margin_top: 48.0,
+    row_gap:           8.0,
+)

@@ -108,6 +108,8 @@ pub fn t(key: &'static str, lang: Language) -> &'static str {
         ("stat_level_reached", Language::English) => "Level Reached:",
         ("stat_enemies_defeated", Language::Japanese) => "撃破数:",
         ("stat_enemies_defeated", Language::English) => "Enemies Defeated:",
+        ("stat_gold_earned", Language::Japanese) => "獲得ゴールド:",
+        ("stat_gold_earned", Language::English) => "Gold Earned:",
 
         // ── Fallback ──────────────────────────────────────────────────────
         _ => key,
@@ -206,6 +208,7 @@ mod tests {
             "stat_clear_time",
             "stat_level_reached",
             "stat_enemies_defeated",
+            "stat_gold_earned",
         ];
         for key in &keys {
             assert!(!t(key, Language::Japanese).is_empty(), "JP: {key}");

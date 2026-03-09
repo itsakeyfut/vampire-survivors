@@ -1,32 +1,48 @@
 //! Game-over screen — shown when the player's HP reaches zero.
 //!
-//! Spawns a full-screen layout containing a screen heading and a large menu
-//! button, composed from HUD widget functions.  All entities are tagged with
+//! Spawns a full-screen layout containing a "GAME OVER" heading, run
+//! statistics (survival time, level reached, enemies defeated, gold earned),
+//! and two buttons: "もう一度" (retry → CharacterSelect) and "タイトルへ"
+//! (title).  All entities are tagged with
 //! [`DespawnOnExit`]`(`[`AppState::GameOver`]`)` so Bevy automatically
 //! despawns them when the state transitions away.
 //!
 //! - Background color: [`UiStyleParams`]
 //! - Heading layout: [`ScreenHeadingHudParams`]
 //! - Button dimensions and colors: [`MenuButtonHudParams`]
+//! - Stat text colors and spacing: [`GameOverScreenParams`]
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
-use vs_core::resources::GameSettings;
+use vs_core::resources::{GameData, GameSettings};
 use vs_core::states::AppState;
 
 use crate::components::ButtonAction;
-use crate::config::{MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams};
+use crate::config::{
+    GameOverScreenParams, MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams,
+};
+use crate::hud::gameplay::timer::format_elapsed;
 use crate::hud::menu_button::spawn_large_menu_button;
 use crate::hud::screen_heading::spawn_screen_heading;
 use crate::i18n::{font_for_lang, t};
 use crate::styles::DEFAULT_BG_COLOR;
 
 // ---------------------------------------------------------------------------
-// Color constants (local to this screen)
+// Fallback constants
 // ---------------------------------------------------------------------------
 
-/// Red tone used for the "GAME OVER" heading.
-const GAME_OVER_COLOR: Color = Color::srgb(0.8, 0.2, 0.2);
+/// Red tone used for the "GAME OVER" heading (fallback).
+const DEFAULT_HEADING_COLOR: Color = Color::srgb(0.8, 0.2, 0.2);
+/// Muted white for stat text lines.
+const DEFAULT_STAT_COLOR: Color = Color::srgb(0.85, 0.85, 0.85);
+/// Font size for stat lines.
+const DEFAULT_STAT_FONT_SIZE: f32 = 24.0;
+/// Top margin between heading and stats container (pixels).
+const DEFAULT_STATS_MARGIN_TOP: f32 = 16.0;
+/// Top margin between stats and buttons (pixels).
+const DEFAULT_BUTTON_MARGIN_TOP: f32 = 48.0;
+/// Vertical gap between individual stat lines and between buttons (pixels).
+const DEFAULT_ROW_GAP: f32 = 8.0;
 
 // ---------------------------------------------------------------------------
 // Marker components
@@ -41,11 +57,19 @@ pub struct GameOverScreenBg;
 // ---------------------------------------------------------------------------
 
 /// Spawns the game-over screen UI when entering [`AppState::GameOver`].
+///
+/// Reads [`GameData`] to display run statistics (survival time, level
+/// reached, enemies defeated, gold earned).  Visual tunables are loaded from
+/// `config/ui/screen/game_over.ron` via [`GameOverScreenParams`]; the private
+/// `DEFAULT_*` constants above serve as fallbacks while the file loads.
+#[allow(clippy::too_many_arguments)]
 pub fn setup_game_over_screen(
     mut commands: Commands,
     ui_style: UiStyleParams,
     heading_cfg: ScreenHeadingHudParams,
     btn_cfg: MenuButtonHudParams,
+    game_over_cfg: GameOverScreenParams,
+    game_data: Res<GameData>,
     asset_server: Option<Res<AssetServer>>,
     settings: Option<Res<GameSettings>>,
 ) {
@@ -57,6 +81,35 @@ pub fn setup_game_over_screen(
         .get()
         .map(|c| Color::from(&c.bg_color))
         .unwrap_or(DEFAULT_BG_COLOR);
+    let stat_color = game_over_cfg
+        .get()
+        .map(|c| Color::from(&c.stat_color))
+        .unwrap_or(DEFAULT_STAT_COLOR);
+    let stat_font_size = game_over_cfg
+        .get()
+        .map(|c| c.stat_font_size)
+        .unwrap_or(DEFAULT_STAT_FONT_SIZE);
+    let stats_margin_top = game_over_cfg
+        .get()
+        .map(|c| c.stats_margin_top)
+        .unwrap_or(DEFAULT_STATS_MARGIN_TOP);
+    let button_margin_top = game_over_cfg
+        .get()
+        .map(|c| c.button_margin_top)
+        .unwrap_or(DEFAULT_BUTTON_MARGIN_TOP);
+    let row_gap = game_over_cfg
+        .get()
+        .map(|c| c.row_gap)
+        .unwrap_or(DEFAULT_ROW_GAP);
+    let heading_color = game_over_cfg
+        .get()
+        .map(|c| Color::from(&c.heading_color))
+        .unwrap_or(DEFAULT_HEADING_COLOR);
+
+    let clear_time = format_elapsed(game_data.elapsed_time as u32);
+    let level = game_data.current_level;
+    let kills = game_data.kill_count;
+    let gold = game_data.gold_earned;
 
     commands
         .spawn((
@@ -73,24 +126,73 @@ pub fn setup_game_over_screen(
             GameOverScreenBg,
         ))
         .with_children(|parent| {
-            // "GAME OVER" heading — red; color is screen-specific.
+            // "GAME OVER" heading.
             spawn_screen_heading(
                 parent,
                 t("game_over_title", lang),
-                GAME_OVER_COLOR,
+                heading_color,
                 heading_cfg.get(),
                 font.clone(),
             );
 
-            // Title button.
-            spawn_large_menu_button(
-                parent,
-                t("btn_to_title", lang),
-                ButtonAction::GoToTitle,
-                btn_cfg.get(),
-                font.clone(),
-                None,
-            );
+            // Run statistics.
+            parent
+                .spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    margin: UiRect::top(Val::Px(stats_margin_top)),
+                    row_gap: Val::Px(row_gap),
+                    ..default()
+                })
+                .with_children(|stats| {
+                    for line in [
+                        format!("{} {clear_time}", t("stat_clear_time", lang)),
+                        format!("{} {level}", t("stat_level_reached", lang)),
+                        format!("{} {kills}", t("stat_enemies_defeated", lang)),
+                        format!("{} {gold}", t("stat_gold_earned", lang)),
+                    ] {
+                        stats.spawn((
+                            Text::new(line),
+                            TextFont {
+                                font: font.clone(),
+                                font_size: stat_font_size,
+                                ..default()
+                            },
+                            TextColor(stat_color),
+                        ));
+                    }
+                });
+
+            // Button column — margin separates it from the stats block.
+            parent
+                .spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    margin: UiRect::top(Val::Px(button_margin_top)),
+                    row_gap: Val::Px(row_gap),
+                    ..default()
+                })
+                .with_children(|buttons| {
+                    // "もう一度" → CharacterSelect (restart run).
+                    spawn_large_menu_button(
+                        buttons,
+                        t("btn_retry", lang),
+                        ButtonAction::GoToCharacterSelect,
+                        btn_cfg.get(),
+                        font.clone(),
+                        Some("btn_retry"),
+                    );
+
+                    // "タイトルへ" → Title.
+                    spawn_large_menu_button(
+                        buttons,
+                        t("btn_to_title", lang),
+                        ButtonAction::GoToTitle,
+                        btn_cfg.get(),
+                        font.clone(),
+                        Some("btn_to_title"),
+                    );
+                });
         });
 }
 
@@ -111,6 +213,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin));
         app.init_state::<AppState>();
+        app.insert_resource(GameData::default());
         app
     }
 
@@ -136,7 +239,7 @@ mod tests {
     }
 
     #[test]
-    fn setup_game_over_screen_has_exactly_one_button() {
+    fn setup_game_over_screen_has_two_buttons() {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::GameOver), setup_game_over_screen);
         enter_game_over(&mut app);
@@ -144,20 +247,27 @@ mod tests {
         let mut q = app.world_mut().query_filtered::<Entity, With<Button>>();
         assert_eq!(
             q.iter(app.world()).count(),
-            1,
-            "game-over screen should have exactly one button"
+            2,
+            "game-over screen should have exactly two buttons"
         );
     }
 
     #[test]
-    fn title_button_has_go_to_title_action() {
+    fn game_over_screen_has_retry_and_title_buttons() {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::GameOver), setup_game_over_screen);
         enter_game_over(&mut app);
 
         let mut q = app.world_mut().query::<&MenuButton>();
-        let btn = q.single(app.world()).expect("MenuButton should exist");
-        assert_eq!(btn.action, ButtonAction::GoToTitle);
+        let actions: Vec<ButtonAction> = q.iter(app.world()).map(|b| b.action).collect();
+        assert!(
+            actions.contains(&ButtonAction::GoToCharacterSelect),
+            "game-over screen must have a GoToCharacterSelect (retry) button"
+        );
+        assert!(
+            actions.contains(&ButtonAction::GoToTitle),
+            "game-over screen must have a GoToTitle button"
+        );
     }
 
     #[test]
@@ -206,7 +316,7 @@ mod tests {
     }
 
     #[test]
-    fn game_over_screen_button_has_hud_marker() {
+    fn game_over_screen_has_two_hud_buttons() {
         let mut app = build_app();
         app.add_systems(OnEnter(AppState::GameOver), setup_game_over_screen);
         enter_game_over(&mut app);
@@ -216,8 +326,8 @@ mod tests {
             .query_filtered::<Entity, With<LargeMenuButtonHud>>();
         assert_eq!(
             q.iter(app.world()).count(),
-            1,
-            "exactly one LargeMenuButtonHud expected"
+            2,
+            "exactly two LargeMenuButtonHud expected"
         );
     }
 
@@ -234,6 +344,40 @@ mod tests {
             q.iter(app.world()).count(),
             1,
             "exactly one ScreenHeadingHud expected"
+        );
+    }
+
+    #[test]
+    fn stats_reflect_game_data() {
+        let mut app = build_app();
+        {
+            let mut gd = app.world_mut().resource_mut::<GameData>();
+            gd.elapsed_time = 1865.0; // 31:05
+            gd.current_level = 42;
+            gd.kill_count = 777;
+            gd.gold_earned = 999;
+        }
+        app.add_systems(OnEnter(AppState::GameOver), setup_game_over_screen);
+        enter_game_over(&mut app);
+
+        let mut q = app.world_mut().query::<&Text>();
+        let texts: Vec<String> = q.iter(app.world()).map(|t| t.0.clone()).collect();
+
+        assert!(
+            texts.iter().any(|t| t.contains("31:05")),
+            "survival time '31:05' should appear; got: {texts:?}"
+        );
+        assert!(
+            texts.iter().any(|t| t.contains("42")),
+            "level 42 should appear; got: {texts:?}"
+        );
+        assert!(
+            texts.iter().any(|t| t.contains("777")),
+            "kill count 777 should appear; got: {texts:?}"
+        );
+        assert!(
+            texts.iter().any(|t| t.contains("999")),
+            "gold 999 should appear; got: {texts:?}"
         );
     }
 }

@@ -22,12 +22,17 @@
 //! All files are watched by Bevy's asset server, so edits take effect while
 //! the game is running (hot-reload).
 
+pub mod game_over;
 pub mod hud;
 pub mod level_up;
 pub mod pause;
 pub mod styles;
 pub mod victory;
 
+pub use game_over::{
+    GameOverScreenConfig, GameOverScreenConfigHandle, GameOverScreenParams,
+    hot_reload_game_over_screen,
+};
 pub use hud::{
     BossHpBarHudConfig, BossHpBarHudConfigHandle, BossHpBarHudParams, BossWarningHudConfig,
     BossWarningHudConfigHandle, BossWarningHudParams, EvolutionNotificationHudConfig,
@@ -98,6 +103,7 @@ macro_rules! ron_asset_loader {
 
 // Screen config loaders
 ron_asset_loader!(UiStyleConfigLoader, UiStyleConfig);
+ron_asset_loader!(GameOverScreenConfigLoader, GameOverScreenConfig);
 ron_asset_loader!(LevelUpScreenConfigLoader, LevelUpScreenConfig);
 ron_asset_loader!(PauseScreenConfigLoader, PauseScreenConfig);
 ron_asset_loader!(VictoryScreenConfigLoader, VictoryScreenConfig);
@@ -137,6 +143,8 @@ impl Plugin for UiConfigPlugin {
         // Screen configs
         app.init_asset::<UiStyleConfig>()
             .register_asset_loader(UiStyleConfigLoader)
+            .init_asset::<GameOverScreenConfig>()
+            .register_asset_loader(GameOverScreenConfigLoader)
             .init_asset::<LevelUpScreenConfig>()
             .register_asset_loader(LevelUpScreenConfigLoader)
             .init_asset::<PauseScreenConfig>()
@@ -178,6 +186,8 @@ impl Plugin for UiConfigPlugin {
 
         // Load screen configs
         let style_handle: Handle<UiStyleConfig> = asset_server.load("config/ui/styles.ron");
+        let game_over_handle: Handle<GameOverScreenConfig> =
+            asset_server.load("config/ui/screen/game_over.ron");
         let level_up_handle: Handle<LevelUpScreenConfig> =
             asset_server.load("config/ui/screen/level_up.ron");
         let pause_handle: Handle<PauseScreenConfig> =
@@ -216,6 +226,7 @@ impl Plugin for UiConfigPlugin {
             asset_server.load("config/ui/hud/gameplay/weapon_slots.ron");
 
         app.insert_resource(UiStyleConfigHandle(style_handle))
+            .insert_resource(GameOverScreenConfigHandle(game_over_handle))
             .insert_resource(LevelUpScreenConfigHandle(level_up_handle))
             .insert_resource(PauseScreenConfigHandle(pause_handle))
             .insert_resource(VictoryScreenConfigHandle(victory_handle))
@@ -234,6 +245,7 @@ impl Plugin for UiConfigPlugin {
             .insert_resource(WeaponSlotsHudConfigHandle(weapon_slots_handle));
 
         app.add_systems(Update, hot_reload_ui_style)
+            .add_systems(Update, hot_reload_game_over_screen)
             .add_systems(Update, hot_reload_level_up_screen)
             .add_systems(Update, hot_reload_pause_screen)
             .add_systems(Update, hot_reload_victory_screen)
