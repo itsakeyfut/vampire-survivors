@@ -22,7 +22,7 @@ use bevy::state::state_scoped::DespawnOnExit;
 use vs_core::config::CharacterParams;
 use vs_core::resources::{GameSettings, MetaProgress, SelectedCharacter};
 use vs_core::states::AppState;
-use vs_core::types::{CharacterType, WeaponType};
+use vs_core::types::{CharacterType, WeaponType, unlock_cost_for};
 
 use crate::components::ButtonAction;
 use crate::config::{
@@ -145,8 +145,13 @@ fn weapon_name_key(wt: WeaponType) -> &'static str {
 }
 
 /// Builds the formatted multi-line detail string for the given character.
+///
+/// For unlocked characters the detail shows HP, move speed, starting weapon,
+/// and the description line.  For locked characters it shows the lock badge
+/// and the gold cost required to purchase the character in the gold shop.
 fn build_detail_text(
     stats: &vs_core::types::CharacterBaseStats,
+    char_type: CharacterType,
     is_unlocked: bool,
     lang: vs_core::resources::Language,
 ) -> String {
@@ -163,7 +168,15 @@ fn build_detail_text(
             stats.description,
         )
     } else {
-        format!("{}\n{}", stats.name, t("label_locked", lang))
+        let cost = unlock_cost_for(char_type);
+        format!(
+            "{}\n{}\n{} {} {}",
+            stats.name,
+            t("label_locked", lang),
+            t("label_unlock_cost_prefix", lang),
+            cost,
+            t("label_unlock_cost_suffix", lang),
+        )
     }
 }
 
@@ -357,7 +370,8 @@ pub fn setup_character_select_screen(
             // ── Detail panel ──────────────────────────────────────────────
             let init_stats = char_params.stats_for(current_selected);
             let init_unlocked = unlocked.contains(&current_selected);
-            let detail_content = build_detail_text(&init_stats, init_unlocked, lang);
+            let detail_content =
+                build_detail_text(&init_stats, current_selected, init_unlocked, lang);
             let init_detail_text_color = if init_unlocked {
                 detail_text_color
             } else {
@@ -470,7 +484,7 @@ pub fn update_character_select(
     let is_unlocked = meta.unlocked_characters.contains(&char_type);
 
     // Rebuild detail panel text.
-    let content = build_detail_text(&stats, is_unlocked, lang);
+    let content = build_detail_text(&stats, char_type, is_unlocked, lang);
     let text_color = if is_unlocked {
         detail_text_color
     } else {
@@ -827,6 +841,13 @@ mod tests {
         assert!(
             text.0.contains('🔒'),
             "locked character detail must contain lock badge; got: {:?}",
+            text.0
+        );
+        // Gold cost must also appear for locked characters.
+        let cost = vs_core::types::unlock_cost_for(CharacterType::Magician);
+        assert!(
+            text.0.contains(&cost.to_string()),
+            "locked character detail must show unlock cost {cost}G; got: {:?}",
             text.0
         );
     }

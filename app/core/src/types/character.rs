@@ -88,6 +88,20 @@ pub fn get_character_stats(char_type: CharacterType) -> CharacterBaseStats {
     }
 }
 
+/// Returns the gold cost required to unlock a [`CharacterType`] in the gold shop.
+///
+/// [`CharacterType::DefaultCharacter`] costs 0 gold because it is always
+/// available from the start.  All other characters must be purchased once
+/// before they can be selected on the character-select screen.
+pub fn unlock_cost_for(char_type: CharacterType) -> u32 {
+    match char_type {
+        CharacterType::DefaultCharacter => 0,
+        CharacterType::Magician => 500,
+        CharacterType::Thief => 500,
+        CharacterType::Knight => 1000,
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -181,6 +195,29 @@ mod tests {
                 !stats.description.is_empty(),
                 "{:?} description must not be empty",
                 char_type
+            );
+        }
+    }
+
+    #[test]
+    fn default_character_unlock_cost_is_zero() {
+        assert_eq!(
+            unlock_cost_for(CharacterType::DefaultCharacter),
+            0,
+            "DefaultCharacter must be free (always unlocked)"
+        );
+    }
+
+    #[test]
+    fn non_default_characters_have_positive_unlock_cost() {
+        for char_type in [
+            CharacterType::Magician,
+            CharacterType::Thief,
+            CharacterType::Knight,
+        ] {
+            assert!(
+                unlock_cost_for(char_type) > 0,
+                "{char_type:?} must have a positive unlock cost"
             );
         }
     }
