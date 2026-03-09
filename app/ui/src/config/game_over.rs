@@ -16,10 +16,12 @@ use super::SrgbColor;
 
 /// Game-over screen style config loaded from `config/ui/screen/game_over.ron`.
 ///
-/// Controls the visual appearance of the game-over screen: stat text color
-/// and size, and spacing between sections.
+/// Controls the visual appearance of the game-over screen: heading color,
+/// stat text color and size, and spacing between sections.
 #[derive(Asset, TypePath, Deserialize, Debug, Clone)]
 pub struct GameOverScreenConfig {
+    /// Color of the "GAME OVER" heading text.
+    pub heading_color: SrgbColor,
     /// Color of the run-statistics text lines.
     pub stat_color: SrgbColor,
     /// Font size of the run-statistics text lines.
@@ -65,6 +67,10 @@ impl<'w> GameOverScreenParams<'w> {
 // ---------------------------------------------------------------------------
 
 /// Logs when `config/ui/screen/game_over.ron` is loaded or hot-reloaded.
+///
+/// Because the game-over screen is transient (spawned on enter, despawned on
+/// exit), live entity updates are not required — the next time the screen
+/// opens it will read the new values via [`GameOverScreenParams`].
 pub fn hot_reload_game_over_screen(mut events: MessageReader<AssetEvent<GameOverScreenConfig>>) {
     for event in events.read() {
         match event {
@@ -94,6 +100,7 @@ mod tests {
     fn game_over_screen_config_deserialization() {
         let ron_data = r#"
 GameOverScreenConfig(
+    heading_color:     (r: 0.8,  g: 0.2,  b: 0.2),
     stat_color:        (r: 0.85, g: 0.85, b: 0.85),
     stat_font_size:    24.0,
     stats_margin_top:  16.0,
@@ -104,6 +111,7 @@ GameOverScreenConfig(
         let cfg: GameOverScreenConfig =
             ron::de::from_str(ron_data).expect("RON parse must succeed");
 
+        assert!((cfg.heading_color.r - 0.8).abs() < 1e-6);
         assert!((cfg.stat_color.r - 0.85).abs() < 1e-6);
         assert_eq!(cfg.stat_font_size, 24.0);
         assert_eq!(cfg.stats_margin_top, 16.0);
@@ -114,6 +122,11 @@ GameOverScreenConfig(
     #[test]
     fn game_over_screen_config_values_are_positive() {
         let cfg = GameOverScreenConfig {
+            heading_color: SrgbColor {
+                r: 0.8,
+                g: 0.2,
+                b: 0.2,
+            },
             stat_color: SrgbColor {
                 r: 0.85,
                 g: 0.85,

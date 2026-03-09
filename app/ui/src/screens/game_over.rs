@@ -31,8 +31,8 @@ use crate::styles::DEFAULT_BG_COLOR;
 // Fallback constants
 // ---------------------------------------------------------------------------
 
-/// Red tone used for the "GAME OVER" heading.
-const GAME_OVER_COLOR: Color = Color::srgb(0.8, 0.2, 0.2);
+/// Red tone used for the "GAME OVER" heading (fallback).
+const DEFAULT_HEADING_COLOR: Color = Color::srgb(0.8, 0.2, 0.2);
 /// Muted white for stat text lines.
 const DEFAULT_STAT_COLOR: Color = Color::srgb(0.85, 0.85, 0.85);
 /// Font size for stat lines.
@@ -101,6 +101,10 @@ pub fn setup_game_over_screen(
         .get()
         .map(|c| c.row_gap)
         .unwrap_or(DEFAULT_ROW_GAP);
+    let heading_color = game_over_cfg
+        .get()
+        .map(|c| Color::from(&c.heading_color))
+        .unwrap_or(DEFAULT_HEADING_COLOR);
 
     let clear_time = format_elapsed(game_data.elapsed_time as u32);
     let level = game_data.current_level;
@@ -122,11 +126,11 @@ pub fn setup_game_over_screen(
             GameOverScreenBg,
         ))
         .with_children(|parent| {
-            // "GAME OVER" heading — red.
+            // "GAME OVER" heading.
             spawn_screen_heading(
                 parent,
                 t("game_over_title", lang),
-                GAME_OVER_COLOR,
+                heading_color,
                 heading_cfg.get(),
                 font.clone(),
             );
