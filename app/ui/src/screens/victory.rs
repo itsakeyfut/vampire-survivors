@@ -188,11 +188,13 @@ pub fn setup_victory_screen(
 #[cfg(test)]
 mod tests {
     use bevy::state::app::StatesPlugin;
+    use vs_core::resources::Language;
 
     use super::*;
     use crate::components::MenuButton;
-    use crate::hud::menu_button::LargeMenuButtonHud;
+    use crate::hud::menu_button::{LargeMenuButtonHud, LargeMenuButtonLabelHud};
     use crate::hud::screen_heading::ScreenHeadingHud;
+    use crate::i18n::TranslatableText;
 
     fn build_app() -> App {
         let mut app = App::new();
@@ -355,9 +357,28 @@ mod tests {
             texts.iter().any(|t| t.contains("777")),
             "kill count 777 should appear in a Text node; got: {texts:?}"
         );
+        let expected_gold = format!("{} 999", t("stat_gold_earned", Language::Japanese));
         assert!(
-            texts.iter().any(|t| t.contains("999")),
-            "gold 999 should appear in a Text node; got: {texts:?}"
+            texts.iter().any(|t| t.as_str() == expected_gold),
+            "gold stat row '{expected_gold}' should appear exactly; got: {texts:?}"
+        );
+    }
+
+    #[test]
+    fn title_button_label_has_i18n_key() {
+        let mut app = build_app();
+        app.add_systems(OnEnter(AppState::Victory), setup_victory_screen);
+        enter_victory(&mut app);
+
+        // The label spawned by spawn_large_menu_button(... Some("btn_to_title"))
+        // must carry a TranslatableText marker with the correct key.
+        let mut q = app
+            .world_mut()
+            .query_filtered::<&TranslatableText, With<LargeMenuButtonLabelHud>>();
+        let keys: Vec<&str> = q.iter(app.world()).map(|tt| tt.0).collect();
+        assert!(
+            keys.contains(&"btn_to_title"),
+            "title button label must carry TranslatableText(\"btn_to_title\"); got: {keys:?}"
         );
     }
 }
