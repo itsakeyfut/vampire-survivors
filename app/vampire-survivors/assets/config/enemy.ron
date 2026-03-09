@@ -124,6 +124,7 @@ EnemyConfig(
     demon_unlock_secs:   900.0,
     medusa_unlock_secs:  1200.0,
     dragon_unlock_secs:  1500.0,
+    mini_boss_interval:  180.0,
     medusa_behavior: (
         keep_min_dist:       150.0,
         keep_max_dist:       250.0,

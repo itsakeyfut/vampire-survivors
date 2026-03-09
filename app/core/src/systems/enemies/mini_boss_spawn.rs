@@ -1,8 +1,9 @@
 //! Mini-boss spawn system — timer-based, every 3 minutes.
 //!
 //! [`spawn_mini_boss`] runs every frame during [`AppState::Playing`].
-//! When [`TreasureSpawner::spawn_timer`] first reaches `MINI_BOSS_INTERVAL`
-//! (180 seconds) it:
+//! When [`TreasureSpawner::spawn_timer`] first reaches
+//! `EnemyConfig::mini_boss_interval` (default 180 seconds, tunable via
+//! `enemy.ron`) it:
 //!
 //! 1. Resets the timer to 0.
 //! 2. Spawns a [`EnemyType::MiniBoss`] entity just off-screen using the
@@ -24,8 +25,9 @@ use crate::{
 // Fallback constants (used before game.ron / enemy.ron finish loading)
 // ---------------------------------------------------------------------------
 
-/// Seconds between each mini-boss spawn.
-const MINI_BOSS_INTERVAL: f32 = 180.0;
+/// Seconds between each mini-boss spawn — used when `enemy.ron` is not yet
+/// loaded.  The authoritative value lives in `EnemyConfig::mini_boss_interval`.
+const DEFAULT_MINI_BOSS_INTERVAL: f32 = 180.0;
 
 /// Fallback viewport half-width when `game.ron` is not yet loaded (pixels).
 const DEFAULT_HALF_W: f32 = 640.0;
@@ -39,7 +41,8 @@ const DEFAULT_SPAWN_MARGIN: f32 = 60.0;
 // ---------------------------------------------------------------------------
 
 /// Ticks [`TreasureSpawner`] and spawns a [`EnemyType::MiniBoss`] every
-/// [`MINI_BOSS_INTERVAL`] seconds.
+/// `EnemyConfig::mini_boss_interval` seconds (default 180 s, tunable via
+/// `enemy.ron`).
 ///
 /// Reads the camera position to compute a random off-screen spawn location
 /// (same four-edge strategy used by the normal enemy spawner).  Skips
@@ -58,8 +61,14 @@ pub fn spawn_mini_boss(
         return;
     }
 
+    let interval = enemy_cfg
+        .get()
+        .map(|c| c.mini_boss_interval)
+        .unwrap_or(DEFAULT_MINI_BOSS_INTERVAL)
+        .max(1.0);
+
     treasure_spawner.spawn_timer += time.delta_secs();
-    if treasure_spawner.spawn_timer < MINI_BOSS_INTERVAL {
+    if treasure_spawner.spawn_timer < interval {
         return;
     }
     treasure_spawner.spawn_timer = 0.0;
@@ -166,7 +175,7 @@ mod tests {
         let mut app = build_app();
         app.world_mut()
             .resource_mut::<TreasureSpawner>()
-            .spawn_timer = MINI_BOSS_INTERVAL - 1.0;
+            .spawn_timer = DEFAULT_MINI_BOSS_INTERVAL - 1.0;
 
         app.world_mut()
             .run_system_once(spawn_mini_boss)
@@ -182,7 +191,7 @@ mod tests {
         let mut app = build_app();
         app.world_mut()
             .resource_mut::<TreasureSpawner>()
-            .spawn_timer = MINI_BOSS_INTERVAL;
+            .spawn_timer = DEFAULT_MINI_BOSS_INTERVAL;
 
         app.world_mut()
             .run_system_once(spawn_mini_boss)
@@ -207,7 +216,7 @@ mod tests {
         }
         app.world_mut()
             .resource_mut::<TreasureSpawner>()
-            .spawn_timer = MINI_BOSS_INTERVAL;
+            .spawn_timer = DEFAULT_MINI_BOSS_INTERVAL;
 
         app.world_mut()
             .run_system_once(spawn_mini_boss)
@@ -227,7 +236,7 @@ mod tests {
         let mut app = build_app();
         app.world_mut()
             .resource_mut::<TreasureSpawner>()
-            .spawn_timer = MINI_BOSS_INTERVAL;
+            .spawn_timer = DEFAULT_MINI_BOSS_INTERVAL;
 
         app.world_mut()
             .run_system_once(spawn_mini_boss)

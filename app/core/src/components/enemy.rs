@@ -197,7 +197,7 @@ mod tests {
     fn enemy_from_type_all_variants_construct() {
         use crate::types::EnemyType::*;
         for et in [
-            Bat, Skeleton, Zombie, Ghost, Demon, Medusa, Dragon, BossDeath, MiniDeath,
+            Bat, Skeleton, MiniBoss, Zombie, Ghost, Demon, Medusa, Dragon, BossDeath, MiniDeath,
         ] {
             let e = Enemy::from_type(et, 1.0);
             assert!(e.max_hp > 0.0, "{et:?} must have positive HP");

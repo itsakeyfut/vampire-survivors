@@ -201,6 +201,55 @@ mod tests {
         assert_eq!(gs[0].0.value, 15);
     }
 
+    /// MiniBoss death spawns a treasure chest entity.
+    #[test]
+    fn mini_boss_death_spawns_treasure() {
+        use crate::components::Treasure;
+
+        let mut app = build_app();
+        send_died(&mut app, EnemyType::MiniBoss, Vec2::new(10.0, 20.0), 30);
+
+        app.world_mut()
+            .run_system_once(drop_treasure_on_mini_boss_death)
+            .expect("drop_treasure_on_mini_boss_death should run");
+        app.world_mut().flush();
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Treasure>>();
+        assert_eq!(
+            q.iter(app.world()).count(),
+            1,
+            "MiniBoss death must spawn exactly one treasure chest"
+        );
+    }
+
+    /// Non-MiniBoss death must NOT spawn a treasure chest.
+    #[test]
+    fn non_mini_boss_death_does_not_spawn_treasure() {
+        use crate::components::Treasure;
+
+        let mut app = build_app();
+        for et in [
+            EnemyType::Bat,
+            EnemyType::Skeleton,
+            EnemyType::Dragon,
+            EnemyType::BossDeath,
+        ] {
+            send_died(&mut app, et, Vec2::ZERO, 5);
+        }
+
+        app.world_mut()
+            .run_system_once(drop_treasure_on_mini_boss_death)
+            .expect("drop_treasure_on_mini_boss_death should run");
+        app.world_mut().flush();
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Treasure>>();
+        assert_eq!(
+            q.iter(app.world()).count(),
+            0,
+            "non-MiniBoss enemies must not drop a treasure chest"
+        );
+    }
+
     /// Gem has a Sprite component (placeholder visual).
     #[test]
     fn gem_has_sprite_component() {

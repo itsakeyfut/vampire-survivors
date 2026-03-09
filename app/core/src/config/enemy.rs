@@ -105,6 +105,8 @@ pub struct EnemyConfig {
     pub medusa_unlock_secs: f32,
     /// Seconds into the run before Dragons are added to the spawn table.
     pub dragon_unlock_secs: f32,
+    /// Seconds between each mini-boss spawn (default 180 = 3 minutes).
+    pub mini_boss_interval: f32,
     /// Medusa-specific AI and projectile behavior parameters.
     pub medusa_behavior: MedusaBehaviorConfig,
     /// Dragon-specific fireball behavior parameters.
@@ -216,6 +218,7 @@ EnemyConfig(
     demon_unlock_secs: 900.0,
     medusa_unlock_secs: 1200.0,
     dragon_unlock_secs: 1500.0,
+    mini_boss_interval: 180.0,
     medusa_behavior: (
         keep_min_dist: 150.0,
         keep_max_dist: 250.0,
@@ -251,6 +254,7 @@ EnemyConfig(
         assert_eq!(config.demon_unlock_secs, 900.0);
         assert_eq!(config.medusa_unlock_secs, 1200.0);
         assert_eq!(config.dragon_unlock_secs, 1500.0);
+        assert_eq!(config.mini_boss_interval, 180.0);
         assert_eq!(config.medusa_behavior.keep_min_dist, 150.0);
         assert_eq!(config.medusa_behavior.keep_max_dist, 250.0);
         assert_eq!(config.medusa_behavior.attack_interval, 2.0);
@@ -284,6 +288,7 @@ EnemyConfig(
     demon_unlock_secs: 900.0,
     medusa_unlock_secs: 1200.0,
     dragon_unlock_secs: 1500.0,
+    mini_boss_interval: 180.0,
     medusa_behavior: (
         keep_min_dist: 150.0,
         keep_max_dist: 250.0,

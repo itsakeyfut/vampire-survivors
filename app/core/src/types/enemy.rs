@@ -7,6 +7,9 @@ pub enum EnemyType {
     Bat,
     /// Appears from 0 min. Basic melee enemy.
     Skeleton,
+    /// Spawns every 3 minutes until the final boss appears. High HP mini-boss
+    /// that drops a treasure chest on defeat.
+    MiniBoss,
     /// Appears from 5 min. Slow but tanky.
     Zombie,
     /// Appears from 10 min. Passes through walls.
@@ -21,9 +24,6 @@ pub enum EnemyType {
     BossDeath,
     /// Summoned by Boss Death at Phase2 (HP < 60%). Low HP, normal speed.
     MiniDeath,
-    /// Spawns every 3 minutes throughout the run. High HP mini-boss that drops
-    /// a treasure chest on defeat.
-    MiniBoss,
 }
 
 /// Enemy AI behavior mode.

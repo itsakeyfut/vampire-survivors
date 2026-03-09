@@ -1231,6 +1231,7 @@ mod tests {
             demon_unlock_secs: 0.0,
             medusa_unlock_secs: 0.0,
             dragon_unlock_secs: 0.0,
+            mini_boss_interval: 180.0,
             medusa_behavior: MedusaBehaviorConfig {
                 keep_min_dist: 150.0,
                 keep_max_dist: 250.0,
