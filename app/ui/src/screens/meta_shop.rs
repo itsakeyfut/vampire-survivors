@@ -20,12 +20,15 @@ use crate::config::{MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams};
 use crate::hud::menu_button::spawn_large_menu_button;
 use crate::hud::screen_heading::ScreenHeadingHud;
 use crate::i18n::{font_for_lang, t};
-use crate::styles::{DEFAULT_BG_COLOR, DEFAULT_TITLE_COLOR};
 
 // ---------------------------------------------------------------------------
 // Fallback constants
 // ---------------------------------------------------------------------------
 
+/// Dark-purple background (#1a0a2e) per docs/04_ui_ux.md.
+const DEFAULT_BG_COLOR: Color = Color::srgb(0.102, 0.039, 0.180);
+/// Gold title color (#ffd700) per docs/04_ui_ux.md.
+const DEFAULT_TITLE_COLOR: Color = Color::srgb(1.0, 0.843, 0.0);
 const DEFAULT_FONT_SIZE: f32 = 48.0;
 const DEFAULT_MARGIN_BOTTOM: f32 = 60.0;
 const DEFAULT_ROW_GAP: f32 = 16.0;
