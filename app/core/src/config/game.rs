@@ -28,8 +28,10 @@ pub struct GameConfig {
     pub treasure_spawn_interval: f32,
     /// Collision radius of treasure chests in pixels.
     pub treasure_radius: f32,
-    /// Gold awarded when a chest contains no evolvable weapon.
+    /// Gold awarded when a chest reward rolls gold (one of three possible rewards).
     pub treasure_gold_reward: u32,
+    /// Fraction of max HP restored when a chest reward rolls HP recovery (0.0–1.0).
+    pub treasure_hp_recovery_pct: f32,
     // XP / levelling
     pub xp_level_base: u32,
     pub xp_level_multiplier: f32,
@@ -151,6 +153,7 @@ GameConfig(
     treasure_spawn_interval: 180.0,
     treasure_radius: 20.0,
     treasure_gold_reward: 50,
+    treasure_hp_recovery_pct: 0.3,
     xp_level_base: 20,
     xp_level_multiplier: 1.2,
     level_up_choice_count: 3,
@@ -184,6 +187,7 @@ GameConfig(
         assert_eq!(config.treasure_spawn_interval, 180.0);
         assert_eq!(config.treasure_radius, 20.0);
         assert_eq!(config.treasure_gold_reward, 50);
+        assert_eq!(config.treasure_hp_recovery_pct, 0.3);
         assert_eq!(config.xp_level_base, 20);
         assert_eq!(config.level_up_choice_count, 3);
         assert_eq!(config.spatial_grid_cell_size, 64.0);

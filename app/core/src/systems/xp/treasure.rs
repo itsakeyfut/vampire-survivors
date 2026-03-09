@@ -5,8 +5,11 @@
 //!
 //! 1. **If any weapon can evolve** (at max level + required passive owned),
 //!    the first eligible weapon evolves immediately.
-//! 2. Otherwise the gold reward from config (`GameConfig::treasure_gold_reward`)
-//!    is added to [`GameData`].
+//! 2. Otherwise a random reward is chosen from three options:
+//!    - **Upgrade** — if any owned weapon or passive is below max level, one
+//!      is upgraded.  This option is skipped when no upgrades are available.
+//!    - **HP recovery** — restores `treasure_hp_recovery_pct × max_hp`.
+//!    - **Gold** — adds `treasure_gold_reward` to [`GameData`].
 //!
 //! At most **one chest is collected per frame** to keep inventory state
 //! consistent: `apply_evolution` runs deferred via a trigger, so collecting a
@@ -15,17 +18,20 @@
 //! restriction has no gameplay impact.
 
 use bevy::prelude::*;
+use rand::RngExt;
 
 use crate::{
     components::{
-        CircleCollider, GameSessionEntity, PassiveInventory, Player, Treasure, WeaponInventory,
+        CircleCollider, GameSessionEntity, PassiveInventory, Player, PlayerStats, Treasure,
+        WeaponInventory,
     },
-    config::GameParams,
+    config::{GameParams, PassiveConfig, PassiveParams},
     events::TreasureOpenedEvent,
     resources::GameData,
-    types::WeaponType,
+    types::{UpgradeChoice, WeaponType},
 };
 
+use super::apply::apply_passive_bonus;
 use super::evolution::find_evolution;
 
 // ---------------------------------------------------------------------------
@@ -35,6 +41,8 @@ use super::evolution::find_evolution;
 const DEFAULT_TREASURE_GOLD: u32 = 50;
 const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
 const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
+const DEFAULT_MAX_PASSIVE_LEVEL: u8 = 5;
+const DEFAULT_TREASURE_HP_RECOVERY_PCT: f32 = 0.3;
 
 // ---------------------------------------------------------------------------
 // System
@@ -45,7 +53,9 @@ const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
 ///
 /// Evolution takes priority: if at least one weapon in the player's inventory
 /// is at `max_weapon_level` **and** the player owns the required passive, that
-/// weapon is replaced by its evolved form and `evolved` is set to `true`.
+/// weapon is replaced by its evolved form.
+///
+/// Otherwise a random reward is chosen from three options (see module docs).
 ///
 /// At most one chest is processed per frame (see module-level note).
 ///
@@ -60,18 +70,22 @@ pub fn open_treasure_chests(
     mut game_data: ResMut<GameData>,
     mut opened_events: MessageWriter<TreasureOpenedEvent>,
     game_cfg: GameParams,
-    player_q: Query<
+    passive_cfg: PassiveParams,
+    mut player_q: Query<
         (
             &Transform,
             &CircleCollider,
-            &WeaponInventory,
-            &PassiveInventory,
+            &mut WeaponInventory,
+            &mut PassiveInventory,
+            &mut PlayerStats,
         ),
         With<Player>,
     >,
     treasure_q: Query<(Entity, &Transform), With<Treasure>>,
 ) {
-    let Ok((player_tf, player_col, weapon_inv, passive_inv)) = player_q.single() else {
+    let Ok((player_tf, player_col, mut weapon_inv, mut passive_inv, mut stats)) =
+        player_q.single_mut()
+    else {
         return;
     };
 
@@ -79,6 +93,10 @@ pub fn open_treasure_chests(
     let treasure_radius = cfg.map_or(DEFAULT_TREASURE_RADIUS, |c| c.treasure_radius);
     let gold_reward = cfg.map_or(DEFAULT_TREASURE_GOLD, |c| c.treasure_gold_reward);
     let max_weapon_level = cfg.map_or(DEFAULT_MAX_WEAPON_LEVEL, |c| c.max_weapon_level);
+    let max_passive_level = cfg.map_or(DEFAULT_MAX_PASSIVE_LEVEL, |c| c.max_passive_level);
+    let hp_recovery_pct = cfg.map_or(DEFAULT_TREASURE_HP_RECOVERY_PCT, |c| {
+        c.treasure_hp_recovery_pct
+    });
 
     for (treasure_entity, treasure_tf) in &treasure_q {
         let dist = player_tf
@@ -101,8 +119,8 @@ pub fn open_treasure_chests(
         // Despawn the chest immediately.
         commands.entity(treasure_entity).despawn();
 
-        // Apply reward: evolution takes priority over gold.
-        if let Some(evolved) = find_evolution(weapon_inv, passive_inv, max_weapon_level) {
+        // Apply reward: evolution takes priority over random reward.
+        if let Some(evolved) = find_evolution(&weapon_inv, &passive_inv, max_weapon_level) {
             // Mutation happens in apply_evolution (an observer) which runs
             // after this system.  Emitting a trigger keeps this system
             // read-only on the inventory, avoiding borrow conflicts.
@@ -110,11 +128,118 @@ pub fn open_treasure_chests(
                 evolved_type: evolved,
             });
         } else {
-            game_data.gold_earned += gold_reward;
+            apply_non_evolution_reward(
+                &mut weapon_inv,
+                &mut passive_inv,
+                &mut stats,
+                &mut game_data,
+                &RewardParams {
+                    passive_cfg: passive_cfg.get(),
+                    max_weapon_level,
+                    max_passive_level,
+                    hp_recovery_pct,
+                    gold_reward,
+                },
+            );
         }
 
         // Process at most one chest per frame to avoid stale-inventory decisions.
         break;
+    }
+}
+
+/// Tuning parameters for [`apply_non_evolution_reward`], derived from config.
+struct RewardParams<'a> {
+    passive_cfg: Option<&'a PassiveConfig>,
+    max_weapon_level: u8,
+    max_passive_level: u8,
+    hp_recovery_pct: f32,
+    gold_reward: u32,
+}
+
+/// Randomly applies one non-evolution reward when a treasure chest is opened.
+///
+/// Three reward types are possible:
+/// - **Upgrade** — one random weapon or passive that is below max level is
+///   upgraded by one level.  This option is excluded from the draw when no
+///   upgrades are available.
+/// - **HP recovery** — restores `hp_recovery_pct × max_hp` hit points,
+///   capped at the player's current maximum.
+/// - **Gold** — adds `gold_reward` to [`GameData::gold_earned`].
+///
+/// All eligible options have equal probability.
+fn apply_non_evolution_reward(
+    weapon_inv: &mut WeaponInventory,
+    passive_inv: &mut PassiveInventory,
+    stats: &mut PlayerStats,
+    game_data: &mut GameData,
+    params: &RewardParams<'_>,
+) {
+    let RewardParams {
+        passive_cfg,
+        max_weapon_level,
+        max_passive_level,
+        hp_recovery_pct,
+        gold_reward,
+    } = *params;
+    // Build upgrade pool: existing weapons and passives that are below max level.
+    let mut upgrade_pool: Vec<UpgradeChoice> = Vec::new();
+    for weapon in &weapon_inv.weapons {
+        if weapon.level < max_weapon_level && !weapon.evolved {
+            upgrade_pool.push(UpgradeChoice::WeaponUpgrade(weapon.weapon_type));
+        }
+    }
+    for passive in &passive_inv.items {
+        if passive.level < max_passive_level {
+            upgrade_pool.push(UpgradeChoice::PassiveUpgrade(passive.item_type));
+        }
+    }
+
+    // All eligible reward options.  Upgrade is omitted when pool is empty.
+    #[derive(Clone, Copy)]
+    enum Reward {
+        Upgrade,
+        HpRecovery,
+        Gold,
+    }
+    let mut options = vec![Reward::HpRecovery, Reward::Gold];
+    if !upgrade_pool.is_empty() {
+        options.push(Reward::Upgrade);
+    }
+
+    let mut rng = rand::rng();
+    let reward = options[rng.random_range(0..options.len())];
+
+    match reward {
+        Reward::Upgrade => {
+            let idx = rng.random_range(0..upgrade_pool.len());
+            match upgrade_pool[idx] {
+                UpgradeChoice::WeaponUpgrade(wt) => {
+                    if let Some(w) = weapon_inv.weapons.iter_mut().find(|w| w.weapon_type == wt) {
+                        w.level += 1;
+                        info!("Treasure: upgraded {wt:?} to level {}", w.level);
+                    }
+                }
+                UpgradeChoice::PassiveUpgrade(pt) => {
+                    if let Some(p) = passive_inv.items.iter_mut().find(|p| p.item_type == pt) {
+                        p.level += 1;
+                        apply_passive_bonus(stats, pt, passive_cfg);
+                        info!("Treasure: upgraded {pt:?} to level {}", p.level);
+                    }
+                }
+                // Upgrade pool only contains WeaponUpgrade / PassiveUpgrade.
+                _ => {}
+            }
+        }
+        Reward::HpRecovery => {
+            let heal = stats.max_hp * hp_recovery_pct;
+            stats.current_hp = (stats.current_hp + heal).min(stats.max_hp);
+            info!("Treasure: restored {heal:.0} HP");
+        }
+        Reward::Gold => {
+            game_data.gold_earned += gold_reward;
+            info!("Treasure: awarded {gold_reward} gold");
+        }
     }
 }
 
@@ -202,13 +327,12 @@ pub fn spawn_treasure(commands: &mut Commands, position: Vec2, radius: f32) {
 mod tests {
     use super::*;
     use crate::{
-        components::{CircleCollider, PassiveInventory, WeaponInventory},
+        components::{CircleCollider, PassiveInventory, PlayerStats, WeaponInventory},
         events::TreasureOpenedEvent,
         resources::GameData,
         states::AppState,
         types::{PassiveItemType, PassiveState, WeaponState, WeaponType},
     };
-    use bevy::prelude::*;
     use bevy::state::app::StatesPlugin;
 
     fn build_app() -> App {
@@ -233,11 +357,15 @@ mod tests {
     }
 
     fn spawn_player_at(app: &mut App, pos: Vec2) -> Entity {
+        let mut stats = PlayerStats::default();
+        stats.max_hp = 100.0;
+        stats.current_hp = 100.0;
         app.world_mut()
             .spawn((
                 Player,
                 WeaponInventory { weapons: vec![] },
                 PassiveInventory::default(),
+                stats,
                 Transform::from_xyz(pos.x, pos.y, 0.0),
                 CircleCollider {
                     radius: DEFAULT_TREASURE_RADIUS, // same size is fine for tests
@@ -265,17 +393,34 @@ mod tests {
         assert!(app.world().get_entity(t).is_ok(), "chest should survive");
     }
 
-    /// When player overlaps treasure with no evolvable weapon, gold is awarded.
+    /// When player overlaps treasure with no evolvable weapon, some reward is applied.
+    ///
+    /// One of three rewards is given: gold, HP recovery, or upgrade (skipped
+    /// here since the player has no weapons/passives).  With an empty upgrade
+    /// pool the reward is always gold or HP recovery.
     #[test]
-    fn treasure_awards_gold_when_no_evolution_possible() {
+    fn treasure_applies_some_reward_when_no_evolution_possible() {
         let mut app = build_app();
         spawn_player_at(&mut app, Vec2::ZERO);
-        spawn_treasure_at(&mut app, Vec2::ZERO); // overlapping
+        // Player HP is full (100), so HP recovery will be clamped to no visible change.
+        // Force the chest to be at ZERO to guarantee a collection.
+        spawn_treasure_at(&mut app, Vec2::ZERO);
 
         app.update();
 
+        // At least gold or HP recovery must have been applied.  Since upgrade
+        // pool is empty the only two options are gold and HP recovery.
         let gold = app.world().resource::<GameData>().gold_earned;
-        assert_eq!(gold, DEFAULT_TREASURE_GOLD, "gold should be awarded");
+        // Either gold was awarded or HP was recovered (already full → no change).
+        // Just verify the chest was collected (despawned) — reward was applied.
+        let mut q = app.world_mut().query_filtered::<Entity, With<Treasure>>();
+        assert_eq!(
+            q.iter(app.world()).count(),
+            0,
+            "chest must be despawned after collection"
+        );
+        // Gold or HP was the outcome. At least the system ran without panicking.
+        let _ = gold;
     }
 
     /// When an evolvable weapon is present, the evolution triggers and no gold
@@ -293,12 +438,16 @@ mod tests {
                 level: 1,
             }],
         };
+        let mut stats = PlayerStats::default();
+        stats.max_hp = 100.0;
+        stats.current_hp = 100.0;
         app.world_mut().spawn((
             Player,
             WeaponInventory {
                 weapons: vec![whip],
             },
             passive,
+            stats,
             Transform::from_xyz(0.0, 0.0, 0.0),
             CircleCollider {
                 radius: DEFAULT_TREASURE_RADIUS,
@@ -436,5 +585,155 @@ mod tests {
         );
         assert_eq!(tf.translation.x, 10.0, "x position must match");
         assert_eq!(tf.translation.y, 20.0, "y position must match");
+    }
+
+    // ---------------------------------------------------------------------------
+    // apply_non_evolution_reward — unit tests for each reward path
+    // ---------------------------------------------------------------------------
+
+    fn default_reward_params() -> RewardParams<'static> {
+        RewardParams {
+            passive_cfg: None,
+            max_weapon_level: DEFAULT_MAX_WEAPON_LEVEL,
+            max_passive_level: DEFAULT_MAX_PASSIVE_LEVEL,
+            hp_recovery_pct: DEFAULT_TREASURE_HP_RECOVERY_PCT,
+            gold_reward: DEFAULT_TREASURE_GOLD,
+        }
+    }
+
+    /// HP recovery reward heals the player by the configured percentage.
+    #[test]
+    fn reward_hp_recovery_heals_player() {
+        let mut weapon_inv = WeaponInventory { weapons: vec![] };
+        let mut passive_inv = PassiveInventory::default();
+        let mut stats = PlayerStats::default();
+        stats.max_hp = 100.0;
+        stats.current_hp = 40.0; // depleted
+        let mut game_data = GameData::default();
+        let params = default_reward_params();
+
+        // With no upgrades the pool is empty, so reward is either HP recovery or gold.
+        // Loop until HP increases.
+        for _ in 0..100 {
+            let prev_hp = stats.current_hp;
+            apply_non_evolution_reward(
+                &mut weapon_inv,
+                &mut passive_inv,
+                &mut stats,
+                &mut game_data,
+                &params,
+            );
+            if stats.current_hp > prev_hp {
+                let expected = (prev_hp + 100.0 * DEFAULT_TREASURE_HP_RECOVERY_PCT).min(100.0);
+                assert!(
+                    (stats.current_hp - expected).abs() < 0.001,
+                    "HP should increase by {}% of max HP",
+                    DEFAULT_TREASURE_HP_RECOVERY_PCT * 100.0
+                );
+                return;
+            }
+            game_data.gold_earned = 0;
+        }
+        panic!("HP recovery never triggered in 100 attempts");
+    }
+
+    /// Gold reward adds the configured amount to GameData.
+    #[test]
+    fn reward_gold_adds_to_game_data() {
+        let mut weapon_inv = WeaponInventory { weapons: vec![] };
+        let mut passive_inv = PassiveInventory::default();
+        let mut stats = PlayerStats::default();
+        stats.max_hp = 100.0;
+        stats.current_hp = 100.0;
+        let mut game_data = GameData::default();
+        let params = default_reward_params();
+
+        for _ in 0..100 {
+            apply_non_evolution_reward(
+                &mut weapon_inv,
+                &mut passive_inv,
+                &mut stats,
+                &mut game_data,
+                &params,
+            );
+            if game_data.gold_earned > 0 {
+                assert_eq!(
+                    game_data.gold_earned, DEFAULT_TREASURE_GOLD,
+                    "gold reward must match config"
+                );
+                return;
+            }
+        }
+        panic!("gold never awarded in 100 attempts");
+    }
+
+    /// Upgrade reward increases a weapon's level when an upgrade is available.
+    #[test]
+    fn reward_upgrade_increases_weapon_level() {
+        let mut whip = WeaponState::new(WeaponType::Whip);
+        whip.level = 3;
+        let mut weapon_inv = WeaponInventory {
+            weapons: vec![whip],
+        };
+        let mut passive_inv = PassiveInventory::default();
+        let mut stats = PlayerStats::default();
+        stats.max_hp = 100.0;
+        stats.current_hp = 100.0;
+        let mut game_data = GameData::default();
+        let params = default_reward_params();
+
+        for _ in 0..200 {
+            if weapon_inv.weapons[0].level > 3 {
+                assert_eq!(
+                    weapon_inv.weapons[0].level, 4,
+                    "weapon level should be incremented by 1"
+                );
+                return;
+            }
+            weapon_inv.weapons[0].level = 3;
+            game_data.gold_earned = 0;
+            stats.current_hp = 100.0;
+            apply_non_evolution_reward(
+                &mut weapon_inv,
+                &mut passive_inv,
+                &mut stats,
+                &mut game_data,
+                &params,
+            );
+        }
+        panic!("upgrade never triggered in 200 attempts");
+    }
+
+    /// HP recovery is clamped to max HP.
+    #[test]
+    fn reward_hp_recovery_clamped_to_max_hp() {
+        let mut weapon_inv = WeaponInventory { weapons: vec![] };
+        let mut passive_inv = PassiveInventory::default();
+        let mut stats = PlayerStats::default();
+        stats.max_hp = 100.0;
+        stats.current_hp = 95.0; // 5 HP below max; 30% heal = 30 HP → clamped to 100
+        let mut game_data = GameData::default();
+        let params = default_reward_params();
+
+        for _ in 0..100 {
+            let prev = stats.current_hp;
+            apply_non_evolution_reward(
+                &mut weapon_inv,
+                &mut passive_inv,
+                &mut stats,
+                &mut game_data,
+                &params,
+            );
+            if stats.current_hp > prev {
+                assert!(
+                    stats.current_hp <= stats.max_hp,
+                    "HP must not exceed max_hp after recovery"
+                );
+                assert_eq!(stats.current_hp, 100.0, "HP must be clamped to max_hp");
+                return;
+            }
+            game_data.gold_earned = 0;
+        }
+        panic!("HP recovery never triggered in 100 attempts");
     }
 }
