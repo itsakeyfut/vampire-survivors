@@ -300,7 +300,7 @@ pub fn recalculate_player_stats(
 /// `cfg` is `Some` when `passive.ron` has finished loading; the function falls
 /// back to the `DEFAULT_*` constants defined in this module while the asset is
 /// still loading.
-fn apply_passive_bonus(
+pub(crate) fn apply_passive_bonus(
     stats: &mut PlayerStats,
     passive_type: PassiveItemType,
     cfg: Option<&PassiveConfig>,
