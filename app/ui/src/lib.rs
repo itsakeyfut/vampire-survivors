@@ -48,6 +48,15 @@ impl Plugin for GameUIPlugin {
                 OnEnter(AppState::CharacterSelect),
                 screens::character_select::setup_character_select_screen,
             )
+            .add_systems(
+                Update,
+                (
+                    screens::character_select::handle_character_card_interaction,
+                    screens::character_select::update_character_select
+                        .after(screens::character_select::handle_character_card_interaction),
+                )
+                    .run_if(in_state(AppState::CharacterSelect)),
+            )
             // Meta shop screen
             .add_systems(
                 OnEnter(AppState::MetaShop),
