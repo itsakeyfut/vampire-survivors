@@ -25,12 +25,13 @@ use crate::hud::gameplay::timer::format_elapsed;
 use crate::hud::menu_button::spawn_large_menu_button;
 use crate::hud::screen_heading::spawn_screen_heading;
 use crate::i18n::{font_for_lang, t};
-use crate::styles::DEFAULT_BG_COLOR;
 
 // ---------------------------------------------------------------------------
 // Fallback constants
 // ---------------------------------------------------------------------------
 
+/// Dark-purple background (#1a0a2e) per docs/04_ui_ux.md.
+const DEFAULT_BG_COLOR: Color = Color::srgb(0.102, 0.039, 0.180);
 /// Red tone used for the "GAME OVER" heading (fallback).
 const DEFAULT_HEADING_COLOR: Color = Color::srgb(0.8, 0.2, 0.2);
 /// Muted white for stat text lines.

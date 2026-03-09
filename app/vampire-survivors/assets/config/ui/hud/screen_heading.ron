@@ -7,8 +7,11 @@
 // Parameters:
 // - font_size:     Font size of the heading text in points
 // - margin_bottom: Bottom margin below the heading in pixels (spacing before the next element)
+//
+// Design reference (docs/04_ui_ux.md):
+//   Headings ("GAME OVER", etc.): 48px
 
 ScreenHeadingHudConfig(
-    font_size:     72.0,
-    margin_bottom: 80.0,
+    font_size:     48.0,
+    margin_bottom: 40.0,
 )

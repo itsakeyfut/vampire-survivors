@@ -5,10 +5,14 @@
 // - bg_color:    Background color for full-screen overlays (title, game-over, etc.) (RGB, 0.0–1.0)
 // - title_color: Color of the "Vampire Survivors" heading on the title screen (RGB, 0.0–1.0)
 //
+// Design palette reference (docs/04_ui_ux.md):
+//   Background:       #1a0a2e  → (r: 0.102, g: 0.039, b: 0.180)
+//   Text emphasized:  #ffd700  → (r: 1.000, g: 0.843, b: 0.000)
+//
 // Button colors/dimensions → config/ui/hud/menu_button.ron
 // Heading font size        → config/ui/hud/screen_heading.ron
 // Upgrade card styles      → config/ui/hud/upgrade_card.ron
 UiStyleConfig(
-    bg_color:    (r: 0.05, g: 0.05, b: 0.08),
-    title_color: (r: 0.85, g: 0.15, b: 0.15),
+    bg_color:    (r: 0.102, g: 0.039, b: 0.180),
+    title_color: (r: 1.000, g: 0.843, b: 0.000),
 )

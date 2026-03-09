@@ -15,9 +15,10 @@ use crate::config::MenuButtonHudParams;
 // Fallback constants
 // ---------------------------------------------------------------------------
 
-const DEFAULT_BUTTON_NORMAL: Color = Color::srgb(0.30, 0.05, 0.05);
-const DEFAULT_BUTTON_HOVER: Color = Color::srgb(0.60, 0.10, 0.10);
-const DEFAULT_BUTTON_PRESSED: Color = Color::srgb(0.20, 0.02, 0.02);
+// Button colors per docs/04_ui_ux.md: #223366 normal, #3355aa hover, #162244 pressed.
+const DEFAULT_BUTTON_NORMAL: Color = Color::srgb(0.133, 0.200, 0.400);
+const DEFAULT_BUTTON_HOVER: Color = Color::srgb(0.200, 0.333, 0.667);
+const DEFAULT_BUTTON_PRESSED: Color = Color::srgb(0.086, 0.133, 0.267);
 
 // ---------------------------------------------------------------------------
 // Component

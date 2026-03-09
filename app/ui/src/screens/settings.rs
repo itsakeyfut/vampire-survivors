@@ -32,12 +32,15 @@ use crate::config::{MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams};
 use crate::hud::menu_button::spawn_large_menu_button;
 use crate::hud::screen_heading::ScreenHeadingHud;
 use crate::i18n::{TranslatableText, font_for_lang, t};
-use crate::styles::{DEFAULT_BG_COLOR, DEFAULT_TITLE_COLOR};
 
 // ---------------------------------------------------------------------------
 // Fallback constants
 // ---------------------------------------------------------------------------
 
+/// Dark-purple background (#1a0a2e) per docs/04_ui_ux.md.
+const DEFAULT_BG_COLOR: Color = Color::srgb(0.102, 0.039, 0.180);
+/// Gold title color (#ffd700) per docs/04_ui_ux.md.
+const DEFAULT_TITLE_COLOR: Color = Color::srgb(1.0, 0.843, 0.0);
 const DEFAULT_FONT_SIZE: f32 = 48.0;
 const DEFAULT_MARGIN_BOTTOM: f32 = 48.0;
 const DEFAULT_ROW_GAP: f32 = 24.0;
@@ -99,16 +102,16 @@ pub fn setup_settings_screen(
         .unwrap_or(DEFAULT_MARGIN_BOTTOM);
 
     let btn_width = btn_cfg.get().map(|c| c.width).unwrap_or(280.0);
-    let btn_height = btn_cfg.get().map(|c| c.height).unwrap_or(80.0);
-    let btn_font_size = btn_cfg.get().map(|c| c.font_size).unwrap_or(48.0);
+    let btn_height = btn_cfg.get().map(|c| c.height).unwrap_or(60.0);
+    let btn_font_size = btn_cfg.get().map(|c| c.font_size).unwrap_or(32.0);
     let btn_normal = btn_cfg
         .get()
         .map(|c| Color::from(&c.color_normal))
-        .unwrap_or(Color::srgb(0.30, 0.05, 0.05));
+        .unwrap_or(Color::srgb(0.133, 0.200, 0.400));
     let btn_text_color = btn_cfg
         .get()
         .map(|c| Color::from(&c.text_color))
-        .unwrap_or(Color::srgb(0.95, 0.90, 0.85));
+        .unwrap_or(Color::srgb(1.0, 1.0, 1.0));
 
     commands
         .spawn((
@@ -168,7 +171,7 @@ pub fn setup_settings_screen(
                         Button,
                         Node {
                             width: Val::Px(btn_width),
-                            height: Val::Px(btn_height * 0.6),
+                            height: Val::Px(btn_height * 0.75),
                             justify_content: JustifyContent::Center,
                             align_items: AlignItems::Center,
                             ..default()

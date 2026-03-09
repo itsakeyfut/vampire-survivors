@@ -11,13 +11,20 @@
 // - color_hover:   Button background color when the cursor is hovering (RGB, 0.0-1.0)
 // - color_pressed: Button background color while the mouse button is held (RGB, 0.0-1.0)
 // - text_color:    Label text color (RGB, 0.0-1.0)
+//
+// Design palette reference (docs/04_ui_ux.md):
+//   Button normal:  #223366  → (r: 0.133, g: 0.200, b: 0.400)
+//   Button hover:   #3355aa  → (r: 0.200, g: 0.333, b: 0.667)
+//   Button pressed: #162244  → (r: 0.086, g: 0.133, b: 0.267)
+//   Text:           #ffffff  → (r: 1.000, g: 1.000, b: 1.000)
+//   Font size:      32px (between "section title" 24px and legacy 48px)
 
 MenuButtonHudConfig(
     width:         280.0,
-    height:        80.0,
-    font_size:     48.0,
-    color_normal:  (r: 0.30, g: 0.05, b: 0.05),
-    color_hover:   (r: 0.60, g: 0.10, b: 0.10),
-    color_pressed: (r: 0.20, g: 0.02, b: 0.02),
-    text_color:    (r: 0.95, g: 0.90, b: 0.85),
+    height:        60.0,
+    font_size:     32.0,
+    color_normal:  (r: 0.133, g: 0.200, b: 0.400),
+    color_hover:   (r: 0.200, g: 0.333, b: 0.667),
+    color_pressed: (r: 0.086, g: 0.133, b: 0.267),
+    text_color:    (r: 1.000, g: 1.000, b: 1.000),
 )

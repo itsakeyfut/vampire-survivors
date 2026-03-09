@@ -28,8 +28,8 @@ use crate::i18n::{font_for_lang, t};
 // Fallback constants (used when VictoryScreenConfig / UiStyleConfig not loaded)
 // ---------------------------------------------------------------------------
 
-/// Near-black background, matching the shared screen palette.
-const DEFAULT_BG_COLOR: Color = Color::srgb(0.05, 0.05, 0.08);
+/// Dark-purple background (#1a0a2e) per docs/04_ui_ux.md.
+const DEFAULT_BG_COLOR: Color = Color::srgb(0.102, 0.039, 0.180);
 /// Gold tone for the "YOU WIN!" heading.
 const DEFAULT_VICTORY_COLOR: Color = Color::srgb(1.0, 0.85, 0.1);
 /// Muted white for stat text lines.
