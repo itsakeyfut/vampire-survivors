@@ -27,10 +27,11 @@ use rand::RngExt;
 use crate::{
     components::{
         CircleCollider, GameSessionEntity, PassiveInventory, Player, PlayerStats, Treasure,
-        WeaponInventory,
+        TreasureGlow, TreasureSpawnFlash, WeaponInventory,
     },
     config::{GameParams, PassiveConfig, PassiveParams},
     events::TreasureOpenedEvent,
+    materials::GlowMaterial,
     resources::{GameData, MetaProgress},
     types::{UpgradeChoice, WeaponType},
 };
@@ -48,6 +49,13 @@ const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
 const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
 const DEFAULT_MAX_PASSIVE_LEVEL: u8 = 5;
 const DEFAULT_TREASURE_HP_RECOVERY_PCT: f32 = 0.3;
+
+/// Duration of the spawn white-flash animation in seconds.
+const SPAWN_FLASH_DURATION: f32 = 0.35;
+/// Normal chest colour (yellow placeholder).
+const CHEST_COLOR: Color = Color::srgb(1.0, 0.85, 0.1);
+/// Distance (pixels) within which the glow ring becomes visible.
+const HIGHLIGHT_DISTANCE: f32 = 150.0;
 
 // ---------------------------------------------------------------------------
 // System
@@ -337,16 +345,108 @@ pub fn apply_evolution(
 pub fn spawn_treasure(commands: &mut Commands, position: Vec2, radius: f32) {
     commands.spawn((
         // Yellow square placeholder; Phase 17 will replace with a real sprite.
+        // Starts white and fades to yellow via TreasureSpawnFlash.
         Sprite {
-            color: Color::srgb(1.0, 0.85, 0.1),
+            color: Color::WHITE,
             custom_size: Some(Vec2::splat(radius * 2.0)),
             ..default()
         },
         Transform::from_xyz(position.x, position.y, 6.0),
         CircleCollider { radius },
         Treasure,
+        TreasureSpawnFlash {
+            elapsed: 0.0,
+            duration: SPAWN_FLASH_DURATION,
+        },
         GameSessionEntity,
     ));
+}
+
+// ---------------------------------------------------------------------------
+// Visual systems — wired by XpPlugin
+// ---------------------------------------------------------------------------
+
+/// Spawns a radial-glow child entity for every newly created [`Treasure`] chest.
+///
+/// The glow mesh is a quad `3×` the chest diameter so the ring has room to
+/// expand outward.  It starts [`Visibility::Hidden`] and is made visible by
+/// [`update_treasure_glow`] when the player approaches.
+pub fn spawn_treasure_glow(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut glow_materials: ResMut<Assets<GlowMaterial>>,
+    query: Query<(Entity, &CircleCollider), Added<Treasure>>,
+) {
+    for (entity, collider) in &query {
+        let size = collider.radius * 3.0 * 2.0;
+        let mesh = meshes.add(Rectangle::new(size, size));
+        let material = glow_materials.add(GlowMaterial::for_treasure(collider.radius));
+
+        let glow = commands
+            .spawn((
+                TreasureGlow,
+                Mesh2d(mesh),
+                MeshMaterial2d(material),
+                // z = -0.1 so the glow ring renders behind the chest sprite.
+                Transform::from_xyz(0.0, 0.0, -0.1),
+                Visibility::Hidden,
+            ))
+            .id();
+
+        commands.entity(entity).add_child(glow);
+    }
+}
+
+/// Lerps the chest sprite from white → yellow over [`SPAWN_FLASH_DURATION`].
+///
+/// Removes [`TreasureSpawnFlash`] once the animation completes.
+pub fn animate_treasure_spawn_flash(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut TreasureSpawnFlash, &mut Sprite)>,
+    time: Res<Time>,
+) {
+    for (entity, mut flash, mut sprite) in &mut query {
+        flash.elapsed += time.delta_secs();
+        let t = (flash.elapsed / flash.duration).clamp(0.0, 1.0);
+
+        // White (1,1,1) → CHEST_COLOR (1, 0.85, 0.1)
+        let g = 1.0 - 0.15 * t;
+        let b = 1.0 - 0.90 * t;
+        sprite.color = Color::srgb(1.0, g, b);
+
+        if flash.elapsed >= flash.duration {
+            sprite.color = CHEST_COLOR;
+            commands.entity(entity).remove::<TreasureSpawnFlash>();
+        }
+    }
+}
+
+/// Shows the glow ring when the player is within [`HIGHLIGHT_DISTANCE`] pixels
+/// of a chest, hides it otherwise.
+pub fn update_treasure_glow(
+    player_q: Query<&Transform, With<Player>>,
+    treasure_q: Query<(&Transform, &Children), With<Treasure>>,
+    mut glow_q: Query<&mut Visibility, With<TreasureGlow>>,
+) {
+    let Ok(player_tf) = player_q.single() else {
+        return;
+    };
+    let player_pos = player_tf.translation.truncate();
+
+    for (chest_tf, children) in &treasure_q {
+        let dist = player_pos.distance(chest_tf.translation.truncate());
+        let desired = if dist < HIGHLIGHT_DISTANCE {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+
+        for &child in children {
+            if let Ok(mut vis) = glow_q.get_mut(child) {
+                *vis = desired;
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -615,9 +715,11 @@ mod tests {
         );
     }
 
-    /// `spawn_treasure` must produce a yellow `Sprite` of the correct size.
+    /// `spawn_treasure` must produce a `Sprite` of the correct size with the
+    /// [`TreasureSpawnFlash`] component attached (the flash starts white and
+    /// fades to yellow via [`animate_treasure_spawn_flash`]).
     #[test]
-    fn spawn_treasure_has_yellow_sprite() {
+    fn spawn_treasure_has_correct_size_and_flash() {
         use bevy::ecs::system::RunSystemOnce as _;
 
         let mut app = App::new();
@@ -634,8 +736,8 @@ mod tests {
 
         let mut q = app
             .world_mut()
-            .query_filtered::<(&Sprite, &CircleCollider), With<Treasure>>();
-        let (sprite, collider) = q.single(app.world()).expect("treasure entity must exist");
+            .query_filtered::<(&Sprite, &CircleCollider, &TreasureSpawnFlash), With<Treasure>>();
+        let (sprite, collider, flash) = q.single(app.world()).expect("treasure entity must exist");
 
         assert_eq!(
             collider.radius, radius,
@@ -646,11 +748,13 @@ mod tests {
             Some(Vec2::splat(radius * 2.0)),
             "sprite size must be diameter"
         );
-        // Yellow: R ≈ 1.0, G ≈ 0.85, B ≈ 0.1.
+        // Chest spawns white (flash t=0) and transitions to yellow.
         let [r, g, b, _] = sprite.color.to_srgba().to_f32_array();
-        assert!(r > 0.9, "red channel must be high for yellow sprite");
-        assert!(g > 0.7, "green channel must be moderate for yellow sprite");
-        assert!(b < 0.3, "blue channel must be low for yellow sprite");
+        assert!(r > 0.9, "red channel must be high at spawn");
+        assert!(g > 0.9, "green channel must be high (white) at spawn");
+        assert!(b > 0.9, "blue channel must be high (white) at spawn");
+        assert_eq!(flash.elapsed, 0.0, "flash must not have advanced yet");
+        assert!(flash.duration > 0.0, "flash duration must be positive");
     }
 
     /// `spawn_treasure` z-coordinate must be above enemies (z > 5.0).

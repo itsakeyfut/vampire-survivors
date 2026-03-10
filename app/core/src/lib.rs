@@ -1,6 +1,7 @@
 pub mod components;
 pub mod config;
 pub mod events;
+pub mod materials;
 pub mod resources;
 pub mod states;
 pub mod systems;
@@ -39,6 +40,7 @@ fn reset_per_run_resources(
     *level_up_choices = LevelUpChoices::default();
     *pending_upgrade = PendingUpgradeIndex::default();
 }
+use materials::GlowMaterialPlugin;
 use states::AppState;
 use systems::{
     damage::apply_damage_to_enemies, enemies::EnemiesPlugin, game_over::GameOverPlugin,
@@ -120,6 +122,7 @@ impl Plugin for GameCorePlugin {
                     .run_if(in_state(AppState::Playing)),
             )
             .add_plugins((
+                GlowMaterialPlugin,
                 TimerPlugin,
                 SpatialPlugin,
                 PlayerPlugin,
