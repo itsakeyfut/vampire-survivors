@@ -50,10 +50,11 @@ const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
 const DEFAULT_MAX_PASSIVE_LEVEL: u8 = 5;
 const DEFAULT_TREASURE_HP_RECOVERY_PCT: f32 = 0.3;
 const DEFAULT_TREASURE_GLOW_DISTANCE: f32 = 150.0;
+const DEFAULT_TREASURE_SPAWN_FLASH_DURATION: f32 = 0.35;
 
-/// Duration of the spawn white-flash animation in seconds.
-const SPAWN_FLASH_DURATION: f32 = 0.35;
-/// Normal chest colour (yellow placeholder).
+/// Normal chest colour (yellow placeholder, Phase 17 will replace with a real
+/// sprite; kept as a constant so `spawn_treasure` and `animate_treasure_spawn_flash`
+/// stay in sync without a config round-trip for a colour value).
 const CHEST_COLOR: Color = Color::srgb(1.0, 0.85, 0.1);
 
 // ---------------------------------------------------------------------------
@@ -353,10 +354,7 @@ pub fn spawn_treasure(commands: &mut Commands, position: Vec2, radius: f32) {
         Transform::from_xyz(position.x, position.y, 6.0),
         CircleCollider { radius },
         Treasure,
-        TreasureSpawnFlash {
-            elapsed: 0.0,
-            duration: SPAWN_FLASH_DURATION,
-        },
+        TreasureSpawnFlash { elapsed: 0.0 },
         GameSessionEntity,
     ));
 }
@@ -396,24 +394,31 @@ pub fn spawn_treasure_glow(
     }
 }
 
-/// Lerps the chest sprite from white → yellow over [`SPAWN_FLASH_DURATION`].
+/// Lerps the chest sprite from white → yellow over `treasure_spawn_flash_duration`
+/// seconds (from `game.ron`).
 ///
 /// Removes [`TreasureSpawnFlash`] once the animation completes.
 pub fn animate_treasure_spawn_flash(
     mut commands: Commands,
+    game_cfg: GameParams,
     mut query: Query<(Entity, &mut TreasureSpawnFlash, &mut Sprite)>,
     time: Res<Time>,
 ) {
+    let duration = game_cfg
+        .get()
+        .map(|c| c.treasure_spawn_flash_duration)
+        .unwrap_or(DEFAULT_TREASURE_SPAWN_FLASH_DURATION);
+
     for (entity, mut flash, mut sprite) in &mut query {
         flash.elapsed += time.delta_secs();
-        let t = (flash.elapsed / flash.duration).clamp(0.0, 1.0);
+        let t = (flash.elapsed / duration).clamp(0.0, 1.0);
 
         // White (1,1,1) → CHEST_COLOR (1, 0.85, 0.1)
         let g = 1.0 - 0.15 * t;
         let b = 1.0 - 0.90 * t;
         sprite.color = Color::srgb(1.0, g, b);
 
-        if flash.elapsed >= flash.duration {
+        if flash.elapsed >= duration {
             sprite.color = CHEST_COLOR;
             commands.entity(entity).remove::<TreasureSpawnFlash>();
         }
@@ -759,7 +764,6 @@ mod tests {
         assert!(g > 0.9, "green channel must be high (white) at spawn");
         assert!(b > 0.9, "blue channel must be high (white) at spawn");
         assert_eq!(flash.elapsed, 0.0, "flash must not have advanced yet");
-        assert!(flash.duration > 0.0, "flash duration must be positive");
     }
 
     /// `spawn_treasure` z-coordinate must be above enemies (z > 5.0).

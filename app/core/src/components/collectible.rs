@@ -19,11 +19,11 @@ pub struct Treasure;
 /// Drives the white-flash-to-yellow transition played when a chest first spawns.
 ///
 /// Inserted by [`spawn_treasure`] and removed by [`animate_treasure_spawn_flash`]
-/// once `elapsed` reaches `duration`.
+/// once `elapsed` reaches the duration from `game.ron`
+/// (`treasure_spawn_flash_duration`).
 #[derive(Component, Debug)]
 pub struct TreasureSpawnFlash {
     pub elapsed: f32,
-    pub duration: f32,
 }
 
 /// Marker for the radial-glow overlay that is spawned as a child of each

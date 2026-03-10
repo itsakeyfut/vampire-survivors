@@ -35,6 +35,8 @@ pub struct GameConfig {
     /// Player distance (pixels) within which the radial-glow highlight becomes
     /// visible on a treasure chest.
     pub treasure_glow_distance: f32,
+    /// Duration in seconds of the white-flash-to-yellow spawn animation.
+    pub treasure_spawn_flash_duration: f32,
     // XP / levelling
     pub xp_level_base: u32,
     pub xp_level_multiplier: f32,
@@ -158,6 +160,7 @@ GameConfig(
     treasure_gold_reward: 50,
     treasure_hp_recovery_pct: 0.3,
     treasure_glow_distance: 150.0,
+    treasure_spawn_flash_duration: 0.35,
     xp_level_base: 20,
     xp_level_multiplier: 1.2,
     level_up_choice_count: 3,
@@ -193,6 +196,7 @@ GameConfig(
         assert_eq!(config.treasure_gold_reward, 50);
         assert_eq!(config.treasure_hp_recovery_pct, 0.3);
         assert_eq!(config.treasure_glow_distance, 150.0);
+        assert_eq!(config.treasure_spawn_flash_duration, 0.35);
         assert_eq!(config.xp_level_base, 20);
         assert_eq!(config.level_up_choice_count, 3);
         assert_eq!(config.spatial_grid_cell_size, 64.0);
