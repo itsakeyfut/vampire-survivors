@@ -26,22 +26,41 @@ use bevy::shader::ShaderRef;
 use bevy::sprite_render::{AlphaMode2d, Material2d, Material2dPlugin};
 
 // ---------------------------------------------------------------------------
+// Fallback constant
+// ---------------------------------------------------------------------------
+
+/// Default glow colour for treasure chests (yellow, matching the placeholder
+/// sprite).  Phase 17 will replace the placeholder sprite; at that point this
+/// colour should be revisited.
+///
+/// Format: `[R, G, B, A]` in linear sRGB, all channels in 0.0–1.0.
+const DEFAULT_TREASURE_GLOW_COLOR: [f32; 4] = [1.0, 0.85, 0.15, 0.85];
+
+// ---------------------------------------------------------------------------
 // Shader params struct
 // ---------------------------------------------------------------------------
 
 /// Uniform data passed to `shaders/glow.wgsl`.
 ///
-/// Encase auto-pads to 16-byte alignment; explicit `_pad` is not required.
+/// Layout (explicit `_pad` ensures a 32-byte struct across all WGSL backends;
+/// vec4=16 bytes, two f32=8 bytes, Vec2 pad=8 bytes):
+///
+/// | Field          | WGSL type    | Offset | Size |
+/// |----------------|--------------|--------|------|
+/// | `glow_color`   | `vec4<f32>`  | 0      | 16   |
+/// | `inner_radius` | `f32`        | 16     | 4    |
+/// | `outer_radius` | `f32`        | 20     | 4    |
+/// | `_pad`         | `vec2<f32>`  | 24     | 8    |
 #[derive(ShaderType, Clone, Debug, Default)]
 pub struct GlowParams {
     /// RGBA colour of the glow ring (A controls overall opacity).
     pub glow_color: Vec4,
-    /// Inner radius in UV space (0-0.5) — start of the glow ring.
+    /// Inner radius in UV space (0–0.5) — start of the glow ring.
     pub inner_radius: f32,
-    /// Outer radius in UV space (0-0.5) — end of the glow ring.
+    /// Outer radius in UV space (0–0.5) — end of the glow ring.
     pub outer_radius: f32,
-    /// Explicit padding so the struct is a multiple of 16 bytes
-    /// (vec4=16, f32+f32=8, pad=8 → 32 total).
+    /// Padding to make the struct a multiple of 16 bytes, matching the WGSL
+    /// uniform buffer alignment requirement.  Do not remove.
     pub _pad: Vec2,
 }
 
@@ -65,6 +84,7 @@ impl GlowMaterial {
     /// `chest_radius` is the [`CircleCollider`] radius of the chest (pixels).
     /// The glow mesh should be sized to `chest_radius * 3.0 * 2.0` on each axis.
     pub fn for_treasure(chest_radius: f32) -> Self {
+        let [r, g, b, a] = DEFAULT_TREASURE_GLOW_COLOR;
         // UV space: the mesh covers [0,1]×[0,1].
         // The chest body occupies the inner circle up to 1/3 of the mesh half-size.
         let mesh_half = chest_radius * 3.0;
@@ -73,7 +93,7 @@ impl GlowMaterial {
 
         Self {
             params: GlowParams {
-                glow_color: Vec4::new(1.0, 0.85, 0.15, 0.85),
+                glow_color: Vec4::new(r, g, b, a),
                 inner_radius: inner,
                 outer_radius: outer,
                 _pad: Vec2::ZERO,

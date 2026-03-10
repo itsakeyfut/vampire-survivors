@@ -49,13 +49,12 @@ const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
 const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
 const DEFAULT_MAX_PASSIVE_LEVEL: u8 = 5;
 const DEFAULT_TREASURE_HP_RECOVERY_PCT: f32 = 0.3;
+const DEFAULT_TREASURE_GLOW_DISTANCE: f32 = 150.0;
 
 /// Duration of the spawn white-flash animation in seconds.
 const SPAWN_FLASH_DURATION: f32 = 0.35;
 /// Normal chest colour (yellow placeholder).
 const CHEST_COLOR: Color = Color::srgb(1.0, 0.85, 0.1);
-/// Distance (pixels) within which the glow ring becomes visible.
-const HIGHLIGHT_DISTANCE: f32 = 150.0;
 
 // ---------------------------------------------------------------------------
 // System
@@ -421,13 +420,19 @@ pub fn animate_treasure_spawn_flash(
     }
 }
 
-/// Shows the glow ring when the player is within [`HIGHLIGHT_DISTANCE`] pixels
-/// of a chest, hides it otherwise.
+/// Shows the glow ring when the player is within `treasure_glow_distance`
+/// pixels of a chest (from `game.ron`), hides it otherwise.
 pub fn update_treasure_glow(
+    game_cfg: GameParams,
     player_q: Query<&Transform, With<Player>>,
     treasure_q: Query<(&Transform, &Children), With<Treasure>>,
     mut glow_q: Query<&mut Visibility, With<TreasureGlow>>,
 ) {
+    let highlight_dist = game_cfg
+        .get()
+        .map(|c| c.treasure_glow_distance)
+        .unwrap_or(DEFAULT_TREASURE_GLOW_DISTANCE);
+
     let Ok(player_tf) = player_q.single() else {
         return;
     };
@@ -435,7 +440,7 @@ pub fn update_treasure_glow(
 
     for (chest_tf, children) in &treasure_q {
         let dist = player_pos.distance(chest_tf.translation.truncate());
-        let desired = if dist < HIGHLIGHT_DISTANCE {
+        let desired = if dist < highlight_dist {
             Visibility::Visible
         } else {
             Visibility::Hidden

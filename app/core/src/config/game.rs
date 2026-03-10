@@ -32,6 +32,9 @@ pub struct GameConfig {
     pub treasure_gold_reward: u32,
     /// Fraction of max HP restored when a chest reward rolls HP recovery (0.0–1.0).
     pub treasure_hp_recovery_pct: f32,
+    /// Player distance (pixels) within which the radial-glow highlight becomes
+    /// visible on a treasure chest.
+    pub treasure_glow_distance: f32,
     // XP / levelling
     pub xp_level_base: u32,
     pub xp_level_multiplier: f32,
@@ -154,6 +157,7 @@ GameConfig(
     treasure_radius: 20.0,
     treasure_gold_reward: 50,
     treasure_hp_recovery_pct: 0.3,
+    treasure_glow_distance: 150.0,
     xp_level_base: 20,
     xp_level_multiplier: 1.2,
     level_up_choice_count: 3,
@@ -188,6 +192,7 @@ GameConfig(
         assert_eq!(config.treasure_radius, 20.0);
         assert_eq!(config.treasure_gold_reward, 50);
         assert_eq!(config.treasure_hp_recovery_pct, 0.3);
+        assert_eq!(config.treasure_glow_distance, 150.0);
         assert_eq!(config.xp_level_base, 20);
         assert_eq!(config.level_up_choice_count, 3);
         assert_eq!(config.spatial_grid_cell_size, 64.0);
