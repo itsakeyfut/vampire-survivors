@@ -667,6 +667,8 @@ mod tests {
             treasure_radius: 20.0,
             treasure_gold_reward: 50,
             treasure_hp_recovery_pct: 0.3,
+            treasure_glow_distance: 150.0,
+            treasure_spawn_flash_duration: 0.35,
             xp_level_base: 20,
             xp_level_multiplier: 1.2,
             level_up_choice_count: DEFAULT_CHOICE_COUNT,

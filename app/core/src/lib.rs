@@ -1,6 +1,7 @@
 pub mod components;
 pub mod config;
 pub mod events;
+pub mod materials;
 pub mod resources;
 pub mod states;
 pub mod systems;
@@ -12,9 +13,17 @@ use events::{
     BossSpawnedEvent, DamageEnemyEvent, EnemyDiedEvent, GameOverEvent, LevelUpEvent,
     PlayerDamagedEvent, TreasureOpenedEvent, VictoryEvent, WeaponFiredEvent,
 };
+use materials::GlowMaterialPlugin;
 use resources::{
     EnemySpawner, GameData, GameSettings, LevelUpChoices, MetaProgress, PendingUpgradeIndex,
     SelectedCharacter, SpatialGrid, TreasureSpawner,
+};
+use states::AppState;
+use systems::{
+    damage::apply_damage_to_enemies, enemies::EnemiesPlugin, game_over::GameOverPlugin,
+    game_timer::TimerPlugin, kill_count::track_kill_count, player::PlayerPlugin,
+    projectiles::ProjectilesPlugin, spatial::SpatialPlugin, victory::VictoryPlugin,
+    weapons::WeaponsPlugin, xp::XpPlugin,
 };
 
 /// Resets all per-run resources to their defaults at the start of each run.
@@ -39,13 +48,6 @@ fn reset_per_run_resources(
     *level_up_choices = LevelUpChoices::default();
     *pending_upgrade = PendingUpgradeIndex::default();
 }
-use states::AppState;
-use systems::{
-    damage::apply_damage_to_enemies, enemies::EnemiesPlugin, game_over::GameOverPlugin,
-    game_timer::TimerPlugin, kill_count::track_kill_count, player::PlayerPlugin,
-    projectiles::ProjectilesPlugin, spatial::SpatialPlugin, victory::VictoryPlugin,
-    weapons::WeaponsPlugin, xp::XpPlugin,
-};
 
 /// Core game plugin. Registers states, inserts default resources, and wires up
 /// all gameplay systems.
@@ -120,6 +122,7 @@ impl Plugin for GameCorePlugin {
                     .run_if(in_state(AppState::Playing)),
             )
             .add_plugins((
+                GlowMaterialPlugin,
                 TimerPlugin,
                 SpatialPlugin,
                 PlayerPlugin,

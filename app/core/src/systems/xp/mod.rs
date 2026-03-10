@@ -22,7 +22,10 @@ impl Plugin for XpPlugin {
         use crate::systems::xp::choices::generate_level_up_choices;
         use crate::systems::xp::drop::{drop_treasure_on_mini_boss_death, spawn_xp_gems};
         use crate::systems::xp::level_up::check_level_up;
-        use crate::systems::xp::treasure::{apply_evolution, open_treasure_chests};
+        use crate::systems::xp::treasure::{
+            animate_treasure_spawn_flash, apply_evolution, open_treasure_chests,
+            spawn_treasure_glow, update_treasure_glow,
+        };
         app.add_observer(apply_evolution)
             .add_systems(
                 OnEnter(AppState::Playing),
@@ -39,6 +42,9 @@ impl Plugin for XpPlugin {
                     move_attracted_gems.after(attract_gems_to_player),
                     check_level_up.after(move_attracted_gems),
                     open_treasure_chests,
+                    spawn_treasure_glow,
+                    animate_treasure_spawn_flash,
+                    update_treasure_glow,
                 )
                     .run_if(in_state(AppState::Playing)),
             );
