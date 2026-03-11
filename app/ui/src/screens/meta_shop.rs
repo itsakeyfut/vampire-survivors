@@ -396,27 +396,36 @@ pub fn setup_meta_shop_screen(
 
 /// Keeps the gold balance display and item button colors current.
 ///
-/// Runs every frame while in [`AppState::MetaShop`].  Early-returns when
-/// neither [`MetaProgress`] nor [`GameSettings`] has changed to avoid fighting
-/// with the hover/press color feedback from
+/// Runs every frame while in [`AppState::MetaShop`], **after**
 /// [`crate::components::handle_button_interaction`].
+///
+/// # Color policy
+///
+/// | Item state   | Color behavior                                      |
+/// |---|---|
+/// | Purchased    | Forced to gray every frame — no hover feedback.    |
+/// | Unaffordable | Forced to dark-red every frame — no hover feedback. |
+/// | Affordable   | Color untouched — hover/press feedback from        |
+/// |              | `handle_button_interaction` works normally.         |
+///
+/// Running after `handle_button_interaction` ensures purchased/unaffordable
+/// buttons cannot turn blue on hover.
 pub fn update_meta_shop_screen(
     meta: Res<MetaProgress>,
     settings: Res<GameSettings>,
     mut gold_q: Query<&mut Text, With<MetaShopGoldLabel>>,
     mut item_q: Query<(&MetaShopItemButton, &mut BackgroundColor)>,
 ) {
-    if !meta.is_changed() && !settings.is_changed() {
-        return;
-    }
-    let lang = settings.language;
-
-    // Update gold balance label.
-    if let Ok(mut text) = gold_q.single_mut() {
-        *text = Text::new(format!("{}: {}G", t("gold_display", lang), meta.total_gold));
+    // Update gold balance label only when something changed.
+    if meta.is_changed() || settings.is_changed() {
+        let lang = settings.language;
+        if let Ok(mut text) = gold_q.single_mut() {
+            *text = Text::new(format!("{}: {}G", t("gold_display", lang), meta.total_gold));
+        }
     }
 
-    // Refresh item button colors to reflect latest purchase/affordability state.
+    // Every frame: enforce correct colors for purchased/unaffordable buttons so
+    // handle_button_interaction's hover tint cannot override the grayout state.
     for (item, mut bg) in item_q.iter_mut() {
         let (purchased, affordable) = match item {
             MetaShopItemButton::Character(ct) => (
@@ -428,7 +437,12 @@ pub fn update_meta_shop_screen(
                 meta.total_gold >= upgrade_cost(*ut),
             ),
         };
-        *bg = BackgroundColor(item_button_color(purchased, affordable));
+        if purchased {
+            *bg = BackgroundColor(DEFAULT_PURCHASED_COLOR);
+        } else if !affordable {
+            *bg = BackgroundColor(DEFAULT_UNAFFORDABLE_COLOR);
+        }
+        // Affordable items: leave color unchanged so hover/press feedback works.
     }
 }
 

@@ -64,7 +64,9 @@ impl Plugin for GameUIPlugin {
             )
             .add_systems(
                 Update,
-                screens::meta_shop::update_meta_shop_screen.run_if(in_state(AppState::MetaShop)),
+                screens::meta_shop::update_meta_shop_screen
+                    .after(components::handle_button_interaction)
+                    .run_if(in_state(AppState::MetaShop)),
             )
             // Settings screen
             .add_systems(
