@@ -26,9 +26,10 @@
 
 use bevy::prelude::*;
 use bevy::state::state_scoped::DespawnOnExit;
+use vs_core::config::{CharacterParams, GameParams};
 use vs_core::resources::{GameSettings, MetaProgress};
 use vs_core::states::AppState;
-use vs_core::types::{CharacterType, MetaUpgradeType, get_character_stats, upgrade_cost};
+use vs_core::types::{CharacterType, MetaUpgradeType};
 
 use crate::components::ButtonAction;
 use crate::config::{MenuButtonHudParams, ScreenHeadingHudParams, UiStyleParams};
@@ -98,11 +99,14 @@ pub enum MetaShopItemButton {
 // ---------------------------------------------------------------------------
 
 /// Returns the base background color for a shop item button.
-fn item_base_color(purchased: bool, affordable: bool) -> Color {
+///
+/// `normal_color` is the theme color for an affordable, unpurchased item;
+/// it is read from [`MenuButtonHudParams`] with `DEFAULT_BUTTON_NORMAL` as fallback.
+fn item_base_color(purchased: bool, affordable: bool, normal_color: Color) -> Color {
     if purchased {
         DEFAULT_PURCHASED_COLOR
     } else if affordable {
-        DEFAULT_BUTTON_NORMAL
+        normal_color
     } else {
         DEFAULT_UNAFFORDABLE_COLOR
     }
@@ -162,6 +166,7 @@ fn spawn_item_button(
 // ---------------------------------------------------------------------------
 
 /// Spawns the gold shop screen when entering [`AppState::MetaShop`].
+#[allow(clippy::too_many_arguments)]
 pub fn setup_meta_shop_screen(
     mut commands: Commands,
     meta: Res<MetaProgress>,
@@ -170,6 +175,8 @@ pub fn setup_meta_shop_screen(
     heading_cfg: ScreenHeadingHudParams,
     btn_cfg: MenuButtonHudParams,
     asset_server: Option<Res<AssetServer>>,
+    char_params: CharacterParams,
+    game_params: GameParams,
 ) {
     let lang = settings.language;
     let font: Handle<Font> = asset_server
@@ -192,15 +199,18 @@ pub fn setup_meta_shop_screen(
         .get()
         .map(|c| c.margin_bottom)
         .unwrap_or(DEFAULT_HEADING_MARGIN);
+    let color_normal = btn_cfg
+        .get()
+        .map(|c| Color::from(&c.color_normal))
+        .unwrap_or(DEFAULT_BUTTON_NORMAL);
 
     // Character unlock affordability
+    let char_cost = |ct: CharacterType| char_params.stats_for(ct).unlock_cost;
     let is_unlocked = |ct: CharacterType| meta.unlocked_characters.contains(&ct);
-    let char_affordable = |ct: CharacterType| {
-        let cost = get_character_stats(ct).unlock_cost;
-        meta.total_gold >= cost
-    };
+    let char_affordable = |ct: CharacterType| meta.total_gold >= char_cost(ct);
 
     // Upgrade affordability
+    let upgrade_cost = |ut: MetaUpgradeType| game_params.upgrade_cost(ut);
     let is_purchased = |ut: MetaUpgradeType| meta.purchased_upgrades.contains(&ut);
     let upgrade_affordable = |ut: MetaUpgradeType| meta.total_gold >= upgrade_cost(ut);
 
@@ -282,28 +292,20 @@ pub fn setup_meta_shop_screen(
                     })
                     .with_children(|row| {
                         let chars = [
-                            (
-                                CharacterType::Magician,
-                                t("shop_char_magician", lang),
-                                ButtonAction::UnlockCharacter(CharacterType::Magician),
-                            ),
-                            (
-                                CharacterType::Thief,
-                                t("shop_char_thief", lang),
-                                ButtonAction::UnlockCharacter(CharacterType::Thief),
-                            ),
-                            (
-                                CharacterType::Knight,
-                                t("shop_char_knight", lang),
-                                ButtonAction::UnlockCharacter(CharacterType::Knight),
-                            ),
+                            CharacterType::Magician,
+                            CharacterType::Thief,
+                            CharacterType::Knight,
                         ];
-                        for (ct, label, action) in chars {
-                            let color = item_base_color(is_unlocked(ct), char_affordable(ct));
+                        let keys = ["shop_char_magician", "shop_char_thief", "shop_char_knight"];
+                        for (ct, key) in chars.into_iter().zip(keys) {
+                            let cost = char_cost(ct);
+                            let label = format!("{} ({}G)", t(key, lang), cost);
+                            let color =
+                                item_base_color(is_unlocked(ct), char_affordable(ct), color_normal);
                             spawn_item_button(
                                 row,
-                                label,
-                                action,
+                                &label,
+                                ButtonAction::UnlockCharacter(ct),
                                 MetaShopItemButton::Character(ct),
                                 color,
                                 font.clone(),
@@ -342,38 +344,24 @@ pub fn setup_meta_shop_screen(
                     })
                     .with_children(|row| {
                         let upgrades = [
-                            (
-                                MetaUpgradeType::BonusHp,
-                                t("shop_upgrade_hp", lang),
-                                ButtonAction::PurchaseUpgrade(MetaUpgradeType::BonusHp),
-                            ),
-                            (
-                                MetaUpgradeType::BonusSpeed,
-                                t("shop_upgrade_speed", lang),
-                                ButtonAction::PurchaseUpgrade(MetaUpgradeType::BonusSpeed),
-                            ),
-                            (
-                                MetaUpgradeType::BonusDamage,
-                                t("shop_upgrade_damage", lang),
-                                ButtonAction::PurchaseUpgrade(MetaUpgradeType::BonusDamage),
-                            ),
-                            (
-                                MetaUpgradeType::BonusXp,
-                                t("shop_upgrade_xp", lang),
-                                ButtonAction::PurchaseUpgrade(MetaUpgradeType::BonusXp),
-                            ),
-                            (
-                                MetaUpgradeType::StartingWeapon,
-                                t("shop_upgrade_weapon", lang),
-                                ButtonAction::PurchaseUpgrade(MetaUpgradeType::StartingWeapon),
-                            ),
+                            (MetaUpgradeType::BonusHp, "shop_upgrade_hp"),
+                            (MetaUpgradeType::BonusSpeed, "shop_upgrade_speed"),
+                            (MetaUpgradeType::BonusDamage, "shop_upgrade_damage"),
+                            (MetaUpgradeType::BonusXp, "shop_upgrade_xp"),
+                            (MetaUpgradeType::StartingWeapon, "shop_upgrade_weapon"),
                         ];
-                        for (ut, label, action) in upgrades {
-                            let color = item_base_color(is_purchased(ut), upgrade_affordable(ut));
+                        for (ut, key) in upgrades {
+                            let cost = upgrade_cost(ut);
+                            let label = format!("{} ({}G)", t(key, lang), cost);
+                            let color = item_base_color(
+                                is_purchased(ut),
+                                upgrade_affordable(ut),
+                                color_normal,
+                            );
                             spawn_item_button(
                                 row,
-                                label,
-                                action,
+                                &label,
+                                ButtonAction::PurchaseUpgrade(ut),
                                 MetaShopItemButton::Upgrade(ut),
                                 color,
                                 font.clone(),
@@ -423,9 +411,17 @@ pub fn setup_meta_shop_screen(
 pub fn update_meta_shop_screen(
     meta: Res<MetaProgress>,
     settings: Res<GameSettings>,
+    btn_cfg: MenuButtonHudParams,
+    char_params: CharacterParams,
+    game_params: GameParams,
     mut gold_q: Query<&mut Text, With<MetaShopGoldLabel>>,
     mut item_q: Query<(&MetaShopItemButton, &mut BackgroundColor, &Interaction)>,
 ) {
+    let color_normal = btn_cfg
+        .get()
+        .map(|c| Color::from(&c.color_normal))
+        .unwrap_or(DEFAULT_BUTTON_NORMAL);
+
     // Update gold balance label only when something changed.
     if meta.is_changed() || settings.is_changed() {
         let lang = settings.language;
@@ -439,14 +435,14 @@ pub fn update_meta_shop_screen(
         let (purchased, affordable) = match item {
             MetaShopItemButton::Character(ct) => (
                 meta.unlocked_characters.contains(ct),
-                meta.total_gold >= get_character_stats(*ct).unlock_cost,
+                meta.total_gold >= char_params.stats_for(*ct).unlock_cost,
             ),
             MetaShopItemButton::Upgrade(ut) => (
                 meta.purchased_upgrades.contains(ut),
-                meta.total_gold >= upgrade_cost(*ut),
+                meta.total_gold >= game_params.upgrade_cost(*ut),
             ),
         };
-        let base = item_base_color(purchased, affordable);
+        let base = item_base_color(purchased, affordable, color_normal);
         let color = match interaction {
             Interaction::Pressed => darken(base, PRESS_DARKEN),
             Interaction::Hovered => darken(base, HOVER_DARKEN),

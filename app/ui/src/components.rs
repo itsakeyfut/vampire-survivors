@@ -6,6 +6,7 @@
 //! code.
 
 use bevy::prelude::*;
+use vs_core::config::{CharacterConfig, CharacterParams, GameConfig, GameParams};
 use vs_core::resources::{GameSettings, MetaProgress, PendingUpgradeIndex};
 use vs_core::states::AppState;
 use vs_core::types::{CharacterType, MetaUpgradeType, get_character_stats, upgrade_cost};
@@ -89,6 +90,7 @@ pub enum ButtonAction {
 /// appropriate [`AppState`] transition when a button is clicked.
 /// Colors are read from [`MenuButtonHudParams`]; `DEFAULT_BUTTON_*` constants
 /// are used as fallbacks while the config is loading.
+#[allow(clippy::too_many_arguments)]
 pub fn handle_button_interaction(
     mut interaction_query: Query<
         (&Interaction, &MenuButton, &mut BackgroundColor),
@@ -99,6 +101,8 @@ pub fn handle_button_interaction(
     mut pending: Option<ResMut<PendingUpgradeIndex>>,
     mut settings: Option<ResMut<GameSettings>>,
     mut meta: Option<ResMut<MetaProgress>>,
+    char_params: CharacterParams,
+    game_params: GameParams,
 ) {
     let color_normal = btn_cfg
         .get()
@@ -123,6 +127,8 @@ pub fn handle_button_interaction(
                     &mut pending,
                     &mut settings,
                     &mut meta,
+                    char_params.get(),
+                    game_params.get(),
                 );
             }
             Interaction::Hovered => {
@@ -141,6 +147,8 @@ fn apply_action(
     pending: &mut Option<ResMut<PendingUpgradeIndex>>,
     settings: &mut Option<ResMut<GameSettings>>,
     meta: &mut Option<ResMut<MetaProgress>>,
+    char_cfg: Option<&CharacterConfig>,
+    game_cfg: Option<&GameConfig>,
 ) {
     match action {
         ButtonAction::StartGame => {
@@ -174,7 +182,9 @@ fn apply_action(
         }
         ButtonAction::UnlockCharacter(ct) => {
             if let Some(m) = meta {
-                let cost = get_character_stats(ct).unlock_cost;
+                let cost = char_cfg
+                    .map(|c| c.stats_for(ct).unlock_cost)
+                    .unwrap_or_else(|| get_character_stats(ct).unlock_cost);
                 if m.total_gold >= cost && !m.unlocked_characters.contains(&ct) {
                     m.total_gold = m.total_gold.saturating_sub(cost);
                     m.unlocked_characters.push(ct);
@@ -185,7 +195,9 @@ fn apply_action(
         }
         ButtonAction::PurchaseUpgrade(ut) => {
             if let Some(m) = meta {
-                let cost = upgrade_cost(ut);
+                let cost = game_cfg
+                    .map(|c| c.upgrade_cost(ut))
+                    .unwrap_or_else(|| upgrade_cost(ut));
                 if m.total_gold >= cost && !m.purchased_upgrades.contains(&ut) {
                     m.total_gold = m.total_gold.saturating_sub(cost);
                     m.purchased_upgrades.push(ut);
@@ -235,6 +247,8 @@ mod tests {
                 &mut None,
                 &mut None,
                 &mut None,
+                None,
+                None,
             );
         }
         app.update();
@@ -266,6 +280,8 @@ mod tests {
                 &mut None,
                 &mut None,
                 &mut None,
+                None,
+                None,
             );
         }
         app.update();
@@ -289,6 +305,8 @@ mod tests {
                 &mut None,
                 &mut None,
                 &mut None,
+                None,
+                None,
             );
         }
         app.update();
