@@ -22,7 +22,12 @@ impl Default for SelectedCharacter {
 
 /// Persistent cross-run data. Loaded from `save/meta.json` at startup and
 /// saved automatically after game-over, victory, and shop purchases.
+///
+/// `#[serde(default)]` ensures that old save files with missing fields
+/// deserialize successfully using each field's `Default` value, making
+/// schema evolution safely additive.
 #[derive(Resource, Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct MetaProgress {
     /// Total gold accumulated across all runs.
     pub total_gold: u32,
@@ -30,6 +35,11 @@ pub struct MetaProgress {
     pub unlocked_characters: Vec<CharacterType>,
     /// Permanent upgrades that have been purchased.
     pub purchased_upgrades: Vec<MetaUpgradeType>,
+    /// Set to `true` when the file existed but could not be read or parsed.
+    /// Autosave is suppressed while this flag is set so the broken file on
+    /// disk is preserved for manual recovery.
+    #[serde(skip)]
+    pub(crate) load_failed: bool,
 }
 
 impl Default for MetaProgress {
@@ -38,6 +48,7 @@ impl Default for MetaProgress {
             total_gold: 0,
             unlocked_characters: vec![CharacterType::DefaultCharacter],
             purchased_upgrades: vec![],
+            load_failed: false,
         }
     }
 }
@@ -62,14 +73,28 @@ impl MetaProgress {
             Ok(json) => match serde_json::from_str(&json) {
                 Ok(meta) => meta,
                 Err(e) => {
-                    warn!("Failed to parse meta progress from {}: {e}", path.display());
-                    Self::default()
+                    warn!(
+                        "Failed to parse meta progress from {}: {e} \
+                         — autosave suppressed to preserve original file",
+                        path.display()
+                    );
+                    Self {
+                        load_failed: true,
+                        ..Self::default()
+                    }
                 }
             },
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Self::default(),
             Err(e) => {
-                warn!("Failed to read meta progress from {}: {e}", path.display());
-                Self::default()
+                warn!(
+                    "Failed to read meta progress from {}: {e} \
+                     — autosave suppressed to preserve original file",
+                    path.display()
+                );
+                Self {
+                    load_failed: true,
+                    ..Self::default()
+                }
             }
         }
     }
@@ -99,31 +124,6 @@ impl MetaProgress {
         fs::rename(&tmp_path, dir.join(filename))?;
         Ok(())
     }
-}
-
-// ---------------------------------------------------------------------------
-// Auto-save systems — wired by GameCorePlugin
-// ---------------------------------------------------------------------------
-
-/// Saves [`MetaProgress`] to disk when the player transitions to
-/// [`AppState::GameOver`].
-pub fn save_meta_on_game_over(meta: Res<MetaProgress>) {
-    info!("Saving meta progress (game over)…");
-    meta.save();
-}
-
-/// Saves [`MetaProgress`] to disk when the player transitions to
-/// [`AppState::Victory`].
-pub fn save_meta_on_victory(meta: Res<MetaProgress>) {
-    info!("Saving meta progress (victory)…");
-    meta.save();
-}
-
-/// Saves [`MetaProgress`] to disk when the player exits the
-/// [`AppState::MetaShop`] screen (i.e. after any purchase).
-pub fn save_meta_on_shop_exit(meta: Res<MetaProgress>) {
-    info!("Saving meta progress (shop exit)…");
-    meta.save();
 }
 
 // ---------------------------------------------------------------------------
@@ -162,6 +162,7 @@ mod tests {
             total_gold: 1234,
             unlocked_characters: vec![CharacterType::DefaultCharacter],
             purchased_upgrades: vec![MetaUpgradeType::BonusHp],
+            load_failed: false,
         };
         let json = serde_json::to_string(&original).unwrap();
         let restored: MetaProgress = serde_json::from_str(&json).unwrap();
@@ -187,12 +188,24 @@ mod tests {
     }
 
     #[test]
-    fn load_from_corrupt_file_returns_default() {
+    fn load_from_corrupt_file_returns_default_with_load_failed() {
         let dir = TempDir::new().unwrap();
         let path = dir.path().join("meta.json");
         fs::write(&path, "{ not valid json }").unwrap();
         let mp = MetaProgress::load_from(&path);
         assert_eq!(mp.total_gold, 0);
+        assert!(
+            mp.load_failed,
+            "load_failed should be true for corrupt files"
+        );
+    }
+
+    #[test]
+    fn load_from_nonexistent_file_has_no_load_failed() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("missing.json");
+        let mp = MetaProgress::load_from(&path);
+        assert!(!mp.load_failed, "first launch should not set load_failed");
     }
 
     #[test]
@@ -202,6 +215,7 @@ mod tests {
             total_gold: 999,
             unlocked_characters: vec![CharacterType::DefaultCharacter],
             purchased_upgrades: vec![MetaUpgradeType::BonusHp],
+            load_failed: false,
         };
         original.save_to(dir.path(), "meta.json");
 

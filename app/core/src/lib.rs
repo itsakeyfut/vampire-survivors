@@ -17,15 +17,23 @@ use materials::GlowMaterialPlugin;
 use resources::{
     EnemySpawner, GameData, GameSettings, LevelUpChoices, MetaProgress, PendingUpgradeIndex,
     SelectedCharacter, SpatialGrid, TreasureSpawner,
-    meta::{save_meta_on_game_over, save_meta_on_shop_exit, save_meta_on_victory},
-    settings::save_settings_on_exit,
 };
 use states::AppState;
 use systems::{
-    damage::apply_damage_to_enemies, enemies::EnemiesPlugin, game_over::GameOverPlugin,
-    game_timer::TimerPlugin, kill_count::track_kill_count, player::PlayerPlugin,
-    projectiles::ProjectilesPlugin, spatial::SpatialPlugin, victory::VictoryPlugin,
-    weapons::WeaponsPlugin, xp::XpPlugin,
+    damage::apply_damage_to_enemies,
+    enemies::EnemiesPlugin,
+    game_over::GameOverPlugin,
+    game_timer::TimerPlugin,
+    kill_count::track_kill_count,
+    persistence::{
+        save_meta_on_game_over, save_meta_on_shop_exit, save_meta_on_victory, save_settings_on_exit,
+    },
+    player::PlayerPlugin,
+    projectiles::ProjectilesPlugin,
+    spatial::SpatialPlugin,
+    victory::VictoryPlugin,
+    weapons::WeaponsPlugin,
+    xp::XpPlugin,
 };
 
 /// Resets all per-run resources to their defaults at the start of each run.

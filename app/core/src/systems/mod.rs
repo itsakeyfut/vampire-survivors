@@ -9,6 +9,7 @@ pub mod enemies;
 pub mod game_over;
 pub mod game_timer;
 pub mod kill_count;
+pub mod persistence;
 pub mod player;
 pub mod projectiles;
 pub mod spatial;

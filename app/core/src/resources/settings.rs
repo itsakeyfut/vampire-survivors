@@ -2,8 +2,8 @@
 //!
 //! [`GameSettings`] is a Bevy resource holding all player preferences that
 //! persist across sessions.  Call [`GameSettings::load`] at startup and
-//! [`GameSettings::save`] (or [`save_settings_on_exit`]) to persist to
-//! `save/settings.json`.
+//! [`GameSettings::save`] to persist to `save/settings.json`.
+//! The autosave Bevy system lives in [`crate::systems::persistence`].
 
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -49,6 +49,7 @@ impl Language {
 /// saved automatically when the player leaves the settings screen via
 /// [`save_settings_on_exit`].
 #[derive(Resource, Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
 pub struct GameSettings {
     /// UI and text language.
     pub language: Language,
@@ -106,17 +107,6 @@ impl GameSettings {
         fs::rename(&tmp_path, dir.join(filename))?;
         Ok(())
     }
-}
-
-// ---------------------------------------------------------------------------
-// Auto-save system — wired by GameCorePlugin
-// ---------------------------------------------------------------------------
-
-/// Saves [`GameSettings`] to `save/settings.json` when the player exits the
-/// settings screen ([`AppState::Settings`]).
-pub fn save_settings_on_exit(settings: Res<GameSettings>) {
-    info!("Saving settings (settings screen exit)…");
-    settings.save();
 }
 
 // ---------------------------------------------------------------------------
