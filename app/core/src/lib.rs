@@ -26,7 +26,8 @@ use systems::{
     game_timer::TimerPlugin,
     kill_count::track_kill_count,
     persistence::{
-        save_meta_on_game_over, save_meta_on_shop_exit, save_meta_on_victory, save_settings_on_exit,
+        accrue_gold_on_game_over, accrue_gold_on_victory, save_meta_on_game_over,
+        save_meta_on_shop_exit, save_meta_on_victory, save_settings_on_exit,
     },
     player::PlayerPlugin,
     projectiles::ProjectilesPlugin,
@@ -123,10 +124,17 @@ impl Plugin for GameCorePlugin {
                 reset_per_run_resources,
             )
             // ---------------------------------------------------------------
-            // Meta-progression auto-save
+            // Gold carry-over + meta-progression auto-save
+            // Accumulation runs first; save runs second (chained).
             // ---------------------------------------------------------------
-            .add_systems(OnEnter(AppState::GameOver), save_meta_on_game_over)
-            .add_systems(OnEnter(AppState::Victory), save_meta_on_victory)
+            .add_systems(
+                OnEnter(AppState::GameOver),
+                (accrue_gold_on_game_over, save_meta_on_game_over).chain(),
+            )
+            .add_systems(
+                OnEnter(AppState::Victory),
+                (accrue_gold_on_victory, save_meta_on_victory).chain(),
+            )
             .add_systems(OnExit(AppState::MetaShop), save_meta_on_shop_exit)
             // ---------------------------------------------------------------
             // Settings auto-save

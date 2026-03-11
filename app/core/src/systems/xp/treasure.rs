@@ -11,9 +11,11 @@
 //!    - **HP recovery** — restores `treasure_hp_recovery_pct × max_hp`.
 //!    - **Gold** — adds `treasure_gold_reward` to [`GameData`].
 //!
-//! Gold is added to both [`GameData::gold_earned`] (run total) and
-//! [`MetaProgress::total_gold`] (persistent total) when the gold reward is
-//! chosen.
+//! When gold is the reward, `treasure_gold_reward` is added to
+//! [`GameData::gold_earned`] (run total).  At run end
+//! (`OnEnter(GameOver)` / `OnEnter(Victory)`), the full `gold_earned` value is
+//! transferred to [`MetaProgress::total_gold`] by `accrue_gold_on_game_over` /
+//! `accrue_gold_on_victory` in `systems::persistence`.
 //!
 //! At most **one chest is collected per frame** to keep inventory state
 //! consistent: `apply_evolution` runs deferred via a trigger, so collecting a
@@ -32,7 +34,7 @@ use crate::{
     config::{GameParams, PassiveConfig, PassiveParams},
     events::TreasureOpenedEvent,
     materials::GlowMaterial,
-    resources::{GameData, MetaProgress},
+    resources::GameData,
     types::{UpgradeChoice, WeaponType},
 };
 
@@ -82,7 +84,6 @@ const CHEST_COLOR: Color = Color::srgb(1.0, 0.85, 0.1);
 pub fn open_treasure_chests(
     mut commands: Commands,
     mut game_data: ResMut<GameData>,
-    mut meta_progress: ResMut<MetaProgress>,
     mut opened_events: MessageWriter<TreasureOpenedEvent>,
     game_cfg: GameParams,
     passive_cfg: PassiveParams,
@@ -143,7 +144,7 @@ pub fn open_treasure_chests(
                 evolved_type: evolved,
             });
         } else {
-            let reward = apply_non_evolution_reward(
+            apply_non_evolution_reward(
                 &mut weapon_inv,
                 &mut passive_inv,
                 &mut stats,
@@ -156,10 +157,6 @@ pub fn open_treasure_chests(
                 max_weapon_level,
                 max_passive_level,
             );
-            // Gold is also counted toward the persistent cross-run total.
-            if matches!(reward, Reward::Gold) {
-                meta_progress.total_gold += gold_reward;
-            }
         }
 
         // Process at most one chest per frame to avoid stale-inventory decisions.
@@ -266,7 +263,7 @@ pub(crate) fn apply_reward(
 /// Picks and applies a random non-evolution reward.
 ///
 /// Returns the [`Reward`] that was chosen so the caller can perform
-/// any additional bookkeeping (e.g. updating [`MetaProgress`]).
+/// any additional bookkeeping.
 fn apply_non_evolution_reward(
     weapon_inv: &mut WeaponInventory,
     passive_inv: &mut PassiveInventory,
@@ -564,12 +561,13 @@ mod tests {
         let _ = gold;
     }
 
-    /// When gold is the reward, `MetaProgress::total_gold` is also updated.
+    /// When gold is the reward, `GameData::gold_earned` is incremented.
     ///
-    /// This verifies that the persistent cross-run total is incremented along
-    /// with the run-local `GameData::gold_earned`.
+    /// `MetaProgress::total_gold` is **not** updated during the run; it is
+    /// carried over at run end by `accrue_gold_on_game_over` /
+    /// `accrue_gold_on_victory` in `systems::persistence`.
     #[test]
-    fn gold_reward_updates_meta_progress_total_gold() {
+    fn gold_reward_increments_gold_earned() {
         let mut app = build_app();
 
         // Player with full HP, no weapons/passives → upgrade pool is empty.
@@ -580,57 +578,18 @@ mod tests {
             app.update();
 
             let gold = app.world().resource::<GameData>().gold_earned;
-            let total = app.world().resource::<MetaProgress>().total_gold;
-
             if gold > 0 {
-                // When gold was awarded, both fields must be equal.
+                // MetaProgress must NOT be updated in-run.
+                let total = app.world().resource::<MetaProgress>().total_gold;
                 assert_eq!(
-                    total, gold,
-                    "MetaProgress::total_gold must equal GameData::gold_earned when gold is the reward"
+                    total, 0,
+                    "MetaProgress::total_gold must NOT be updated during the run"
                 );
                 return;
             }
         }
         // Reaching here without gold in 100 chest openings is astronomically unlikely.
         panic!("gold reward never triggered in 100 chest openings");
-    }
-
-    /// When evolution is triggered (not gold), `MetaProgress::total_gold` stays zero.
-    #[test]
-    fn evolution_reward_does_not_update_total_gold() {
-        let mut app = build_app();
-
-        let mut whip = WeaponState::new(WeaponType::Whip);
-        whip.level = 8;
-        let passive = PassiveInventory {
-            items: vec![PassiveState {
-                item_type: PassiveItemType::HollowHeart,
-                level: 1,
-            }],
-        };
-        let mut stats = PlayerStats::default();
-        stats.max_hp = 100.0;
-        stats.current_hp = 100.0;
-        app.world_mut().spawn((
-            Player,
-            WeaponInventory {
-                weapons: vec![whip],
-            },
-            passive,
-            stats,
-            Transform::from_xyz(0.0, 0.0, 0.0),
-            CircleCollider {
-                radius: DEFAULT_TREASURE_RADIUS,
-            },
-        ));
-        spawn_treasure_at(&mut app, Vec2::ZERO);
-        app.update();
-
-        let total = app.world().resource::<MetaProgress>().total_gold;
-        assert_eq!(
-            total, 0,
-            "MetaProgress::total_gold must not change on evolution reward"
-        );
     }
 
     /// When an evolvable weapon is present, the evolution triggers and no gold
