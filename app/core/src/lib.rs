@@ -18,6 +18,7 @@ use resources::{
     EnemySpawner, GameData, GameSettings, LevelUpChoices, MetaProgress, PendingUpgradeIndex,
     SelectedCharacter, SpatialGrid, TreasureSpawner,
     meta::{save_meta_on_game_over, save_meta_on_shop_exit, save_meta_on_victory},
+    settings::save_settings_on_exit,
 };
 use states::AppState;
 use systems::{
@@ -78,7 +79,7 @@ impl Plugin for GameCorePlugin {
             // ---------------------------------------------------------------
             // User settings (language, future: volume, etc.)
             // ---------------------------------------------------------------
-            .insert_resource(GameSettings::default())
+            .insert_resource(GameSettings::load())
             // ---------------------------------------------------------------
             // Events
             // ---------------------------------------------------------------
@@ -119,6 +120,10 @@ impl Plugin for GameCorePlugin {
             .add_systems(OnEnter(AppState::GameOver), save_meta_on_game_over)
             .add_systems(OnEnter(AppState::Victory), save_meta_on_victory)
             .add_systems(OnExit(AppState::MetaShop), save_meta_on_shop_exit)
+            // ---------------------------------------------------------------
+            // Settings auto-save
+            // ---------------------------------------------------------------
+            .add_systems(OnExit(AppState::Settings), save_settings_on_exit)
             // ---------------------------------------------------------------
             // Sub-plugins (each owns its domain's systems)
             // ---------------------------------------------------------------
