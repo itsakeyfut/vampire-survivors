@@ -17,6 +17,7 @@ use materials::GlowMaterialPlugin;
 use resources::{
     EnemySpawner, GameData, GameSettings, LevelUpChoices, MetaProgress, PendingUpgradeIndex,
     SelectedCharacter, SpatialGrid, TreasureSpawner,
+    meta::{save_meta_on_game_over, save_meta_on_shop_exit, save_meta_on_victory},
 };
 use states::AppState;
 use systems::{
@@ -112,6 +113,12 @@ impl Plugin for GameCorePlugin {
                 },
                 reset_per_run_resources,
             )
+            // ---------------------------------------------------------------
+            // Meta-progression auto-save
+            // ---------------------------------------------------------------
+            .add_systems(OnEnter(AppState::GameOver), save_meta_on_game_over)
+            .add_systems(OnEnter(AppState::Victory), save_meta_on_victory)
+            .add_systems(OnExit(AppState::MetaShop), save_meta_on_shop_exit)
             // ---------------------------------------------------------------
             // Sub-plugins (each owns its domain's systems)
             // ---------------------------------------------------------------
