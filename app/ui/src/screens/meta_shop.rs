@@ -56,6 +56,10 @@ const DEFAULT_BUTTON_NORMAL: Color = Color::srgb(0.133, 0.200, 0.400);
 const DEFAULT_PURCHASED_COLOR: Color = Color::srgb(0.25, 0.25, 0.25);
 /// Unaffordable button color (dark red-brown).
 const DEFAULT_UNAFFORDABLE_COLOR: Color = Color::srgb(0.20, 0.08, 0.08);
+/// Brightness multiplier applied to the base color on hover (slightly darker).
+const HOVER_DARKEN: f32 = 0.72;
+/// Brightness multiplier applied to the base color on press (darker still).
+const PRESS_DARKEN: f32 = 0.50;
 
 const DEFAULT_HEADING_FONT_SIZE: f32 = 48.0;
 const DEFAULT_HEADING_MARGIN: f32 = 0.0;
@@ -93,8 +97,8 @@ pub enum MetaShopItemButton {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Returns the initial background color for a shop item button.
-fn item_button_color(purchased: bool, affordable: bool) -> Color {
+/// Returns the base background color for a shop item button.
+fn item_base_color(purchased: bool, affordable: bool) -> Color {
     if purchased {
         DEFAULT_PURCHASED_COLOR
     } else if affordable {
@@ -102,6 +106,12 @@ fn item_button_color(purchased: bool, affordable: bool) -> Color {
     } else {
         DEFAULT_UNAFFORDABLE_COLOR
     }
+}
+
+/// Returns a slightly darkened version of `color` for hover/press feedback.
+fn darken(color: Color, factor: f32) -> Color {
+    let s = color.to_srgba();
+    Color::srgba(s.red * factor, s.green * factor, s.blue * factor, s.alpha)
 }
 
 /// Spawns a shop item button (character unlock or upgrade) as a child of
@@ -289,7 +299,7 @@ pub fn setup_meta_shop_screen(
                             ),
                         ];
                         for (ct, label, action) in chars {
-                            let color = item_button_color(is_unlocked(ct), char_affordable(ct));
+                            let color = item_base_color(is_unlocked(ct), char_affordable(ct));
                             spawn_item_button(
                                 row,
                                 label,
@@ -359,7 +369,7 @@ pub fn setup_meta_shop_screen(
                             ),
                         ];
                         for (ut, label, action) in upgrades {
-                            let color = item_button_color(is_purchased(ut), upgrade_affordable(ut));
+                            let color = item_base_color(is_purchased(ut), upgrade_affordable(ut));
                             spawn_item_button(
                                 row,
                                 label,
@@ -399,22 +409,22 @@ pub fn setup_meta_shop_screen(
 /// Runs every frame while in [`AppState::MetaShop`], **after**
 /// [`crate::components::handle_button_interaction`].
 ///
-/// # Color policy
+/// Each shop item button gets a color derived from its state and the current
+/// [`Interaction`]:
 ///
-/// | Item state   | Color behavior                                      |
-/// |---|---|
-/// | Purchased    | Forced to gray every frame — no hover feedback.    |
-/// | Unaffordable | Forced to dark-red every frame — no hover feedback. |
-/// | Affordable   | Color untouched — hover/press feedback from        |
-/// |              | `handle_button_interaction` works normally.         |
+/// | Item state   | None (idle)              | Hovered         | Pressed         |
+/// |---|---|---|---|
+/// | Purchased    | gray                     | darker gray     | darkest gray    |
+/// | Affordable   | blue                     | darker blue     | darkest blue    |
+/// | Unaffordable | dark-red                 | darker dark-red | darkest dark-red|
 ///
-/// Running after `handle_button_interaction` ensures purchased/unaffordable
-/// buttons cannot turn blue on hover.
+/// Running every frame after `handle_button_interaction` means this system
+/// always has the final say on shop-item colors.
 pub fn update_meta_shop_screen(
     meta: Res<MetaProgress>,
     settings: Res<GameSettings>,
     mut gold_q: Query<&mut Text, With<MetaShopGoldLabel>>,
-    mut item_q: Query<(&MetaShopItemButton, &mut BackgroundColor)>,
+    mut item_q: Query<(&MetaShopItemButton, &mut BackgroundColor, &Interaction)>,
 ) {
     // Update gold balance label only when something changed.
     if meta.is_changed() || settings.is_changed() {
@@ -424,9 +434,8 @@ pub fn update_meta_shop_screen(
         }
     }
 
-    // Every frame: enforce correct colors for purchased/unaffordable buttons so
-    // handle_button_interaction's hover tint cannot override the grayout state.
-    for (item, mut bg) in item_q.iter_mut() {
+    // Every frame: set each item button color based on purchase state + hover.
+    for (item, mut bg, interaction) in item_q.iter_mut() {
         let (purchased, affordable) = match item {
             MetaShopItemButton::Character(ct) => (
                 meta.unlocked_characters.contains(ct),
@@ -437,12 +446,13 @@ pub fn update_meta_shop_screen(
                 meta.total_gold >= upgrade_cost(*ut),
             ),
         };
-        if purchased {
-            *bg = BackgroundColor(DEFAULT_PURCHASED_COLOR);
-        } else if !affordable {
-            *bg = BackgroundColor(DEFAULT_UNAFFORDABLE_COLOR);
-        }
-        // Affordable items: leave color unchanged so hover/press feedback works.
+        let base = item_base_color(purchased, affordable);
+        let color = match interaction {
+            Interaction::Pressed => darken(base, PRESS_DARKEN),
+            Interaction::Hovered => darken(base, HOVER_DARKEN),
+            Interaction::None => base,
+        };
+        *bg = BackgroundColor(color);
     }
 }
 
