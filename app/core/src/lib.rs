@@ -20,10 +20,20 @@ use resources::{
 };
 use states::AppState;
 use systems::{
-    damage::apply_damage_to_enemies, enemies::EnemiesPlugin, game_over::GameOverPlugin,
-    game_timer::TimerPlugin, kill_count::track_kill_count, player::PlayerPlugin,
-    projectiles::ProjectilesPlugin, spatial::SpatialPlugin, victory::VictoryPlugin,
-    weapons::WeaponsPlugin, xp::XpPlugin,
+    damage::apply_damage_to_enemies,
+    enemies::EnemiesPlugin,
+    game_over::GameOverPlugin,
+    game_timer::TimerPlugin,
+    kill_count::track_kill_count,
+    persistence::{
+        save_meta_on_game_over, save_meta_on_shop_exit, save_meta_on_victory, save_settings_on_exit,
+    },
+    player::PlayerPlugin,
+    projectiles::ProjectilesPlugin,
+    spatial::SpatialPlugin,
+    victory::VictoryPlugin,
+    weapons::WeaponsPlugin,
+    xp::XpPlugin,
 };
 
 /// Resets all per-run resources to their defaults at the start of each run.
@@ -77,7 +87,7 @@ impl Plugin for GameCorePlugin {
             // ---------------------------------------------------------------
             // User settings (language, future: volume, etc.)
             // ---------------------------------------------------------------
-            .insert_resource(GameSettings::default())
+            .insert_resource(GameSettings::load())
             // ---------------------------------------------------------------
             // Events
             // ---------------------------------------------------------------
@@ -112,6 +122,16 @@ impl Plugin for GameCorePlugin {
                 },
                 reset_per_run_resources,
             )
+            // ---------------------------------------------------------------
+            // Meta-progression auto-save
+            // ---------------------------------------------------------------
+            .add_systems(OnEnter(AppState::GameOver), save_meta_on_game_over)
+            .add_systems(OnEnter(AppState::Victory), save_meta_on_victory)
+            .add_systems(OnExit(AppState::MetaShop), save_meta_on_shop_exit)
+            // ---------------------------------------------------------------
+            // Settings auto-save
+            // ---------------------------------------------------------------
+            .add_systems(OnExit(AppState::Settings), save_settings_on_exit)
             // ---------------------------------------------------------------
             // Sub-plugins (each owns its domain's systems)
             // ---------------------------------------------------------------
