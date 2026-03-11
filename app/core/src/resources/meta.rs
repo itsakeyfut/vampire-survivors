@@ -6,9 +6,9 @@ use std::path::Path;
 use crate::types::{CharacterType, MetaUpgradeType};
 
 /// Path to the save directory, relative to the working directory.
-const SAVE_DIR: &str = "save";
+const DEFAULT_SAVE_DIR: &str = "save";
 /// Path to the meta-progression JSON save file.
-const SAVE_PATH: &str = "save/meta.json";
+const DEFAULT_SAVE_PATH: &str = "save/meta.json";
 
 /// Which character the player selected on the character-select screen.
 #[derive(Resource, Debug)]
@@ -50,7 +50,7 @@ impl MetaProgress {
     /// - the file cannot be read (permission error, etc.)
     /// - the JSON is malformed or missing fields
     pub fn load() -> Self {
-        Self::load_from(Path::new(SAVE_PATH))
+        Self::load_from(Path::new(DEFAULT_SAVE_PATH))
     }
 
     /// Load meta-progression from an arbitrary path.
@@ -58,12 +58,19 @@ impl MetaProgress {
     /// Separated from [`Self::load`] so tests can use a temporary directory
     /// without touching the real save file.
     pub fn load_from(path: &Path) -> Self {
-        if !path.exists() {
-            return Self::default();
-        }
         match fs::read_to_string(path) {
-            Ok(json) => serde_json::from_str(&json).unwrap_or_default(),
-            Err(_) => Self::default(),
+            Ok(json) => match serde_json::from_str(&json) {
+                Ok(meta) => meta,
+                Err(e) => {
+                    warn!("Failed to parse meta progress from {}: {e}", path.display());
+                    Self::default()
+                }
+            },
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Self::default(),
+            Err(e) => {
+                warn!("Failed to read meta progress from {}: {e}", path.display());
+                Self::default()
+            }
         }
     }
 
@@ -72,7 +79,7 @@ impl MetaProgress {
     /// Creates the `save/` directory if it does not yet exist.
     /// Logs a warning if the save fails (non-fatal — the game keeps running).
     pub fn save(&self) {
-        self.save_to(Path::new(SAVE_DIR), "meta.json");
+        self.save_to(Path::new(DEFAULT_SAVE_DIR), "meta.json");
     }
 
     /// Save meta-progression to `{dir}/{filename}`.
@@ -87,7 +94,9 @@ impl MetaProgress {
     fn try_save_to(&self, dir: &Path, filename: &str) -> Result<(), Box<dyn std::error::Error>> {
         fs::create_dir_all(dir)?;
         let json = serde_json::to_string_pretty(self)?;
-        fs::write(dir.join(filename), json)?;
+        let tmp_path = dir.join(format!("{filename}.tmp"));
+        fs::write(&tmp_path, &json)?;
+        fs::rename(&tmp_path, dir.join(filename))?;
         Ok(())
     }
 }

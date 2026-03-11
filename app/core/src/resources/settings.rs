@@ -11,9 +11,9 @@ use std::fs;
 use std::path::Path;
 
 /// Path to the settings JSON save file.
-const SAVE_PATH: &str = "save/settings.json";
+const DEFAULT_SAVE_PATH: &str = "save/settings.json";
 /// Directory that contains the settings file.
-const SAVE_DIR: &str = "save";
+const DEFAULT_SAVE_DIR: &str = "save";
 
 // ---------------------------------------------------------------------------
 // Language
@@ -62,17 +62,24 @@ impl GameSettings {
     /// - the file cannot be read
     /// - the JSON is malformed or has unknown fields
     pub fn load() -> Self {
-        Self::load_from(Path::new(SAVE_PATH))
+        Self::load_from(Path::new(DEFAULT_SAVE_PATH))
     }
 
     /// Load settings from an arbitrary path (used in tests).
     pub fn load_from(path: &Path) -> Self {
-        if !path.exists() {
-            return Self::default();
-        }
         match fs::read_to_string(path) {
-            Ok(json) => serde_json::from_str(&json).unwrap_or_default(),
-            Err(_) => Self::default(),
+            Ok(json) => match serde_json::from_str(&json) {
+                Ok(settings) => settings,
+                Err(e) => {
+                    warn!("Failed to parse settings from {}: {e}", path.display());
+                    Self::default()
+                }
+            },
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Self::default(),
+            Err(e) => {
+                warn!("Failed to read settings from {}: {e}", path.display());
+                Self::default()
+            }
         }
     }
 
@@ -81,7 +88,7 @@ impl GameSettings {
     /// Creates the `save/` directory if needed.  Logs a warning on failure
     /// (non-fatal — the game continues running).
     pub fn save(&self) {
-        self.save_to(Path::new(SAVE_DIR), "settings.json");
+        self.save_to(Path::new(DEFAULT_SAVE_DIR), "settings.json");
     }
 
     /// Save settings to `{dir}/{filename}` (used in tests).
@@ -94,7 +101,9 @@ impl GameSettings {
     fn try_save_to(&self, dir: &Path, filename: &str) -> Result<(), Box<dyn std::error::Error>> {
         fs::create_dir_all(dir)?;
         let json = serde_json::to_string_pretty(self)?;
-        fs::write(dir.join(filename), json)?;
+        let tmp_path = dir.join(format!("{filename}.tmp"));
+        fs::write(&tmp_path, &json)?;
+        fs::rename(&tmp_path, dir.join(filename))?;
         Ok(())
     }
 }
