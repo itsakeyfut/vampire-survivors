@@ -33,6 +33,7 @@ PlayerConfig(
     base_area_mult:            1.0,
     base_luck:                 1.0,
     base_hp_regen:             0.0,
+    base_xp_mult:              1.0,
     pickup_radius:             80.0,
     invincibility_time:        0.5,
     // Collider radii (pixels)

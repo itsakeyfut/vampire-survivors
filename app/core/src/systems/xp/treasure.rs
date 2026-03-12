@@ -42,18 +42,6 @@ use super::apply::apply_passive_bonus;
 use super::choices::build_owned_upgrade_pool;
 use super::evolution::find_evolution;
 
-// ---------------------------------------------------------------------------
-// Fallback constants (used before game.ron has finished loading)
-// ---------------------------------------------------------------------------
-
-const DEFAULT_TREASURE_GOLD: u32 = 50;
-const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
-const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
-const DEFAULT_MAX_PASSIVE_LEVEL: u8 = 5;
-const DEFAULT_TREASURE_HP_RECOVERY_PCT: f32 = 0.3;
-const DEFAULT_TREASURE_GLOW_DISTANCE: f32 = 150.0;
-const DEFAULT_TREASURE_SPAWN_FLASH_DURATION: f32 = 0.35;
-
 /// Normal chest colour (yellow placeholder, Phase 17 will replace with a real
 /// sprite; kept as a constant so `spawn_treasure` and `animate_treasure_spawn_flash`
 /// stay in sync without a config round-trip for a colour value).
@@ -105,14 +93,11 @@ pub fn open_treasure_chests(
         return;
     };
 
-    let cfg = game_cfg.get();
-    let treasure_radius = cfg.map_or(DEFAULT_TREASURE_RADIUS, |c| c.treasure_radius);
-    let gold_reward = cfg.map_or(DEFAULT_TREASURE_GOLD, |c| c.treasure_gold_reward);
-    let max_weapon_level = cfg.map_or(DEFAULT_MAX_WEAPON_LEVEL, |c| c.max_weapon_level);
-    let max_passive_level = cfg.map_or(DEFAULT_MAX_PASSIVE_LEVEL, |c| c.max_passive_level);
-    let hp_recovery_pct = cfg.map_or(DEFAULT_TREASURE_HP_RECOVERY_PCT, |c| {
-        c.treasure_hp_recovery_pct
-    });
+    let treasure_radius = game_cfg.treasure_radius();
+    let gold_reward = game_cfg.treasure_gold();
+    let max_weapon_level = game_cfg.max_weapon_level();
+    let max_passive_level = game_cfg.max_passive_level();
+    let hp_recovery_pct = game_cfg.treasure_hp_recovery_pct();
 
     for (treasure_entity, treasure_tf) in &treasure_q {
         let dist = player_tf
@@ -331,7 +316,7 @@ pub fn apply_evolution(
 /// Spawns a treasure chest entity at the given world position.
 ///
 /// `radius` is the chest's collision radius in pixels; callers should pass
-/// `GameConfig::treasure_radius` (falling back to `DEFAULT_TREASURE_RADIUS`
+/// `game_cfg.treasure_radius()` (falls back to `config::game::DEFAULT_TREASURE_RADIUS`
 /// when config is not yet loaded).
 ///
 /// The chest uses a yellow square placeholder sprite (replace with pixel-art
@@ -401,10 +386,7 @@ pub fn animate_treasure_spawn_flash(
     mut query: Query<(Entity, &mut TreasureSpawnFlash, &mut Sprite)>,
     time: Res<Time>,
 ) {
-    let duration = game_cfg
-        .get()
-        .map(|c| c.treasure_spawn_flash_duration)
-        .unwrap_or(DEFAULT_TREASURE_SPAWN_FLASH_DURATION);
+    let duration = game_cfg.treasure_spawn_flash_duration();
 
     for (entity, mut flash, mut sprite) in &mut query {
         flash.elapsed += time.delta_secs();
@@ -430,10 +412,7 @@ pub fn update_treasure_glow(
     treasure_q: Query<(&Transform, &Children), With<Treasure>>,
     mut glow_q: Query<&mut Visibility, With<TreasureGlow>>,
 ) {
-    let highlight_dist = game_cfg
-        .get()
-        .map(|c| c.treasure_glow_distance)
-        .unwrap_or(DEFAULT_TREASURE_GLOW_DISTANCE);
+    let highlight_dist = game_cfg.treasure_glow_distance();
 
     let Ok(player_tf) = player_q.single() else {
         return;
@@ -465,6 +444,9 @@ mod tests {
     use super::*;
     use crate::{
         components::{CircleCollider, PassiveInventory, PlayerStats, WeaponInventory},
+        config::game::{
+            DEFAULT_TREASURE_GOLD, DEFAULT_TREASURE_HP_RECOVERY_PCT, DEFAULT_TREASURE_RADIUS,
+        },
         events::TreasureOpenedEvent,
         resources::{GameData, MetaProgress},
         states::AppState,

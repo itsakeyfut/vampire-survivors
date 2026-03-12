@@ -37,8 +37,6 @@ use crate::{
 // Fallback constants (used while passive.ron has not yet loaded)
 // ---------------------------------------------------------------------------
 
-const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
-const DEFAULT_MAX_PASSIVE_LEVEL: u8 = 5;
 const DEFAULT_SPINACH_DAMAGE: f32 = 0.10;
 const DEFAULT_WINGS_SPEED: f32 = 20.0;
 const DEFAULT_HOLLOW_HEART_HP: f32 = 20.0;
@@ -92,13 +90,8 @@ pub fn apply_selected_upgrade(
         return;
     };
 
-    let gcfg = game_cfg.get();
-    let max_weapon_level = gcfg
-        .map(|c| c.max_weapon_level)
-        .unwrap_or(DEFAULT_MAX_WEAPON_LEVEL);
-    let max_passive_level = gcfg
-        .map(|c| c.max_passive_level)
-        .unwrap_or(DEFAULT_MAX_PASSIVE_LEVEL);
+    let max_weapon_level = game_cfg.max_weapon_level();
+    let max_passive_level = game_cfg.max_passive_level();
     let cfg = passive_cfg.get();
 
     match choice {
@@ -193,6 +186,7 @@ pub fn apply_passives(
         extra_projectiles: base.extra_projectiles,
         luck: base.luck,
         hp_regen: base.hp_regen,
+        xp_multiplier: base.xp_multiplier,
     };
 
     for passive in &passive_inv.items {

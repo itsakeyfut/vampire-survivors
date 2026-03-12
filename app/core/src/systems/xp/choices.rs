@@ -30,17 +30,6 @@ use crate::{
 };
 
 // ---------------------------------------------------------------------------
-// Fallback constants
-// ---------------------------------------------------------------------------
-
-const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
-const DEFAULT_MAX_PASSIVE_LEVEL: u8 = 5;
-const DEFAULT_MAX_WEAPONS: usize = 6;
-const DEFAULT_MAX_PASSIVES: usize = 6;
-/// Fallback luck value at which the player receives one extra upgrade card.
-const DEFAULT_LUCK_BONUS_CHOICE_THRESHOLD: f32 = 1.5;
-
-// ---------------------------------------------------------------------------
 // Static item lists
 // ---------------------------------------------------------------------------
 
@@ -69,20 +58,15 @@ const ALL_PASSIVES: [PassiveItemType; 9] = [
     PassiveItemType::Pummarola,
 ];
 
-/// Fallback number of upgrade cards shown to the player on each level-up.
-///
-/// Used when the RON game config has not yet loaded.
-const DEFAULT_CHOICE_COUNT: usize = 3;
-
 // ---------------------------------------------------------------------------
 // System
 // ---------------------------------------------------------------------------
 
 /// Generates random upgrade choices and stores them in [`LevelUpChoices`].
 ///
-/// The number of choices is read from [`GameParams`] (`level_up_choice_count`).
-/// If the player's `luck` stat meets or exceeds `luck_bonus_choice_threshold`,
-/// one extra card is added.  Both fall back to their respective `DEFAULT_*`
+/// The number of choices is read from [`GameParams::choice_count`].
+/// If the player's `luck` stat meets or exceeds [`GameParams::luck_bonus_choice_threshold`],
+/// one extra card is added.  Both fall back to `config::game::DEFAULT_*`
 /// constants when the config asset is not yet loaded.
 ///
 /// Runs on [`OnEnter(AppState::LevelUp)`](crate::states::AppState::LevelUp).
@@ -98,26 +82,16 @@ pub fn generate_level_up_choices(
         return;
     };
 
-    let cfg = game_cfg.get();
-    let base_count = cfg
-        .map(|c| c.level_up_choice_count)
-        .unwrap_or(DEFAULT_CHOICE_COUNT);
-    let luck_threshold = cfg
-        .map(|c| c.luck_bonus_choice_threshold)
-        .unwrap_or(DEFAULT_LUCK_BONUS_CHOICE_THRESHOLD);
-    let choice_count = if stats.luck >= luck_threshold {
+    let base_count = game_cfg.choice_count();
+    let choice_count = if stats.luck >= game_cfg.luck_bonus_choice_threshold() {
         base_count + 1
     } else {
         base_count
     };
-    let max_weapon_level = cfg
-        .map(|c| c.max_weapon_level)
-        .unwrap_or(DEFAULT_MAX_WEAPON_LEVEL);
-    let max_passive_level = cfg
-        .map(|c| c.max_passive_level)
-        .unwrap_or(DEFAULT_MAX_PASSIVE_LEVEL);
-    let max_weapons = cfg.map(|c| c.max_weapons).unwrap_or(DEFAULT_MAX_WEAPONS);
-    let max_passives = cfg.map(|c| c.max_passives).unwrap_or(DEFAULT_MAX_PASSIVES);
+    let max_weapon_level = game_cfg.max_weapon_level();
+    let max_passive_level = game_cfg.max_passive_level();
+    let max_weapons = game_cfg.max_weapons();
+    let max_passives = game_cfg.max_passives();
 
     let mut pool: Vec<UpgradeChoice> = Vec::new();
 
@@ -211,6 +185,10 @@ mod tests {
     use super::*;
     use crate::{
         components::{PassiveInventory, Player, WeaponInventory},
+        config::game::{
+            DEFAULT_CHOICE_COUNT, DEFAULT_MAX_PASSIVE_LEVEL, DEFAULT_MAX_PASSIVES,
+            DEFAULT_MAX_WEAPON_LEVEL, DEFAULT_MAX_WEAPONS,
+        },
         resources::LevelUpChoices,
         types::{PassiveState, WeaponState, WeaponType},
     };
@@ -694,6 +672,10 @@ mod tests {
             shop_upgrade_cost_damage: 300,
             shop_upgrade_cost_xp: 300,
             shop_upgrade_cost_weapon: 500,
+            meta_upgrade_hp_bonus: 20.0,
+            meta_upgrade_speed_bonus: 20.0,
+            meta_upgrade_damage_bonus: 0.1,
+            meta_upgrade_xp_bonus: 0.1,
         };
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<GameConfig>>();

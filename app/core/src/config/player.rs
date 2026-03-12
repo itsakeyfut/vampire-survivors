@@ -4,6 +4,8 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use serde::Deserialize;
 
+use crate::{resources::MetaProgress, types::MetaUpgradeType};
+
 // ---------------------------------------------------------------------------
 // Asset type
 // ---------------------------------------------------------------------------
@@ -24,6 +26,8 @@ pub struct PlayerConfig {
     pub base_area_mult: f32,
     pub base_luck: f32,
     pub base_hp_regen: f32,
+    /// Base XP gain multiplier (1.0 = no bonus; boosted by BonusXp meta upgrade).
+    pub base_xp_mult: f32,
     pub pickup_radius: f32,
     pub invincibility_time: f32,
     // Collider radii (pixels)
@@ -82,6 +86,8 @@ pub fn hot_reload_player_config(
     config_assets: Res<Assets<PlayerConfig>>,
     config_handle: Res<PlayerConfigHandle>,
     mut player_q: Query<&mut crate::components::PlayerStats, With<crate::components::Player>>,
+    meta: Res<MetaProgress>,
+    game_params: super::GameParams,
 ) {
     for event in events.read() {
         match event {
@@ -105,6 +111,16 @@ pub fn hot_reload_player_config(
                         stats.area_multiplier = cfg.base_area_mult;
                         stats.luck = cfg.base_luck;
                         stats.hp_regen = cfg.base_hp_regen;
+                        // Reset to config base, then re-apply any BonusXp meta purchases
+                        // so hot-reloading player.ron mid-run does not strip the bonus.
+                        stats.xp_multiplier = cfg.base_xp_mult;
+                        let xp_bonus: f32 = meta
+                            .purchased_upgrades
+                            .iter()
+                            .filter(|&&u| u == MetaUpgradeType::BonusXp)
+                            .count() as f32
+                            * game_params.upgrade_stat_bonus(MetaUpgradeType::BonusXp);
+                        stats.xp_multiplier += xp_bonus;
                         info!("✨ PlayerStats updated from hot-reload");
                     }
                 }
@@ -138,6 +154,7 @@ PlayerConfig(
     base_area_mult: 1.0,
     base_luck: 1.0,
     base_hp_regen: 0.0,
+    base_xp_mult: 1.0,
     pickup_radius: 80.0,
     invincibility_time: 0.5,
     collider_radius: 12.0,
@@ -159,5 +176,6 @@ PlayerConfig(
         assert_eq!(config.gem_absorption_radius, 8.0);
         assert_eq!(config.collider_radius, 12.0);
         assert_eq!(config.collider_projectile_small, 5.0);
+        assert_eq!(config.base_xp_mult, 1.0);
     }
 }

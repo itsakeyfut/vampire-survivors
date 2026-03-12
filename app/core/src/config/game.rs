@@ -8,13 +8,46 @@ use crate::types::MetaUpgradeType;
 
 // ---------------------------------------------------------------------------
 // Fallback constants (used while game.ron is still loading)
+//
+// These are the single source of truth for every game.ron field's fallback
+// value.  All system files that need a fallback import or use GameParams
+// methods (defined below) rather than redeclaring their own copies.
 // ---------------------------------------------------------------------------
 
+// --- inventory caps ---
+pub(crate) const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
+pub(crate) const DEFAULT_MAX_PASSIVE_LEVEL: u8 = 5;
+pub(crate) const DEFAULT_MAX_WEAPONS: usize = 6;
+pub(crate) const DEFAULT_MAX_PASSIVES: usize = 6;
+
+// --- XP / levelling ---
+pub(crate) const DEFAULT_XP_LEVEL_BASE: u32 = 20;
+pub(crate) const DEFAULT_CHOICE_COUNT: usize = 3;
+pub(crate) const DEFAULT_LUCK_BONUS_CHOICE_THRESHOLD: f32 = 1.5;
+
+// --- treasure chests ---
+pub(crate) const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
+pub(crate) const DEFAULT_TREASURE_GOLD: u32 = 50;
+pub(crate) const DEFAULT_TREASURE_HP_RECOVERY_PCT: f32 = 0.3;
+pub(crate) const DEFAULT_TREASURE_GLOW_DISTANCE: f32 = 150.0;
+pub(crate) const DEFAULT_TREASURE_SPAWN_FLASH_DURATION: f32 = 0.35;
+
+// --- meta shop costs ---
 const DEFAULT_SHOP_UPGRADE_COST_HP: u32 = 300;
 const DEFAULT_SHOP_UPGRADE_COST_SPEED: u32 = 300;
 const DEFAULT_SHOP_UPGRADE_COST_DAMAGE: u32 = 300;
 const DEFAULT_SHOP_UPGRADE_COST_XP: u32 = 300;
 const DEFAULT_SHOP_UPGRADE_COST_WEAPON: u32 = 500;
+
+// --- meta upgrade stat bonuses ---
+/// Flat HP bonus per BonusHp purchase (same magnitude as HollowHeart per level).
+pub(crate) const DEFAULT_META_UPGRADE_HP_BONUS: f32 = 20.0;
+/// Flat speed bonus (px/s) per BonusSpeed purchase (same magnitude as Wings per level).
+pub(crate) const DEFAULT_META_UPGRADE_SPEED_BONUS: f32 = 20.0;
+/// Damage multiplier added per BonusDamage purchase (same magnitude as Spinach per level).
+pub(crate) const DEFAULT_META_UPGRADE_DAMAGE_BONUS: f32 = 0.1;
+/// XP multiplier added per BonusXp purchase (10 % more XP per upgrade).
+pub(crate) const DEFAULT_META_UPGRADE_XP_BONUS: f32 = 0.1;
 
 fn default_upgrade_cost(upgrade: MetaUpgradeType) -> u32 {
     match upgrade {
@@ -23,6 +56,16 @@ fn default_upgrade_cost(upgrade: MetaUpgradeType) -> u32 {
         MetaUpgradeType::BonusDamage => DEFAULT_SHOP_UPGRADE_COST_DAMAGE,
         MetaUpgradeType::BonusXp => DEFAULT_SHOP_UPGRADE_COST_XP,
         MetaUpgradeType::StartingWeapon => DEFAULT_SHOP_UPGRADE_COST_WEAPON,
+    }
+}
+
+fn default_upgrade_stat_bonus(upgrade: MetaUpgradeType) -> f32 {
+    match upgrade {
+        MetaUpgradeType::BonusHp => DEFAULT_META_UPGRADE_HP_BONUS,
+        MetaUpgradeType::BonusSpeed => DEFAULT_META_UPGRADE_SPEED_BONUS,
+        MetaUpgradeType::BonusDamage => DEFAULT_META_UPGRADE_DAMAGE_BONUS,
+        MetaUpgradeType::BonusXp => DEFAULT_META_UPGRADE_XP_BONUS,
+        MetaUpgradeType::StartingWeapon => 0.0,
     }
 }
 
@@ -112,6 +155,15 @@ pub struct GameConfig {
     pub shop_upgrade_cost_xp: u32,
     /// Gold cost to purchase the starting-weapon permanent upgrade.
     pub shop_upgrade_cost_weapon: u32,
+    // Meta upgrade bonus values (applied to PlayerStats at run start)
+    /// Flat HP added to max_hp per BonusHp purchase.
+    pub meta_upgrade_hp_bonus: f32,
+    /// Flat speed (px/s) added to move_speed per BonusSpeed purchase.
+    pub meta_upgrade_speed_bonus: f32,
+    /// Amount added to damage_multiplier per BonusDamage purchase.
+    pub meta_upgrade_damage_bonus: f32,
+    /// Amount added to xp_multiplier per BonusXp purchase.
+    pub meta_upgrade_xp_bonus: f32,
 }
 
 impl GameConfig {
@@ -123,6 +175,22 @@ impl GameConfig {
             MetaUpgradeType::BonusDamage => self.shop_upgrade_cost_damage,
             MetaUpgradeType::BonusXp => self.shop_upgrade_cost_xp,
             MetaUpgradeType::StartingWeapon => self.shop_upgrade_cost_weapon,
+        }
+    }
+
+    /// Returns the stat bonus applied per purchase of the given upgrade type.
+    ///
+    /// The meaning of the returned `f32` depends on the upgrade:
+    /// - `BonusHp`/`BonusSpeed` — flat additive amount
+    /// - `BonusDamage`/`BonusXp` — multiplier delta (added to a factor that starts at 1.0)
+    /// - `StartingWeapon` — returns `0.0` (no stat effect; it is a selection unlock)
+    pub fn upgrade_stat_bonus(&self, upgrade: MetaUpgradeType) -> f32 {
+        match upgrade {
+            MetaUpgradeType::BonusHp => self.meta_upgrade_hp_bonus,
+            MetaUpgradeType::BonusSpeed => self.meta_upgrade_speed_bonus,
+            MetaUpgradeType::BonusDamage => self.meta_upgrade_damage_bonus,
+            MetaUpgradeType::BonusXp => self.meta_upgrade_xp_bonus,
+            MetaUpgradeType::StartingWeapon => 0.0,
         }
     }
 }
@@ -164,6 +232,94 @@ impl<'w> GameParams<'w> {
         self.get()
             .map(|c| c.upgrade_cost(upgrade))
             .unwrap_or_else(|| default_upgrade_cost(upgrade))
+    }
+
+    /// Returns the stat bonus applied per purchase of the given upgrade type.
+    ///
+    /// Falls back to `DEFAULT_META_UPGRADE_*` constants while the config asset
+    /// is still loading.
+    pub fn upgrade_stat_bonus(&self, upgrade: MetaUpgradeType) -> f32 {
+        self.get()
+            .map(|c| c.upgrade_stat_bonus(upgrade))
+            .unwrap_or_else(|| default_upgrade_stat_bonus(upgrade))
+    }
+
+    // --- Inventory caps ---
+
+    pub fn max_weapon_level(&self) -> u8 {
+        self.get()
+            .map(|c| c.max_weapon_level)
+            .unwrap_or(DEFAULT_MAX_WEAPON_LEVEL)
+    }
+
+    pub fn max_passive_level(&self) -> u8 {
+        self.get()
+            .map(|c| c.max_passive_level)
+            .unwrap_or(DEFAULT_MAX_PASSIVE_LEVEL)
+    }
+
+    pub fn max_weapons(&self) -> usize {
+        self.get()
+            .map(|c| c.max_weapons)
+            .unwrap_or(DEFAULT_MAX_WEAPONS)
+    }
+
+    pub fn max_passives(&self) -> usize {
+        self.get()
+            .map(|c| c.max_passives)
+            .unwrap_or(DEFAULT_MAX_PASSIVES)
+    }
+
+    // --- XP / levelling ---
+
+    pub fn xp_level_base(&self) -> u32 {
+        self.get()
+            .map(|c| c.xp_level_base)
+            .unwrap_or(DEFAULT_XP_LEVEL_BASE)
+    }
+
+    pub fn choice_count(&self) -> usize {
+        self.get()
+            .map(|c| c.level_up_choice_count)
+            .unwrap_or(DEFAULT_CHOICE_COUNT)
+    }
+
+    pub fn luck_bonus_choice_threshold(&self) -> f32 {
+        self.get()
+            .map(|c| c.luck_bonus_choice_threshold)
+            .unwrap_or(DEFAULT_LUCK_BONUS_CHOICE_THRESHOLD)
+    }
+
+    // --- Treasure chests ---
+
+    pub fn treasure_radius(&self) -> f32 {
+        self.get()
+            .map(|c| c.treasure_radius)
+            .unwrap_or(DEFAULT_TREASURE_RADIUS)
+    }
+
+    pub fn treasure_gold(&self) -> u32 {
+        self.get()
+            .map(|c| c.treasure_gold_reward)
+            .unwrap_or(DEFAULT_TREASURE_GOLD)
+    }
+
+    pub fn treasure_hp_recovery_pct(&self) -> f32 {
+        self.get()
+            .map(|c| c.treasure_hp_recovery_pct)
+            .unwrap_or(DEFAULT_TREASURE_HP_RECOVERY_PCT)
+    }
+
+    pub fn treasure_glow_distance(&self) -> f32 {
+        self.get()
+            .map(|c| c.treasure_glow_distance)
+            .unwrap_or(DEFAULT_TREASURE_GLOW_DISTANCE)
+    }
+
+    pub fn treasure_spawn_flash_duration(&self) -> f32 {
+        self.get()
+            .map(|c| c.treasure_spawn_flash_duration)
+            .unwrap_or(DEFAULT_TREASURE_SPAWN_FLASH_DURATION)
     }
 }
 
@@ -242,6 +398,10 @@ GameConfig(
     shop_upgrade_cost_damage: 300,
     shop_upgrade_cost_xp: 300,
     shop_upgrade_cost_weapon: 500,
+    meta_upgrade_hp_bonus: 20.0,
+    meta_upgrade_speed_bonus: 20.0,
+    meta_upgrade_damage_bonus: 0.1,
+    meta_upgrade_xp_bonus: 0.1,
 )
 "#;
         let config: GameConfig = ron::de::from_str(ron_data).unwrap();
@@ -280,5 +440,15 @@ GameConfig(
         assert_eq!(config.shop_upgrade_cost_damage, 300);
         assert_eq!(config.shop_upgrade_cost_xp, 300);
         assert_eq!(config.shop_upgrade_cost_weapon, 500);
+        assert_eq!(config.meta_upgrade_hp_bonus, DEFAULT_META_UPGRADE_HP_BONUS);
+        assert_eq!(
+            config.meta_upgrade_speed_bonus,
+            DEFAULT_META_UPGRADE_SPEED_BONUS
+        );
+        assert_eq!(
+            config.meta_upgrade_damage_bonus,
+            DEFAULT_META_UPGRADE_DAMAGE_BONUS
+        );
+        assert_eq!(config.meta_upgrade_xp_bonus, DEFAULT_META_UPGRADE_XP_BONUS);
     }
 }
