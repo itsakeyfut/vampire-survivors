@@ -7,6 +7,26 @@ use serde::Deserialize;
 use crate::types::MetaUpgradeType;
 
 // ---------------------------------------------------------------------------
+// Fallback constants (used while game.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_SHOP_UPGRADE_COST_HP: u32 = 300;
+const DEFAULT_SHOP_UPGRADE_COST_SPEED: u32 = 300;
+const DEFAULT_SHOP_UPGRADE_COST_DAMAGE: u32 = 300;
+const DEFAULT_SHOP_UPGRADE_COST_XP: u32 = 300;
+const DEFAULT_SHOP_UPGRADE_COST_WEAPON: u32 = 500;
+
+fn default_upgrade_cost(upgrade: MetaUpgradeType) -> u32 {
+    match upgrade {
+        MetaUpgradeType::BonusHp => DEFAULT_SHOP_UPGRADE_COST_HP,
+        MetaUpgradeType::BonusSpeed => DEFAULT_SHOP_UPGRADE_COST_SPEED,
+        MetaUpgradeType::BonusDamage => DEFAULT_SHOP_UPGRADE_COST_DAMAGE,
+        MetaUpgradeType::BonusXp => DEFAULT_SHOP_UPGRADE_COST_XP,
+        MetaUpgradeType::StartingWeapon => DEFAULT_SHOP_UPGRADE_COST_WEAPON,
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Asset type
 // ---------------------------------------------------------------------------
 
@@ -143,7 +163,7 @@ impl<'w> GameParams<'w> {
     pub fn upgrade_cost(&self, upgrade: MetaUpgradeType) -> u32 {
         self.get()
             .map(|c| c.upgrade_cost(upgrade))
-            .unwrap_or_else(|| crate::types::upgrade_cost(upgrade))
+            .unwrap_or_else(|| default_upgrade_cost(upgrade))
     }
 }
 
