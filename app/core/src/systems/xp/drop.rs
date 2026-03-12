@@ -24,8 +24,6 @@ use crate::{
 
 /// Gem visual radius in pixels (placeholder; replace with real sprite later).
 const GEM_RADIUS: f32 = 6.0;
-/// Treasure collider radius fallback (pixels) used before `game.ron` loads.
-const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
 
 // ---------------------------------------------------------------------------
 // System
@@ -72,10 +70,7 @@ pub fn drop_treasure_on_mini_boss_death(
     mut died_events: MessageReader<EnemyDiedEvent>,
     game_cfg: GameParams,
 ) {
-    let radius = game_cfg
-        .get()
-        .map(|c| c.treasure_radius)
-        .unwrap_or(DEFAULT_TREASURE_RADIUS);
+    let radius = game_cfg.treasure_radius();
 
     for event in died_events.read() {
         if event.enemy_type == EnemyType::MiniBoss {

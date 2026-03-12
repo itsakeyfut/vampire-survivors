@@ -8,21 +8,46 @@ use crate::types::MetaUpgradeType;
 
 // ---------------------------------------------------------------------------
 // Fallback constants (used while game.ron is still loading)
+//
+// These are the single source of truth for every game.ron field's fallback
+// value.  All system files that need a fallback import or use GameParams
+// methods (defined below) rather than redeclaring their own copies.
 // ---------------------------------------------------------------------------
 
+// --- inventory caps ---
+pub(crate) const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
+pub(crate) const DEFAULT_MAX_PASSIVE_LEVEL: u8 = 5;
+pub(crate) const DEFAULT_MAX_WEAPONS: usize = 6;
+pub(crate) const DEFAULT_MAX_PASSIVES: usize = 6;
+
+// --- XP / levelling ---
+pub(crate) const DEFAULT_XP_LEVEL_BASE: u32 = 20;
+pub(crate) const DEFAULT_CHOICE_COUNT: usize = 3;
+pub(crate) const DEFAULT_LUCK_BONUS_CHOICE_THRESHOLD: f32 = 1.5;
+
+// --- treasure chests ---
+pub(crate) const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
+pub(crate) const DEFAULT_TREASURE_GOLD: u32 = 50;
+pub(crate) const DEFAULT_TREASURE_HP_RECOVERY_PCT: f32 = 0.3;
+pub(crate) const DEFAULT_TREASURE_GLOW_DISTANCE: f32 = 150.0;
+pub(crate) const DEFAULT_TREASURE_SPAWN_FLASH_DURATION: f32 = 0.35;
+
+// --- meta shop costs ---
 const DEFAULT_SHOP_UPGRADE_COST_HP: u32 = 300;
 const DEFAULT_SHOP_UPGRADE_COST_SPEED: u32 = 300;
 const DEFAULT_SHOP_UPGRADE_COST_DAMAGE: u32 = 300;
 const DEFAULT_SHOP_UPGRADE_COST_XP: u32 = 300;
 const DEFAULT_SHOP_UPGRADE_COST_WEAPON: u32 = 500;
+
+// --- meta upgrade stat bonuses ---
 /// Flat HP bonus per BonusHp purchase (same magnitude as HollowHeart per level).
-const DEFAULT_META_UPGRADE_HP_BONUS: f32 = 20.0;
+pub(crate) const DEFAULT_META_UPGRADE_HP_BONUS: f32 = 20.0;
 /// Flat speed bonus (px/s) per BonusSpeed purchase (same magnitude as Wings per level).
-const DEFAULT_META_UPGRADE_SPEED_BONUS: f32 = 20.0;
+pub(crate) const DEFAULT_META_UPGRADE_SPEED_BONUS: f32 = 20.0;
 /// Damage multiplier added per BonusDamage purchase (same magnitude as Spinach per level).
-const DEFAULT_META_UPGRADE_DAMAGE_BONUS: f32 = 0.1;
+pub(crate) const DEFAULT_META_UPGRADE_DAMAGE_BONUS: f32 = 0.1;
 /// XP multiplier added per BonusXp purchase (10 % more XP per upgrade).
-const DEFAULT_META_UPGRADE_XP_BONUS: f32 = 0.1;
+pub(crate) const DEFAULT_META_UPGRADE_XP_BONUS: f32 = 0.1;
 
 fn default_upgrade_cost(upgrade: MetaUpgradeType) -> u32 {
     match upgrade {
@@ -217,6 +242,84 @@ impl<'w> GameParams<'w> {
         self.get()
             .map(|c| c.upgrade_stat_bonus(upgrade))
             .unwrap_or_else(|| default_upgrade_stat_bonus(upgrade))
+    }
+
+    // --- Inventory caps ---
+
+    pub fn max_weapon_level(&self) -> u8 {
+        self.get()
+            .map(|c| c.max_weapon_level)
+            .unwrap_or(DEFAULT_MAX_WEAPON_LEVEL)
+    }
+
+    pub fn max_passive_level(&self) -> u8 {
+        self.get()
+            .map(|c| c.max_passive_level)
+            .unwrap_or(DEFAULT_MAX_PASSIVE_LEVEL)
+    }
+
+    pub fn max_weapons(&self) -> usize {
+        self.get()
+            .map(|c| c.max_weapons)
+            .unwrap_or(DEFAULT_MAX_WEAPONS)
+    }
+
+    pub fn max_passives(&self) -> usize {
+        self.get()
+            .map(|c| c.max_passives)
+            .unwrap_or(DEFAULT_MAX_PASSIVES)
+    }
+
+    // --- XP / levelling ---
+
+    pub fn xp_level_base(&self) -> u32 {
+        self.get()
+            .map(|c| c.xp_level_base)
+            .unwrap_or(DEFAULT_XP_LEVEL_BASE)
+    }
+
+    pub fn choice_count(&self) -> usize {
+        self.get()
+            .map(|c| c.level_up_choice_count)
+            .unwrap_or(DEFAULT_CHOICE_COUNT)
+    }
+
+    pub fn luck_bonus_choice_threshold(&self) -> f32 {
+        self.get()
+            .map(|c| c.luck_bonus_choice_threshold)
+            .unwrap_or(DEFAULT_LUCK_BONUS_CHOICE_THRESHOLD)
+    }
+
+    // --- Treasure chests ---
+
+    pub fn treasure_radius(&self) -> f32 {
+        self.get()
+            .map(|c| c.treasure_radius)
+            .unwrap_or(DEFAULT_TREASURE_RADIUS)
+    }
+
+    pub fn treasure_gold(&self) -> u32 {
+        self.get()
+            .map(|c| c.treasure_gold_reward)
+            .unwrap_or(DEFAULT_TREASURE_GOLD)
+    }
+
+    pub fn treasure_hp_recovery_pct(&self) -> f32 {
+        self.get()
+            .map(|c| c.treasure_hp_recovery_pct)
+            .unwrap_or(DEFAULT_TREASURE_HP_RECOVERY_PCT)
+    }
+
+    pub fn treasure_glow_distance(&self) -> f32 {
+        self.get()
+            .map(|c| c.treasure_glow_distance)
+            .unwrap_or(DEFAULT_TREASURE_GLOW_DISTANCE)
+    }
+
+    pub fn treasure_spawn_flash_duration(&self) -> f32 {
+        self.get()
+            .map(|c| c.treasure_spawn_flash_duration)
+            .unwrap_or(DEFAULT_TREASURE_SPAWN_FLASH_DURATION)
     }
 }
 

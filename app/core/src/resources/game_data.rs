@@ -1,11 +1,6 @@
 use bevy::prelude::*;
 
-// ---------------------------------------------------------------------------
-// Fallback constants (used when RON config is not yet loaded)
-// ---------------------------------------------------------------------------
-
-/// XP required for the first level-up.
-const DEFAULT_XP_LEVEL_BASE: u32 = 20;
+use crate::config::game::DEFAULT_XP_LEVEL_BASE;
 
 /// Global game-session data. Reset at the start of each run.
 #[derive(Resource, Debug)]
