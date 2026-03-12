@@ -255,5 +255,10 @@ GameConfig(
         assert_eq!(config.boss_scythe_lifetime, 8.0);
         assert_eq!(config.boss_scythe_damage, 80.0);
         assert_eq!(config.boss_scythe_radius, 15.0);
+        assert_eq!(config.shop_upgrade_cost_hp, 300);
+        assert_eq!(config.shop_upgrade_cost_speed, 300);
+        assert_eq!(config.shop_upgrade_cost_damage, 300);
+        assert_eq!(config.shop_upgrade_cost_xp, 300);
+        assert_eq!(config.shop_upgrade_cost_weapon, 500);
     }
 }
