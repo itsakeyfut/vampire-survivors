@@ -4,6 +4,28 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use serde::Deserialize;
 
+use crate::types::MetaUpgradeType;
+
+// ---------------------------------------------------------------------------
+// Fallback constants (used while game.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_SHOP_UPGRADE_COST_HP: u32 = 300;
+const DEFAULT_SHOP_UPGRADE_COST_SPEED: u32 = 300;
+const DEFAULT_SHOP_UPGRADE_COST_DAMAGE: u32 = 300;
+const DEFAULT_SHOP_UPGRADE_COST_XP: u32 = 300;
+const DEFAULT_SHOP_UPGRADE_COST_WEAPON: u32 = 500;
+
+fn default_upgrade_cost(upgrade: MetaUpgradeType) -> u32 {
+    match upgrade {
+        MetaUpgradeType::BonusHp => DEFAULT_SHOP_UPGRADE_COST_HP,
+        MetaUpgradeType::BonusSpeed => DEFAULT_SHOP_UPGRADE_COST_SPEED,
+        MetaUpgradeType::BonusDamage => DEFAULT_SHOP_UPGRADE_COST_DAMAGE,
+        MetaUpgradeType::BonusXp => DEFAULT_SHOP_UPGRADE_COST_XP,
+        MetaUpgradeType::StartingWeapon => DEFAULT_SHOP_UPGRADE_COST_WEAPON,
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Asset type
 // ---------------------------------------------------------------------------
@@ -79,6 +101,30 @@ pub struct GameConfig {
     pub boss_scythe_damage: f32,
     /// Scythe projectile collider radius in pixels.
     pub boss_scythe_radius: f32,
+    // Shop upgrade costs
+    /// Gold cost to purchase the max-HP permanent upgrade.
+    pub shop_upgrade_cost_hp: u32,
+    /// Gold cost to purchase the move-speed permanent upgrade.
+    pub shop_upgrade_cost_speed: u32,
+    /// Gold cost to purchase the damage permanent upgrade.
+    pub shop_upgrade_cost_damage: u32,
+    /// Gold cost to purchase the XP-gain permanent upgrade.
+    pub shop_upgrade_cost_xp: u32,
+    /// Gold cost to purchase the starting-weapon permanent upgrade.
+    pub shop_upgrade_cost_weapon: u32,
+}
+
+impl GameConfig {
+    /// Returns the gold cost for a given permanent upgrade.
+    pub fn upgrade_cost(&self, upgrade: MetaUpgradeType) -> u32 {
+        match upgrade {
+            MetaUpgradeType::BonusHp => self.shop_upgrade_cost_hp,
+            MetaUpgradeType::BonusSpeed => self.shop_upgrade_cost_speed,
+            MetaUpgradeType::BonusDamage => self.shop_upgrade_cost_damage,
+            MetaUpgradeType::BonusXp => self.shop_upgrade_cost_xp,
+            MetaUpgradeType::StartingWeapon => self.shop_upgrade_cost_weapon,
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded game configuration.
@@ -108,6 +154,16 @@ impl<'w> GameParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    /// Returns the gold cost for a given permanent upgrade.
+    ///
+    /// Falls back to the hardcoded value from [`crate::types::upgrade_cost`]
+    /// while the config asset is still loading.
+    pub fn upgrade_cost(&self, upgrade: MetaUpgradeType) -> u32 {
+        self.get()
+            .map(|c| c.upgrade_cost(upgrade))
+            .unwrap_or_else(|| default_upgrade_cost(upgrade))
     }
 }
 
@@ -181,6 +237,11 @@ GameConfig(
     boss_scythe_lifetime: 8.0,
     boss_scythe_damage: 80.0,
     boss_scythe_radius: 15.0,
+    shop_upgrade_cost_hp: 300,
+    shop_upgrade_cost_speed: 300,
+    shop_upgrade_cost_damage: 300,
+    shop_upgrade_cost_xp: 300,
+    shop_upgrade_cost_weapon: 500,
 )
 "#;
         let config: GameConfig = ron::de::from_str(ron_data).unwrap();
@@ -214,5 +275,10 @@ GameConfig(
         assert_eq!(config.boss_scythe_lifetime, 8.0);
         assert_eq!(config.boss_scythe_damage, 80.0);
         assert_eq!(config.boss_scythe_radius, 15.0);
+        assert_eq!(config.shop_upgrade_cost_hp, 300);
+        assert_eq!(config.shop_upgrade_cost_speed, 300);
+        assert_eq!(config.shop_upgrade_cost_damage, 300);
+        assert_eq!(config.shop_upgrade_cost_xp, 300);
+        assert_eq!(config.shop_upgrade_cost_weapon, 500);
     }
 }

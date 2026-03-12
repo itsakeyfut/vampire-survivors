@@ -62,6 +62,12 @@ impl Plugin for GameUIPlugin {
                 OnEnter(AppState::MetaShop),
                 screens::meta_shop::setup_meta_shop_screen,
             )
+            .add_systems(
+                Update,
+                screens::meta_shop::update_meta_shop_screen
+                    .after(components::handle_button_interaction)
+                    .run_if(in_state(AppState::MetaShop)),
+            )
             // Settings screen
             .add_systems(
                 OnEnter(AppState::Settings),

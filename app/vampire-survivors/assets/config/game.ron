@@ -64,4 +64,10 @@ GameConfig(
     boss_scythe_lifetime:          8.0,   // Scythe lifetime before despawn (seconds)
     boss_scythe_damage:            80.0,  // Damage dealt on scythe hit
     boss_scythe_radius:            15.0,  // Scythe collider radius (pixels)
+    // Shop upgrade costs
+    shop_upgrade_cost_hp:     300,
+    shop_upgrade_cost_speed:  300,
+    shop_upgrade_cost_damage: 300,
+    shop_upgrade_cost_xp:     300,
+    shop_upgrade_cost_weapon: 500,
 )

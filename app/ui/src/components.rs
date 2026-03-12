@@ -6,8 +6,10 @@
 //! code.
 
 use bevy::prelude::*;
-use vs_core::resources::{GameSettings, PendingUpgradeIndex};
+use vs_core::config::{CharacterConfig, CharacterParams, GameConfig, GameParams};
+use vs_core::resources::{GameSettings, MetaProgress, PendingUpgradeIndex};
 use vs_core::states::AppState;
+use vs_core::types::{CharacterType, MetaUpgradeType, get_character_stats, upgrade_cost};
 
 use crate::config::MenuButtonHudParams;
 
@@ -64,6 +66,18 @@ pub enum ButtonAction {
     SelectUpgrade(usize),
     /// Resume gameplay from the pause screen — transitions Paused → Playing.
     ResumeGame,
+    /// Unlock a character in the gold shop.
+    ///
+    /// Deducts the character's unlock cost from [`MetaProgress::total_gold`] and
+    /// adds the character to [`MetaProgress::unlocked_characters`] when the
+    /// player can afford it and has not already unlocked it.
+    UnlockCharacter(CharacterType),
+    /// Purchase a permanent upgrade in the gold shop.
+    ///
+    /// Deducts [`upgrade_cost`] from [`MetaProgress::total_gold`] and records
+    /// the upgrade in [`MetaProgress::purchased_upgrades`] when the player can
+    /// afford it and has not already purchased it.
+    PurchaseUpgrade(MetaUpgradeType),
 }
 
 // ---------------------------------------------------------------------------
@@ -76,6 +90,7 @@ pub enum ButtonAction {
 /// appropriate [`AppState`] transition when a button is clicked.
 /// Colors are read from [`MenuButtonHudParams`]; `DEFAULT_BUTTON_*` constants
 /// are used as fallbacks while the config is loading.
+#[allow(clippy::too_many_arguments)]
 pub fn handle_button_interaction(
     mut interaction_query: Query<
         (&Interaction, &MenuButton, &mut BackgroundColor),
@@ -85,6 +100,9 @@ pub fn handle_button_interaction(
     btn_cfg: MenuButtonHudParams,
     mut pending: Option<ResMut<PendingUpgradeIndex>>,
     mut settings: Option<ResMut<GameSettings>>,
+    mut meta: Option<ResMut<MetaProgress>>,
+    char_params: CharacterParams,
+    game_params: GameParams,
 ) {
     let color_normal = btn_cfg
         .get()
@@ -103,7 +121,15 @@ pub fn handle_button_interaction(
         match *interaction {
             Interaction::Pressed => {
                 *bg = BackgroundColor(color_pressed);
-                apply_action(button.action, &mut next_state, &mut pending, &mut settings);
+                apply_action(
+                    button.action,
+                    &mut next_state,
+                    &mut pending,
+                    &mut settings,
+                    &mut meta,
+                    char_params.get(),
+                    game_params.get(),
+                );
             }
             Interaction::Hovered => {
                 *bg = BackgroundColor(color_hover);
@@ -120,6 +146,9 @@ fn apply_action(
     next_state: &mut NextState<AppState>,
     pending: &mut Option<ResMut<PendingUpgradeIndex>>,
     settings: &mut Option<ResMut<GameSettings>>,
+    meta: &mut Option<ResMut<MetaProgress>>,
+    char_cfg: Option<&CharacterConfig>,
+    game_cfg: Option<&GameConfig>,
 ) {
     match action {
         ButtonAction::StartGame => {
@@ -150,6 +179,32 @@ fn apply_action(
         }
         ButtonAction::ResumeGame => {
             next_state.set(AppState::Playing);
+        }
+        ButtonAction::UnlockCharacter(ct) => {
+            if let Some(m) = meta {
+                let cost = char_cfg
+                    .map(|c| c.stats_for(ct).unlock_cost)
+                    .unwrap_or_else(|| get_character_stats(ct).unlock_cost);
+                if m.total_gold >= cost && !m.unlocked_characters.contains(&ct) {
+                    m.total_gold = m.total_gold.saturating_sub(cost);
+                    m.unlocked_characters.push(ct);
+                    m.save();
+                    info!("Unlocked character {:?} for {}G", ct, cost);
+                }
+            }
+        }
+        ButtonAction::PurchaseUpgrade(ut) => {
+            if let Some(m) = meta {
+                let cost = game_cfg
+                    .map(|c| c.upgrade_cost(ut))
+                    .unwrap_or_else(|| upgrade_cost(ut));
+                if m.total_gold >= cost && !m.purchased_upgrades.contains(&ut) {
+                    m.total_gold = m.total_gold.saturating_sub(cost);
+                    m.purchased_upgrades.push(ut);
+                    m.save();
+                    info!("Purchased upgrade {:?} for {}G", ut, cost);
+                }
+            }
         }
     }
 }
@@ -191,6 +246,9 @@ mod tests {
                 &mut next_state,
                 &mut None,
                 &mut None,
+                &mut None,
+                None,
+                None,
             );
         }
         app.update();
@@ -221,6 +279,9 @@ mod tests {
                 &mut next_state,
                 &mut None,
                 &mut None,
+                &mut None,
+                None,
+                None,
             );
         }
         app.update();
@@ -243,6 +304,9 @@ mod tests {
                 &mut next_state,
                 &mut None,
                 &mut None,
+                &mut None,
+                None,
+                None,
             );
         }
         app.update();

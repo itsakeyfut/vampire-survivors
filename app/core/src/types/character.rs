@@ -251,3 +251,14 @@ pub enum MetaUpgradeType {
     /// Unlock a new starting weapon option.
     StartingWeapon,
 }
+
+/// Returns the gold cost to purchase a permanent upgrade in the gold shop.
+pub fn upgrade_cost(upgrade: MetaUpgradeType) -> u32 {
+    match upgrade {
+        MetaUpgradeType::BonusHp => 300,
+        MetaUpgradeType::BonusSpeed => 300,
+        MetaUpgradeType::BonusDamage => 300,
+        MetaUpgradeType::BonusXp => 300,
+        MetaUpgradeType::StartingWeapon => 500,
+    }
+}

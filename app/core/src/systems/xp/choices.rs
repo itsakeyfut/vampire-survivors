@@ -689,6 +689,11 @@ mod tests {
             boss_scythe_lifetime: 8.0,
             boss_scythe_damage: 80.0,
             boss_scythe_radius: 15.0,
+            shop_upgrade_cost_hp: 300,
+            shop_upgrade_cost_speed: 300,
+            shop_upgrade_cost_damage: 300,
+            shop_upgrade_cost_xp: 300,
+            shop_upgrade_cost_weapon: 500,
         };
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<GameConfig>>();
