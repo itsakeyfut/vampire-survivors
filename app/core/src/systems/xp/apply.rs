@@ -193,6 +193,7 @@ pub fn apply_passives(
         extra_projectiles: base.extra_projectiles,
         luck: base.luck,
         hp_regen: base.hp_regen,
+        xp_multiplier: base.xp_multiplier,
     };
 
     for passive in &passive_inv.items {

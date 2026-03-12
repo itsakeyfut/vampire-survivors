@@ -35,9 +35,9 @@ use crate::{
         BasePlayerStats, CircleCollider, GameSessionEntity, PassiveInventory, Player,
         PlayerFacingDirection, PlayerStats, PlayerWhipSide, WeaponInventory,
     },
-    config::{CharacterParams, PlayerParams},
-    resources::SelectedCharacter,
-    types::{WeaponState, WhipSide},
+    config::{CharacterParams, GameParams, PlayerParams},
+    resources::{MetaProgress, SelectedCharacter},
+    types::{MetaUpgradeType, WeaponState, WhipSide},
 };
 
 // ---------------------------------------------------------------------------
@@ -67,11 +67,18 @@ const DEFAULT_COLLIDER_PLAYER: f32 = 12.0;
 /// Non-character stats (pickup radius, gem speeds, projectile modifiers, …)
 /// come from [`PlayerParams`].  Both fall back to hardcoded defaults while
 /// their RON assets are still loading.
+///
+/// After base stats are built, [`apply_meta_upgrades`] is called to bake any
+/// purchased permanent upgrades from [`MetaProgress`] into the stats.  This
+/// means passive items stack on top of the already-boosted base.
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_player(
     mut commands: Commands,
     player_cfg: PlayerParams,
     char_params: CharacterParams,
+    game_params: GameParams,
     selected_character: Res<SelectedCharacter>,
+    meta: Res<MetaProgress>,
     existing_player: Query<Entity, With<Player>>,
 ) {
     // Player persists through LevelUp / Paused; only spawn once per run.
@@ -84,7 +91,7 @@ pub fn spawn_player(
     let char_stats = char_params.stats_for(char_type);
 
     // Non-character stats and collider radius (from player.ron or fallback).
-    let (stats, collider_radius) = if let Some(cfg) = player_cfg.get() {
+    let (mut stats, collider_radius) = if let Some(cfg) = player_cfg.get() {
         let stats = PlayerStats {
             // Character-specific overrides:
             max_hp: char_stats.max_hp,
@@ -99,6 +106,7 @@ pub fn spawn_player(
             extra_projectiles: 0,
             luck: cfg.base_luck,
             hp_regen: cfg.base_hp_regen,
+            xp_multiplier: cfg.base_xp_mult,
             pickup_radius: cfg.pickup_radius,
             gem_attraction_speed: cfg.gem_attraction_speed,
             gem_absorption_radius: cfg.gem_absorption_radius,
@@ -112,10 +120,13 @@ pub fn spawn_player(
             move_speed: char_stats.move_speed,
             damage_multiplier: char_stats.damage_multiplier,
             cooldown_reduction: char_stats.cooldown_reduction,
-            ..PlayerStats::default()
+            ..PlayerStats::default() // includes xp_multiplier = 1.0
         };
         (stats, DEFAULT_COLLIDER_PLAYER)
     };
+
+    // Bake purchased meta upgrades into the base stats.
+    apply_meta_upgrades(&mut stats, &meta.purchased_upgrades, &game_params);
 
     // Player entity: cyan circle sprite + all required ECS components.
     // GameSessionEntity (not DespawnOnExit) — player persists through LevelUp
@@ -158,6 +169,53 @@ pub fn despawn_game_session(
 ) {
     for entity in session_q.iter() {
         commands.entity(entity).despawn();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Meta upgrade application
+// ---------------------------------------------------------------------------
+
+/// Applies all purchased permanent meta upgrades to `stats` in place.
+///
+/// Called once during [`spawn_player`] so that the boosted values become part
+/// of [`BasePlayerStats`].  Passive items then stack on top of this boosted
+/// base — if the player later acquires HollowHeart, the extra HP is added on
+/// top of the meta-HP bonus, not in place of it.
+///
+/// Upgrade effects per purchase:
+/// | Upgrade          | Stat modified         | Source               |
+/// |------------------|-----------------------|----------------------|
+/// | `BonusHp`        | `max_hp`/`current_hp` | `game_params` flat   |
+/// | `BonusSpeed`     | `move_speed`          | `game_params` flat   |
+/// | `BonusDamage`    | `damage_multiplier`   | `game_params` delta  |
+/// | `BonusXp`        | `xp_multiplier`       | `game_params` delta  |
+/// | `StartingWeapon` | *(no stat effect)*    |                      |
+pub(crate) fn apply_meta_upgrades(
+    stats: &mut PlayerStats,
+    purchased: &[MetaUpgradeType],
+    game_params: &GameParams,
+) {
+    for &upgrade in purchased {
+        let bonus = game_params.upgrade_stat_bonus(upgrade);
+        match upgrade {
+            MetaUpgradeType::BonusHp => {
+                stats.max_hp += bonus;
+                stats.current_hp += bonus;
+            }
+            MetaUpgradeType::BonusSpeed => {
+                stats.move_speed += bonus;
+            }
+            MetaUpgradeType::BonusDamage => {
+                stats.damage_multiplier += bonus;
+            }
+            MetaUpgradeType::BonusXp => {
+                stats.xp_multiplier += bonus;
+            }
+            MetaUpgradeType::StartingWeapon => {
+                // No per-run stat effect; this upgrade unlocks starting weapon selection.
+            }
+        }
     }
 }
 
@@ -268,6 +326,7 @@ mod tests {
         app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
         app.init_state::<AppState>();
         app.insert_resource(SelectedCharacter::default());
+        app.insert_resource(MetaProgress::default());
         app
     }
 
@@ -682,5 +741,150 @@ mod tests {
         let entity = q.single(app.world()).expect("player should exist");
         let hp = app.world().get::<PlayerStats>(entity).unwrap().current_hp;
         assert_eq!(hp, 0.0, "dead player must not be healed by regen");
+    }
+
+    // -----------------------------------------------------------------------
+    // apply_meta_upgrades integration tests (via spawn_player)
+    //
+    // GameParams has no GameConfigHandle in these tests → falls back to
+    // DEFAULT_META_UPGRADE_* constants (20 HP / 20 px·s / 0.1 dmg / 0.1 xp).
+    // -----------------------------------------------------------------------
+
+    /// Player spawned with BonusHp purchased has higher max and current HP.
+    #[test]
+    fn meta_upgrade_hp_applied_at_spawn() {
+        let mut app = build_playing_app();
+        let base_hp = PlayerStats::default().max_hp;
+        app.world_mut()
+            .resource_mut::<MetaProgress>()
+            .purchased_upgrades
+            .push(MetaUpgradeType::BonusHp);
+
+        app.add_systems(Update, spawn_player);
+        app.update();
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).unwrap();
+        let stats = app.world().get::<PlayerStats>(entity).unwrap();
+        // Default HP bonus = 20.0 (DEFAULT_META_UPGRADE_HP_BONUS fallback).
+        assert!(
+            stats.max_hp > base_hp,
+            "BonusHp must increase max_hp above base; got {}",
+            stats.max_hp
+        );
+        assert_eq!(
+            stats.current_hp, stats.max_hp,
+            "current_hp must equal max_hp at spawn"
+        );
+    }
+
+    /// Player spawned with BonusSpeed purchased has higher move_speed.
+    #[test]
+    fn meta_upgrade_speed_applied_at_spawn() {
+        let mut app = build_playing_app();
+        let base_speed = PlayerStats::default().move_speed;
+        app.world_mut()
+            .resource_mut::<MetaProgress>()
+            .purchased_upgrades
+            .push(MetaUpgradeType::BonusSpeed);
+
+        app.add_systems(Update, spawn_player);
+        app.update();
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).unwrap();
+        let stats = app.world().get::<PlayerStats>(entity).unwrap();
+        assert!(
+            stats.move_speed > base_speed,
+            "BonusSpeed must increase move_speed above base; got {}",
+            stats.move_speed
+        );
+    }
+
+    /// Player spawned with BonusDamage purchased has higher damage_multiplier.
+    #[test]
+    fn meta_upgrade_damage_applied_at_spawn() {
+        let mut app = build_playing_app();
+        let base_dmg = PlayerStats::default().damage_multiplier;
+        app.world_mut()
+            .resource_mut::<MetaProgress>()
+            .purchased_upgrades
+            .push(MetaUpgradeType::BonusDamage);
+
+        app.add_systems(Update, spawn_player);
+        app.update();
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).unwrap();
+        let stats = app.world().get::<PlayerStats>(entity).unwrap();
+        assert!(
+            stats.damage_multiplier > base_dmg,
+            "BonusDamage must increase damage_multiplier above base; got {}",
+            stats.damage_multiplier
+        );
+    }
+
+    /// Player spawned with BonusXp purchased has higher xp_multiplier.
+    #[test]
+    fn meta_upgrade_xp_applied_at_spawn() {
+        let mut app = build_playing_app();
+        let base_xp = PlayerStats::default().xp_multiplier;
+        app.world_mut()
+            .resource_mut::<MetaProgress>()
+            .purchased_upgrades
+            .push(MetaUpgradeType::BonusXp);
+
+        app.add_systems(Update, spawn_player);
+        app.update();
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).unwrap();
+        let stats = app.world().get::<PlayerStats>(entity).unwrap();
+        assert!(
+            stats.xp_multiplier > base_xp,
+            "BonusXp must increase xp_multiplier above base; got {}",
+            stats.xp_multiplier
+        );
+    }
+
+    /// StartingWeapon purchase does not change any PlayerStats field.
+    #[test]
+    fn meta_upgrade_starting_weapon_has_no_stat_effect() {
+        let mut app = build_playing_app();
+        app.world_mut()
+            .resource_mut::<MetaProgress>()
+            .purchased_upgrades
+            .push(MetaUpgradeType::StartingWeapon);
+
+        app.add_systems(Update, spawn_player);
+        app.update();
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).unwrap();
+        let stats = app.world().get::<PlayerStats>(entity).unwrap();
+        let defaults = PlayerStats::default();
+        // Starting weapon unlock has no stat effect.
+        assert_eq!(stats.max_hp, defaults.max_hp);
+        assert_eq!(stats.move_speed, defaults.move_speed);
+        assert_eq!(stats.damage_multiplier, defaults.damage_multiplier);
+        assert_eq!(stats.xp_multiplier, defaults.xp_multiplier);
+    }
+
+    /// No purchased upgrades → stats equal the character base.
+    #[test]
+    fn no_meta_upgrades_leaves_stats_at_base() {
+        let mut app = build_playing_app();
+        // MetaProgress default has no purchased_upgrades.
+        app.add_systems(Update, spawn_player);
+        app.update();
+
+        let mut q = app.world_mut().query_filtered::<Entity, With<Player>>();
+        let entity = q.single(app.world()).unwrap();
+        let stats = app.world().get::<PlayerStats>(entity).unwrap();
+        let defaults = PlayerStats::default();
+        assert_eq!(stats.max_hp, defaults.max_hp);
+        assert_eq!(stats.move_speed, defaults.move_speed);
+        assert_eq!(stats.damage_multiplier, defaults.damage_multiplier);
+        assert_eq!(stats.xp_multiplier, defaults.xp_multiplier);
     }
 }

@@ -93,8 +93,9 @@ pub fn move_attracted_gems(
         let distance = to_player.length();
 
         if distance <= absorption_radius {
-            // Gem has reached the player — absorb it.
-            game_data.current_xp += gem.value;
+            // Gem has reached the player — absorb it, scaled by the XP multiplier.
+            let xp_gained = (gem.value as f32 * player_stats.xp_multiplier).round() as u32;
+            game_data.current_xp += xp_gained;
             commands.entity(gem_entity).despawn();
         } else {
             // Move toward the player, clamped so we never overshoot.

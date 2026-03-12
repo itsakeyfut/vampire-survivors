@@ -694,6 +694,10 @@ mod tests {
             shop_upgrade_cost_damage: 300,
             shop_upgrade_cost_xp: 300,
             shop_upgrade_cost_weapon: 500,
+            meta_upgrade_hp_bonus: 20.0,
+            meta_upgrade_speed_bonus: 20.0,
+            meta_upgrade_damage_bonus: 0.1,
+            meta_upgrade_xp_bonus: 0.1,
         };
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<GameConfig>>();

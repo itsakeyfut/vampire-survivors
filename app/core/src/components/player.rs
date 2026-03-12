@@ -9,6 +9,7 @@ use crate::types::{PassiveState, WeaponState, WhipSide};
 pub(crate) const DEFAULT_PLAYER_BASE_HP: f32 = 100.0;
 pub(crate) const DEFAULT_PLAYER_BASE_SPEED: f32 = 200.0;
 const DEFAULT_PLAYER_BASE_DAMAGE_MULT: f32 = 1.0;
+const DEFAULT_PLAYER_BASE_XP_MULT: f32 = 1.0;
 const DEFAULT_PLAYER_BASE_COOLDOWN_REDUCTION: f32 = 0.0;
 const DEFAULT_PLAYER_BASE_PROJECTILE_SPEED: f32 = 1.0;
 const DEFAULT_PLAYER_BASE_DURATION_MULT: f32 = 1.0;
@@ -74,6 +75,8 @@ pub struct PlayerStats {
     pub luck: f32,
     /// HP regeneration per second.
     pub hp_regen: f32,
+    /// XP gain multiplier (1.0 = base; boosted by the BonusXp meta upgrade).
+    pub xp_multiplier: f32,
 }
 
 impl Default for PlayerStats {
@@ -93,6 +96,7 @@ impl Default for PlayerStats {
             extra_projectiles: 0,
             luck: DEFAULT_PLAYER_BASE_LUCK,
             hp_regen: DEFAULT_PLAYER_BASE_HP_REGEN,
+            xp_multiplier: DEFAULT_PLAYER_BASE_XP_MULT,
         }
     }
 }
@@ -139,6 +143,8 @@ pub struct BasePlayerStats {
     pub extra_projectiles: u32,
     pub luck: f32,
     pub hp_regen: f32,
+    /// XP gain multiplier (1.0 = base; boosted by the BonusXp meta upgrade).
+    pub xp_multiplier: f32,
 }
 
 impl From<&PlayerStats> for BasePlayerStats {
@@ -157,6 +163,7 @@ impl From<&PlayerStats> for BasePlayerStats {
             extra_projectiles: s.extra_projectiles,
             luck: s.luck,
             hp_regen: s.hp_regen,
+            xp_multiplier: s.xp_multiplier,
         }
     }
 }

@@ -15,6 +15,14 @@ const DEFAULT_SHOP_UPGRADE_COST_SPEED: u32 = 300;
 const DEFAULT_SHOP_UPGRADE_COST_DAMAGE: u32 = 300;
 const DEFAULT_SHOP_UPGRADE_COST_XP: u32 = 300;
 const DEFAULT_SHOP_UPGRADE_COST_WEAPON: u32 = 500;
+/// Flat HP bonus per BonusHp purchase (same magnitude as HollowHeart per level).
+const DEFAULT_META_UPGRADE_HP_BONUS: f32 = 20.0;
+/// Flat speed bonus (px/s) per BonusSpeed purchase (same magnitude as Wings per level).
+const DEFAULT_META_UPGRADE_SPEED_BONUS: f32 = 20.0;
+/// Damage multiplier added per BonusDamage purchase (same magnitude as Spinach per level).
+const DEFAULT_META_UPGRADE_DAMAGE_BONUS: f32 = 0.1;
+/// XP multiplier added per BonusXp purchase (10 % more XP per upgrade).
+const DEFAULT_META_UPGRADE_XP_BONUS: f32 = 0.1;
 
 fn default_upgrade_cost(upgrade: MetaUpgradeType) -> u32 {
     match upgrade {
@@ -23,6 +31,16 @@ fn default_upgrade_cost(upgrade: MetaUpgradeType) -> u32 {
         MetaUpgradeType::BonusDamage => DEFAULT_SHOP_UPGRADE_COST_DAMAGE,
         MetaUpgradeType::BonusXp => DEFAULT_SHOP_UPGRADE_COST_XP,
         MetaUpgradeType::StartingWeapon => DEFAULT_SHOP_UPGRADE_COST_WEAPON,
+    }
+}
+
+fn default_upgrade_stat_bonus(upgrade: MetaUpgradeType) -> f32 {
+    match upgrade {
+        MetaUpgradeType::BonusHp => DEFAULT_META_UPGRADE_HP_BONUS,
+        MetaUpgradeType::BonusSpeed => DEFAULT_META_UPGRADE_SPEED_BONUS,
+        MetaUpgradeType::BonusDamage => DEFAULT_META_UPGRADE_DAMAGE_BONUS,
+        MetaUpgradeType::BonusXp => DEFAULT_META_UPGRADE_XP_BONUS,
+        MetaUpgradeType::StartingWeapon => 0.0,
     }
 }
 
@@ -112,6 +130,15 @@ pub struct GameConfig {
     pub shop_upgrade_cost_xp: u32,
     /// Gold cost to purchase the starting-weapon permanent upgrade.
     pub shop_upgrade_cost_weapon: u32,
+    // Meta upgrade bonus values (applied to PlayerStats at run start)
+    /// Flat HP added to max_hp per BonusHp purchase.
+    pub meta_upgrade_hp_bonus: f32,
+    /// Flat speed (px/s) added to move_speed per BonusSpeed purchase.
+    pub meta_upgrade_speed_bonus: f32,
+    /// Amount added to damage_multiplier per BonusDamage purchase.
+    pub meta_upgrade_damage_bonus: f32,
+    /// Amount added to xp_multiplier per BonusXp purchase.
+    pub meta_upgrade_xp_bonus: f32,
 }
 
 impl GameConfig {
@@ -123,6 +150,22 @@ impl GameConfig {
             MetaUpgradeType::BonusDamage => self.shop_upgrade_cost_damage,
             MetaUpgradeType::BonusXp => self.shop_upgrade_cost_xp,
             MetaUpgradeType::StartingWeapon => self.shop_upgrade_cost_weapon,
+        }
+    }
+
+    /// Returns the stat bonus applied per purchase of the given upgrade type.
+    ///
+    /// The meaning of the returned `f32` depends on the upgrade:
+    /// - `BonusHp`/`BonusSpeed` — flat additive amount
+    /// - `BonusDamage`/`BonusXp` — multiplier delta (added to a factor that starts at 1.0)
+    /// - `StartingWeapon` — returns `0.0` (no stat effect; it is a selection unlock)
+    pub fn upgrade_stat_bonus(&self, upgrade: MetaUpgradeType) -> f32 {
+        match upgrade {
+            MetaUpgradeType::BonusHp => self.meta_upgrade_hp_bonus,
+            MetaUpgradeType::BonusSpeed => self.meta_upgrade_speed_bonus,
+            MetaUpgradeType::BonusDamage => self.meta_upgrade_damage_bonus,
+            MetaUpgradeType::BonusXp => self.meta_upgrade_xp_bonus,
+            MetaUpgradeType::StartingWeapon => 0.0,
         }
     }
 }
@@ -164,6 +207,16 @@ impl<'w> GameParams<'w> {
         self.get()
             .map(|c| c.upgrade_cost(upgrade))
             .unwrap_or_else(|| default_upgrade_cost(upgrade))
+    }
+
+    /// Returns the stat bonus applied per purchase of the given upgrade type.
+    ///
+    /// Falls back to `DEFAULT_META_UPGRADE_*` constants while the config asset
+    /// is still loading.
+    pub fn upgrade_stat_bonus(&self, upgrade: MetaUpgradeType) -> f32 {
+        self.get()
+            .map(|c| c.upgrade_stat_bonus(upgrade))
+            .unwrap_or_else(|| default_upgrade_stat_bonus(upgrade))
     }
 }
 
@@ -242,6 +295,10 @@ GameConfig(
     shop_upgrade_cost_damage: 300,
     shop_upgrade_cost_xp: 300,
     shop_upgrade_cost_weapon: 500,
+    meta_upgrade_hp_bonus: 20.0,
+    meta_upgrade_speed_bonus: 20.0,
+    meta_upgrade_damage_bonus: 0.1,
+    meta_upgrade_xp_bonus: 0.1,
 )
 "#;
         let config: GameConfig = ron::de::from_str(ron_data).unwrap();
@@ -280,5 +337,9 @@ GameConfig(
         assert_eq!(config.shop_upgrade_cost_damage, 300);
         assert_eq!(config.shop_upgrade_cost_xp, 300);
         assert_eq!(config.shop_upgrade_cost_weapon, 500);
+        assert_eq!(config.meta_upgrade_hp_bonus, 20.0);
+        assert_eq!(config.meta_upgrade_speed_bonus, 20.0);
+        assert_eq!(config.meta_upgrade_damage_bonus, 0.1);
+        assert_eq!(config.meta_upgrade_xp_bonus, 0.1);
     }
 }
