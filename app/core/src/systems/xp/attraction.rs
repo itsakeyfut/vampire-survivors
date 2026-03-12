@@ -93,9 +93,12 @@ pub fn move_attracted_gems(
         let distance = to_player.length();
 
         if distance <= absorption_radius {
-            // Gem has reached the player — absorb it, scaled by the XP multiplier.
-            let xp_gained = (gem.value as f32 * player_stats.xp_multiplier).round() as u32;
-            game_data.current_xp += xp_gained;
+            // Accumulate fractional XP so small bonuses are not silently discarded.
+            // e.g. 3 gems × (3 × 1.1 = 3.3) → 9.9 → 9 XP + 0.9 carry-over.
+            game_data.xp_fractional_accumulator += gem.value as f32 * player_stats.xp_multiplier;
+            let whole = game_data.xp_fractional_accumulator as u32;
+            game_data.current_xp += whole;
+            game_data.xp_fractional_accumulator -= whole as f32;
             commands.entity(gem_entity).despawn();
         } else {
             // Move toward the player, clamped so we never overshoot.
@@ -318,6 +321,45 @@ mod tests {
             game_data.current_xp,
             3 + 5 + 8,
             "all absorbed gems should contribute XP"
+        );
+    }
+
+    /// Fractional XP from xp_multiplier accumulates across gems instead of
+    /// being silently discarded per-gem (e.g. 4 × (3 × 1.1 = 3.3) = 13.2 → 13 XP).
+    #[test]
+    fn fractional_xp_accumulates_across_gems() {
+        let mut app = build_app();
+        // xp_multiplier = 1.1: each 3-XP gem contributes 3.3, so 4 gems = 13.2 → 13 whole XP.
+        let mut player_stats = PlayerStats::default();
+        player_stats.xp_multiplier = 1.1;
+        app.world_mut()
+            .spawn((Player, player_stats, Transform::from_xyz(0.0, 0.0, 0.0)));
+
+        for _ in 0..4 {
+            app.world_mut().spawn((
+                ExperienceGem { value: 3 },
+                Transform::from_xyz(1.0, 0.0, 0.5),
+                AttractedToPlayer {
+                    speed: PlayerStats::default().gem_attraction_speed,
+                },
+            ));
+        }
+
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_secs_f32(1.0 / 60.0));
+        app.world_mut()
+            .run_system_once(move_attracted_gems)
+            .unwrap();
+
+        let game_data = app.world().resource::<GameData>();
+        assert_eq!(
+            game_data.current_xp, 13,
+            "4 gems × (3 × 1.1=3.3) = 13.2 → 13 whole XP with 0.2 carry-over"
+        );
+        assert!(
+            (game_data.xp_fractional_accumulator - 0.2).abs() < 0.001,
+            "0.2 fractional XP should be carried over"
         );
     }
 

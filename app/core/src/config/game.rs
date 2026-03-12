@@ -337,9 +337,15 @@ GameConfig(
         assert_eq!(config.shop_upgrade_cost_damage, 300);
         assert_eq!(config.shop_upgrade_cost_xp, 300);
         assert_eq!(config.shop_upgrade_cost_weapon, 500);
-        assert_eq!(config.meta_upgrade_hp_bonus, 20.0);
-        assert_eq!(config.meta_upgrade_speed_bonus, 20.0);
-        assert_eq!(config.meta_upgrade_damage_bonus, 0.1);
-        assert_eq!(config.meta_upgrade_xp_bonus, 0.1);
+        assert_eq!(config.meta_upgrade_hp_bonus, DEFAULT_META_UPGRADE_HP_BONUS);
+        assert_eq!(
+            config.meta_upgrade_speed_bonus,
+            DEFAULT_META_UPGRADE_SPEED_BONUS
+        );
+        assert_eq!(
+            config.meta_upgrade_damage_bonus,
+            DEFAULT_META_UPGRADE_DAMAGE_BONUS
+        );
+        assert_eq!(config.meta_upgrade_xp_bonus, DEFAULT_META_UPGRADE_XP_BONUS);
     }
 }

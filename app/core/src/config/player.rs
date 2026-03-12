@@ -4,6 +4,8 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use serde::Deserialize;
 
+use crate::{resources::MetaProgress, types::MetaUpgradeType};
+
 // ---------------------------------------------------------------------------
 // Asset type
 // ---------------------------------------------------------------------------
@@ -84,6 +86,8 @@ pub fn hot_reload_player_config(
     config_assets: Res<Assets<PlayerConfig>>,
     config_handle: Res<PlayerConfigHandle>,
     mut player_q: Query<&mut crate::components::PlayerStats, With<crate::components::Player>>,
+    meta: Res<MetaProgress>,
+    game_params: super::GameParams,
 ) {
     for event in events.read() {
         match event {
@@ -107,7 +111,16 @@ pub fn hot_reload_player_config(
                         stats.area_multiplier = cfg.base_area_mult;
                         stats.luck = cfg.base_luck;
                         stats.hp_regen = cfg.base_hp_regen;
+                        // Reset to config base, then re-apply any BonusXp meta purchases
+                        // so hot-reloading player.ron mid-run does not strip the bonus.
                         stats.xp_multiplier = cfg.base_xp_mult;
+                        let xp_bonus: f32 = meta
+                            .purchased_upgrades
+                            .iter()
+                            .filter(|&&u| u == MetaUpgradeType::BonusXp)
+                            .count() as f32
+                            * game_params.upgrade_stat_bonus(MetaUpgradeType::BonusXp);
+                        stats.xp_multiplier += xp_bonus;
                         info!("✨ PlayerStats updated from hot-reload");
                     }
                 }
