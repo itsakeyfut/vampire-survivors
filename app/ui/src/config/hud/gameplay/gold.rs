@@ -15,6 +15,9 @@ pub struct GoldHudConfig {
     pub font_size: f32,
     /// Text color of the gold label.
     pub text_color: SrgbColor,
+    /// Extra vertical offset (px) added on top of `BOTTOM_WIDGET_OFFSET` to
+    /// place the gold label one line above the kill count.
+    pub vertical_offset: f32,
 }
 
 /// Resource holding the handle to the loaded [`GoldHudConfig`].
@@ -49,8 +52,9 @@ mod tests {
 
     const RON: &str = r#"
 GoldHudConfig(
-    font_size:  14.0,
-    text_color: (r: 1.0, g: 0.85, b: 0.2),
+    font_size:       14.0,
+    text_color:      (r: 1.0, g: 0.85, b: 0.2),
+    vertical_offset: 20.0,
 )
 "#;
 
@@ -60,6 +64,7 @@ GoldHudConfig(
         assert_eq!(cfg.font_size, 14.0);
         assert!((cfg.text_color.r - 1.0).abs() < 1e-6);
         assert!((cfg.text_color.g - 0.85).abs() < 1e-6);
+        assert_eq!(cfg.vertical_offset, 20.0);
     }
 
     #[test]
