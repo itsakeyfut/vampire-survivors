@@ -43,14 +43,14 @@ pub use hud::{
     BossHpBarHudConfig, BossHpBarHudConfigHandle, BossHpBarHudParams, BossWarningHudConfig,
     BossWarningHudConfigHandle, BossWarningHudParams, EvolutionNotificationHudConfig,
     EvolutionNotificationHudConfigHandle, EvolutionNotificationHudParams, GameplayHudLayoutConfig,
-    GameplayHudLayoutConfigHandle, GameplayHudLayoutParams, HpBarHudConfig, HpBarHudConfigHandle,
-    HpBarHudParams, KillCountHudConfig, KillCountHudConfigHandle, KillCountHudParams,
-    LevelHudConfig, LevelHudConfigHandle, LevelHudParams, MenuButtonHudConfig,
-    MenuButtonHudConfigHandle, MenuButtonHudParams, ScreenHeadingHudConfig,
-    ScreenHeadingHudConfigHandle, ScreenHeadingHudParams, TimerHudConfig, TimerHudConfigHandle,
-    TimerHudParams, UpgradeCardHudConfig, UpgradeCardHudConfigHandle, UpgradeCardHudParams,
-    WeaponSlotsHudConfig, WeaponSlotsHudConfigHandle, WeaponSlotsHudParams, XpBarHudConfig,
-    XpBarHudConfigHandle, XpBarHudParams,
+    GameplayHudLayoutConfigHandle, GameplayHudLayoutParams, GoldHudConfig, GoldHudConfigHandle,
+    GoldHudParams, HpBarHudConfig, HpBarHudConfigHandle, HpBarHudParams, KillCountHudConfig,
+    KillCountHudConfigHandle, KillCountHudParams, LevelHudConfig, LevelHudConfigHandle,
+    LevelHudParams, MenuButtonHudConfig, MenuButtonHudConfigHandle, MenuButtonHudParams,
+    ScreenHeadingHudConfig, ScreenHeadingHudConfigHandle, ScreenHeadingHudParams, TimerHudConfig,
+    TimerHudConfigHandle, TimerHudParams, UpgradeCardHudConfig, UpgradeCardHudConfigHandle,
+    UpgradeCardHudParams, WeaponSlotsHudConfig, WeaponSlotsHudConfigHandle, WeaponSlotsHudParams,
+    XpBarHudConfig, XpBarHudConfigHandle, XpBarHudParams,
 };
 pub use level_up::{
     LevelUpScreenConfig, LevelUpScreenConfigHandle, LevelUpScreenParams, hot_reload_level_up_screen,
@@ -136,6 +136,7 @@ ron_asset_loader!(
 ron_asset_loader!(BossWarningHudConfigLoader, BossWarningHudConfig);
 ron_asset_loader!(BossHpBarHudConfigLoader, BossHpBarHudConfig);
 ron_asset_loader!(KillCountHudConfigLoader, KillCountHudConfig);
+ron_asset_loader!(GoldHudConfigLoader, GoldHudConfig);
 ron_asset_loader!(WeaponSlotsHudConfigLoader, WeaponSlotsHudConfig);
 
 // ---------------------------------------------------------------------------
@@ -191,6 +192,8 @@ impl Plugin for UiConfigPlugin {
             .register_asset_loader(BossHpBarHudConfigLoader)
             .init_asset::<KillCountHudConfig>()
             .register_asset_loader(KillCountHudConfigLoader)
+            .init_asset::<GoldHudConfig>()
+            .register_asset_loader(GoldHudConfigLoader)
             .init_asset::<WeaponSlotsHudConfig>()
             .register_asset_loader(WeaponSlotsHudConfigLoader);
 
@@ -236,6 +239,8 @@ impl Plugin for UiConfigPlugin {
             asset_server.load("config/ui/hud/gameplay/boss_hp_bar.ron");
         let kill_count_handle: Handle<KillCountHudConfig> =
             asset_server.load("config/ui/hud/gameplay/kill_count.ron");
+        let gold_handle: Handle<GoldHudConfig> =
+            asset_server.load("config/ui/hud/gameplay/gold.ron");
         let weapon_slots_handle: Handle<WeaponSlotsHudConfig> =
             asset_server.load("config/ui/hud/gameplay/weapon_slots.ron");
 
@@ -257,6 +262,7 @@ impl Plugin for UiConfigPlugin {
             .insert_resource(BossWarningHudConfigHandle(boss_warning_handle))
             .insert_resource(BossHpBarHudConfigHandle(boss_hp_bar_handle))
             .insert_resource(KillCountHudConfigHandle(kill_count_handle))
+            .insert_resource(GoldHudConfigHandle(gold_handle))
             .insert_resource(WeaponSlotsHudConfigHandle(weapon_slots_handle));
 
         app.add_systems(Update, hot_reload_ui_style)
@@ -283,6 +289,7 @@ impl Plugin for UiConfigPlugin {
                 Update,
                 crate::hud::gameplay::kill_count::hot_reload_kill_count_hud,
             )
+            .add_systems(Update, crate::hud::gameplay::gold::hot_reload_gold_hud)
             .add_systems(
                 Update,
                 crate::hud::gameplay::weapon_slots::hot_reload_weapon_slots_hud,

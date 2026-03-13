@@ -11,11 +11,13 @@
 //! | `config/ui/hud/gameplay/boss_warning.ron`         | [`BossWarningHudConfig`]          | Boss warning timing, font, color      |
 //! | `config/ui/hud/gameplay/boss_hp_bar.ron`          | [`BossHpBarHudConfig`]            | Boss HP bar dimensions and colors     |
 //! | `config/ui/hud/gameplay/kill_count.ron`           | [`KillCountHudConfig`]            | Kill count label font and color       |
+//! | `config/ui/hud/gameplay/gold.ron`                 | [`GoldHudConfig`]                 | Gold label font and color             |
 //! | `config/ui/hud/gameplay/weapon_slots.ron`         | [`WeaponSlotsHudConfig`]          | Weapon slot dimensions and colors     |
 
 pub mod boss_hp_bar;
 pub mod boss_warning;
 pub mod evolution_notification;
+pub mod gold;
 pub mod hp_bar;
 pub mod kill_count;
 pub mod layout;
@@ -30,6 +32,7 @@ pub use evolution_notification::{
     EvolutionNotificationHudConfig, EvolutionNotificationHudConfigHandle,
     EvolutionNotificationHudParams,
 };
+pub use gold::{GoldHudConfig, GoldHudConfigHandle, GoldHudParams};
 pub use hp_bar::{HpBarHudConfig, HpBarHudConfigHandle, HpBarHudParams};
 pub use kill_count::{KillCountHudConfig, KillCountHudConfigHandle, KillCountHudParams};
 pub use layout::{GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle, GameplayHudLayoutParams};

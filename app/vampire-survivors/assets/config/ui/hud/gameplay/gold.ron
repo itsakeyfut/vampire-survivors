@@ -1,0 +1,5 @@
+GoldHudConfig(
+    font_size:       14.0,
+    text_color:      (r: 1.0, g: 0.85, b: 0.2),
+    vertical_offset: 20.0,
+)
