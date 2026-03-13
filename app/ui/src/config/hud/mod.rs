@@ -25,11 +25,12 @@ pub use gameplay::{
     BossHpBarHudConfig, BossHpBarHudConfigHandle, BossHpBarHudParams, BossWarningHudConfig,
     BossWarningHudConfigHandle, BossWarningHudParams, EvolutionNotificationHudConfig,
     EvolutionNotificationHudConfigHandle, EvolutionNotificationHudParams, GameplayHudLayoutConfig,
-    GameplayHudLayoutConfigHandle, GameplayHudLayoutParams, HpBarHudConfig, HpBarHudConfigHandle,
-    HpBarHudParams, KillCountHudConfig, KillCountHudConfigHandle, KillCountHudParams,
-    LevelHudConfig, LevelHudConfigHandle, LevelHudParams, TimerHudConfig, TimerHudConfigHandle,
-    TimerHudParams, WeaponSlotsHudConfig, WeaponSlotsHudConfigHandle, WeaponSlotsHudParams,
-    XpBarHudConfig, XpBarHudConfigHandle, XpBarHudParams,
+    GameplayHudLayoutConfigHandle, GameplayHudLayoutParams, GoldHudConfig, GoldHudConfigHandle,
+    GoldHudParams, HpBarHudConfig, HpBarHudConfigHandle, HpBarHudParams, KillCountHudConfig,
+    KillCountHudConfigHandle, KillCountHudParams, LevelHudConfig, LevelHudConfigHandle,
+    LevelHudParams, TimerHudConfig, TimerHudConfigHandle, TimerHudParams, WeaponSlotsHudConfig,
+    WeaponSlotsHudConfigHandle, WeaponSlotsHudParams, XpBarHudConfig, XpBarHudConfigHandle,
+    XpBarHudParams,
 };
 pub use menu_button::{MenuButtonHudConfig, MenuButtonHudConfigHandle, MenuButtonHudParams};
 pub use screen_heading::{
