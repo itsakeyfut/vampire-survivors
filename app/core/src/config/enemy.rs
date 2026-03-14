@@ -7,6 +7,16 @@ use serde::Deserialize;
 use crate::types::EnemyType;
 
 // ---------------------------------------------------------------------------
+// Fallback constants (used while enemy.ron is still loading)
+// ---------------------------------------------------------------------------
+
+/// Base enemy spawn interval in seconds when difficulty multiplier is 1.0.
+///
+/// Single source of truth — import this instead of redefining the constant
+/// in each system file.
+pub(crate) const DEFAULT_ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
+
+// ---------------------------------------------------------------------------
 // Medusa AI behavior config
 // ---------------------------------------------------------------------------
 
@@ -158,6 +168,13 @@ impl<'w> EnemyParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    /// Returns the base spawn interval, falling back to [`DEFAULT_ENEMY_SPAWN_BASE_INTERVAL`].
+    pub fn spawn_base_interval(&self) -> f32 {
+        self.get()
+            .map(|c| c.spawn_base_interval)
+            .unwrap_or(DEFAULT_ENEMY_SPAWN_BASE_INTERVAL)
     }
 }
 

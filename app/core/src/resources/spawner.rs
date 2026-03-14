@@ -1,11 +1,6 @@
 use bevy::prelude::*;
 
-// ---------------------------------------------------------------------------
-// Fallback constants (used when RON config is not yet loaded)
-// ---------------------------------------------------------------------------
-
-/// Base enemy spawn interval in seconds.
-const DEFAULT_ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
+use crate::config::enemy::DEFAULT_ENEMY_SPAWN_BASE_INTERVAL;
 
 /// Controls enemy spawn timing and difficulty scaling.
 #[derive(Resource, Debug)]
