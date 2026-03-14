@@ -17,20 +17,6 @@ use bevy::prelude::*;
 use crate::{config::GameParams, events::LevelUpEvent, resources::GameData, states::AppState};
 
 // ---------------------------------------------------------------------------
-// Fallback constants
-// ---------------------------------------------------------------------------
-
-/// XP required for the very first level-up.
-///
-/// Used when the RON game config has not yet loaded.
-const DEFAULT_XP_LEVEL_BASE: u32 = 20;
-
-/// Exponential multiplier applied to the XP threshold on each level-up.
-///
-/// Used when the RON game config has not yet loaded.
-const DEFAULT_XP_LEVEL_MULTIPLIER: f32 = 1.2;
-
-// ---------------------------------------------------------------------------
 // System
 // ---------------------------------------------------------------------------
 
@@ -55,14 +41,8 @@ pub fn check_level_up(
     game_data.current_level += 1;
 
     // Recompute the threshold for the next level using the exponential curve.
-    let base = game_cfg
-        .get()
-        .map(|c| c.xp_level_base)
-        .unwrap_or(DEFAULT_XP_LEVEL_BASE);
-    let mult = game_cfg
-        .get()
-        .map(|c| c.xp_level_multiplier)
-        .unwrap_or(DEFAULT_XP_LEVEL_MULTIPLIER);
+    let base = game_cfg.xp_level_base();
+    let mult = game_cfg.xp_level_multiplier();
     game_data.xp_to_next_level =
         (base as f32 * mult.powi(game_data.current_level as i32 - 1)).round() as u32;
 

@@ -22,6 +22,7 @@ pub(crate) const DEFAULT_MAX_PASSIVES: usize = 6;
 
 // --- XP / levelling ---
 pub(crate) const DEFAULT_XP_LEVEL_BASE: u32 = 20;
+pub(crate) const DEFAULT_XP_LEVEL_MULTIPLIER: f32 = 1.2;
 pub(crate) const DEFAULT_CHOICE_COUNT: usize = 3;
 pub(crate) const DEFAULT_LUCK_BONUS_CHOICE_THRESHOLD: f32 = 1.5;
 
@@ -276,6 +277,12 @@ impl<'w> GameParams<'w> {
         self.get()
             .map(|c| c.xp_level_base)
             .unwrap_or(DEFAULT_XP_LEVEL_BASE)
+    }
+
+    pub fn xp_level_multiplier(&self) -> f32 {
+        self.get()
+            .map(|c| c.xp_level_multiplier)
+            .unwrap_or(DEFAULT_XP_LEVEL_MULTIPLIER)
     }
 
     pub fn choice_count(&self) -> usize {
