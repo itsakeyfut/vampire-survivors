@@ -630,7 +630,11 @@ mod tests {
             );
 
             // Clean up spawned entities before the next iteration.
-            let entities: Vec<Entity> = app.world_mut().iter_entities().map(|e| e.id()).collect();
+            let entities: Vec<Entity> = app
+                .world_mut()
+                .query::<Entity>()
+                .iter(app.world())
+                .collect();
             for e in entities {
                 app.world_mut().despawn(e);
             }
