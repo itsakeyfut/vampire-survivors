@@ -17,6 +17,7 @@ const DEFAULT_DAMAGE_PER_TWO_LEVELS: f32 = 5.0;
 const DEFAULT_LIFETIME: f32 = 5.0;
 const DEFAULT_COLLIDER_RADIUS: f32 = 6.0;
 const DEFAULT_SPREAD_ANGLE_DEG: f32 = 15.0;
+const DEFAULT_COUNT_BY_LEVEL: &[u32] = &[1, 1, 2, 2, 3, 3, 4, 5];
 
 /// Deserialization mirror of [`KnifeConfig`] — every field is `Option<T>` so
 /// RON files with missing fields still load and emit a `warn!` instead of failing.
@@ -95,7 +96,7 @@ impl From<KnifeConfigPartial> for KnifeConfig {
             }),
             count_by_level: p.count_by_level.unwrap_or_else(|| {
                 warn!("knife.ron: `count_by_level` missing → using default");
-                vec![]
+                DEFAULT_COUNT_BY_LEVEL.to_vec()
             }),
         }
     }

@@ -48,22 +48,57 @@ const DEFAULT_MINI_BOSS_INTERVAL: f32 = 180.0;
 // ---------------------------------------------------------------------------
 
 /// Behavior parameters for the Medusa ranged enemy, deserialized from RON.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct MedusaBehaviorConfig {
-    /// Minimum keep distance from the player (pixels).  Medusa moves away
-    /// from the player when closer than this value.
     pub keep_min_dist: f32,
-    /// Maximum keep distance from the player (pixels).  Medusa moves toward
-    /// the player when farther than this value.
     pub keep_max_dist: f32,
-    /// Seconds between petrification-projectile shots.
     pub attack_interval: f32,
-    /// Speed of the fired projectile (pixels/second).
     pub projectile_speed: f32,
-    /// Lifetime of the projectile before it despawns (seconds).
     pub projectile_lifetime: f32,
-    /// Collider radius of the projectile (pixels).
     pub projectile_radius: f32,
+}
+
+/// Deserialization mirror of [`MedusaBehaviorConfig`].
+#[derive(Deserialize, Default)]
+#[serde(default)]
+pub(super) struct MedusaBehaviorConfigPartial {
+    pub keep_min_dist: Option<f32>,
+    pub keep_max_dist: Option<f32>,
+    pub attack_interval: Option<f32>,
+    pub projectile_speed: Option<f32>,
+    pub projectile_lifetime: Option<f32>,
+    pub projectile_radius: Option<f32>,
+}
+
+impl From<MedusaBehaviorConfigPartial> for MedusaBehaviorConfig {
+    fn from(p: MedusaBehaviorConfigPartial) -> Self {
+        MedusaBehaviorConfig {
+            keep_min_dist: p.keep_min_dist.unwrap_or_else(|| {
+                warn!("enemy.ron: `medusa_behavior.keep_min_dist` missing → using built-in baseline");
+                150.0
+            }),
+            keep_max_dist: p.keep_max_dist.unwrap_or_else(|| {
+                warn!("enemy.ron: `medusa_behavior.keep_max_dist` missing → using built-in baseline");
+                250.0
+            }),
+            attack_interval: p.attack_interval.unwrap_or_else(|| {
+                warn!("enemy.ron: `medusa_behavior.attack_interval` missing → using built-in baseline");
+                2.0
+            }),
+            projectile_speed: p.projectile_speed.unwrap_or_else(|| {
+                warn!("enemy.ron: `medusa_behavior.projectile_speed` missing → using built-in baseline");
+                180.0
+            }),
+            projectile_lifetime: p.projectile_lifetime.unwrap_or_else(|| {
+                warn!("enemy.ron: `medusa_behavior.projectile_lifetime` missing → using built-in baseline");
+                5.0
+            }),
+            projectile_radius: p.projectile_radius.unwrap_or_else(|| {
+                warn!("enemy.ron: `medusa_behavior.projectile_radius` missing → using built-in baseline");
+                5.0
+            }),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -71,16 +106,45 @@ pub struct MedusaBehaviorConfig {
 // ---------------------------------------------------------------------------
 
 /// Behavior parameters for the Dragon enemy, deserialized from RON.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct DragonBehaviorConfig {
-    /// Seconds between fireball shots.
     pub attack_interval: f32,
-    /// Speed of the fired fireball (pixels/second).
     pub fireball_speed: f32,
-    /// Lifetime of the fireball before it despawns (seconds).
     pub fireball_lifetime: f32,
-    /// Collider radius of the fireball (pixels).
     pub fireball_radius: f32,
+}
+
+/// Deserialization mirror of [`DragonBehaviorConfig`].
+#[derive(Deserialize, Default)]
+#[serde(default)]
+pub(super) struct DragonBehaviorConfigPartial {
+    pub attack_interval: Option<f32>,
+    pub fireball_speed: Option<f32>,
+    pub fireball_lifetime: Option<f32>,
+    pub fireball_radius: Option<f32>,
+}
+
+impl From<DragonBehaviorConfigPartial> for DragonBehaviorConfig {
+    fn from(p: DragonBehaviorConfigPartial) -> Self {
+        DragonBehaviorConfig {
+            attack_interval: p.attack_interval.unwrap_or_else(|| {
+                warn!("enemy.ron: `dragon_behavior.attack_interval` missing → using built-in baseline");
+                3.0
+            }),
+            fireball_speed: p.fireball_speed.unwrap_or_else(|| {
+                warn!("enemy.ron: `dragon_behavior.fireball_speed` missing → using built-in baseline");
+                200.0
+            }),
+            fireball_lifetime: p.fireball_lifetime.unwrap_or_else(|| {
+                warn!("enemy.ron: `dragon_behavior.fireball_lifetime` missing → using built-in baseline");
+                6.0
+            }),
+            fireball_radius: p.fireball_radius.unwrap_or_else(|| {
+                warn!("enemy.ron: `dragon_behavior.fireball_radius` missing → using built-in baseline");
+                7.0
+            }),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -88,7 +152,7 @@ pub struct DragonBehaviorConfig {
 // ---------------------------------------------------------------------------
 
 /// Base stats for a single enemy type, deserialized from RON.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct EnemyStatsEntry {
     pub base_hp: f32,
     pub speed: f32,
@@ -103,69 +167,73 @@ pub struct EnemyStatsEntry {
     pub spawn_weight: f32,
 }
 
+/// Deserialization mirror of [`EnemyStatsEntry`].
+#[derive(Deserialize, Default)]
+#[serde(default)]
+pub(super) struct EnemyStatsEntryPartial {
+    pub base_hp: Option<f32>,
+    pub speed: Option<f32>,
+    pub damage: Option<f32>,
+    pub xp_value: Option<u32>,
+    pub gold_chance: Option<f32>,
+    pub collider_radius: Option<f32>,
+    pub spawn_weight: Option<f32>,
+}
+
+impl EnemyStatsEntryPartial {
+    fn into_entry(self, field_prefix: &str) -> EnemyStatsEntry {
+        EnemyStatsEntry {
+            base_hp: self.base_hp.unwrap_or_else(|| {
+                warn!("enemy.ron: `{field_prefix}.base_hp` missing → using built-in baseline");
+                1.0
+            }),
+            speed: self.speed.unwrap_or_else(|| {
+                warn!("enemy.ron: `{field_prefix}.speed` missing → using built-in baseline");
+                50.0
+            }),
+            damage: self.damage.unwrap_or_else(|| {
+                warn!("enemy.ron: `{field_prefix}.damage` missing → using built-in baseline");
+                1.0
+            }),
+            xp_value: self.xp_value.unwrap_or_else(|| {
+                warn!("enemy.ron: `{field_prefix}.xp_value` missing → using built-in baseline");
+                1
+            }),
+            gold_chance: self.gold_chance.unwrap_or_else(|| {
+                warn!("enemy.ron: `{field_prefix}.gold_chance` missing → using built-in baseline");
+                0.0
+            }),
+            collider_radius: self.collider_radius.unwrap_or_else(|| {
+                warn!("enemy.ron: `{field_prefix}.collider_radius` missing → using built-in baseline");
+                8.0
+            }),
+            spawn_weight: self.spawn_weight.unwrap_or_else(|| {
+                warn!("enemy.ron: `{field_prefix}.spawn_weight` missing → using built-in baseline");
+                0.0
+            }),
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Asset type
 // ---------------------------------------------------------------------------
-
-fn default_enemy_stats_entry(field_name: &str) -> EnemyStatsEntry {
-    warn!(
-        "enemy.ron: `{}` missing → using default zero stats",
-        field_name
-    );
-    EnemyStatsEntry {
-        base_hp: 1.0,
-        speed: 50.0,
-        damage: 1.0,
-        xp_value: 1,
-        gold_chance: 0.0,
-        collider_radius: 8.0,
-        spawn_weight: 0.0,
-    }
-}
-
-fn default_medusa_behavior(field_name: &str) -> MedusaBehaviorConfig {
-    warn!(
-        "enemy.ron: `{}` missing → using default zero stats",
-        field_name
-    );
-    MedusaBehaviorConfig {
-        keep_min_dist: 150.0,
-        keep_max_dist: 250.0,
-        attack_interval: 2.0,
-        projectile_speed: 180.0,
-        projectile_lifetime: 5.0,
-        projectile_radius: 5.0,
-    }
-}
-
-fn default_dragon_behavior(field_name: &str) -> DragonBehaviorConfig {
-    warn!(
-        "enemy.ron: `{}` missing → using default zero stats",
-        field_name
-    );
-    DragonBehaviorConfig {
-        attack_interval: 3.0,
-        fireball_speed: 200.0,
-        fireball_lifetime: 6.0,
-        fireball_radius: 7.0,
-    }
-}
 
 /// Deserialization mirror of [`EnemyConfig`] — every field is `Option<T>` so
 /// RON files with missing fields still load and emit a `warn!` instead of failing.
 #[derive(Deserialize, Default)]
 #[serde(default, rename = "EnemyConfig")]
 pub(super) struct EnemyConfigPartial {
-    pub bat: Option<EnemyStatsEntry>,
-    pub skeleton: Option<EnemyStatsEntry>,
-    pub zombie: Option<EnemyStatsEntry>,
-    pub ghost: Option<EnemyStatsEntry>,
-    pub demon: Option<EnemyStatsEntry>,
-    pub medusa: Option<EnemyStatsEntry>,
-    pub dragon: Option<EnemyStatsEntry>,
-    pub boss_death: Option<EnemyStatsEntry>,
-    pub mini_death: Option<EnemyStatsEntry>,
-    pub mini_boss: Option<EnemyStatsEntry>,
+    pub bat: Option<EnemyStatsEntryPartial>,
+    pub skeleton: Option<EnemyStatsEntryPartial>,
+    pub zombie: Option<EnemyStatsEntryPartial>,
+    pub ghost: Option<EnemyStatsEntryPartial>,
+    pub demon: Option<EnemyStatsEntryPartial>,
+    pub medusa: Option<EnemyStatsEntryPartial>,
+    pub dragon: Option<EnemyStatsEntryPartial>,
+    pub boss_death: Option<EnemyStatsEntryPartial>,
+    pub mini_death: Option<EnemyStatsEntryPartial>,
+    pub mini_boss: Option<EnemyStatsEntryPartial>,
     pub spawn_base_interval: Option<f32>,
     pub max_count: Option<usize>,
     pub cull_distance: Option<f32>,
@@ -177,8 +245,8 @@ pub(super) struct EnemyConfigPartial {
     pub medusa_unlock_secs: Option<f32>,
     pub dragon_unlock_secs: Option<f32>,
     pub mini_boss_interval: Option<f32>,
-    pub medusa_behavior: Option<MedusaBehaviorConfig>,
-    pub dragon_behavior: Option<DragonBehaviorConfig>,
+    pub medusa_behavior: Option<MedusaBehaviorConfigPartial>,
+    pub dragon_behavior: Option<DragonBehaviorConfigPartial>,
 }
 
 /// Full enemy configuration, loaded from `assets/config/enemy.ron`.
@@ -229,34 +297,44 @@ impl From<EnemyConfigPartial> for EnemyConfig {
         EnemyConfig {
             bat: p
                 .bat
-                .unwrap_or_else(|| default_enemy_stats_entry("bat")),
+                .unwrap_or_default()
+                .into_entry("bat"),
             skeleton: p
                 .skeleton
-                .unwrap_or_else(|| default_enemy_stats_entry("skeleton")),
+                .unwrap_or_default()
+                .into_entry("skeleton"),
             zombie: p
                 .zombie
-                .unwrap_or_else(|| default_enemy_stats_entry("zombie")),
+                .unwrap_or_default()
+                .into_entry("zombie"),
             ghost: p
                 .ghost
-                .unwrap_or_else(|| default_enemy_stats_entry("ghost")),
+                .unwrap_or_default()
+                .into_entry("ghost"),
             demon: p
                 .demon
-                .unwrap_or_else(|| default_enemy_stats_entry("demon")),
+                .unwrap_or_default()
+                .into_entry("demon"),
             medusa: p
                 .medusa
-                .unwrap_or_else(|| default_enemy_stats_entry("medusa")),
+                .unwrap_or_default()
+                .into_entry("medusa"),
             dragon: p
                 .dragon
-                .unwrap_or_else(|| default_enemy_stats_entry("dragon")),
+                .unwrap_or_default()
+                .into_entry("dragon"),
             boss_death: p
                 .boss_death
-                .unwrap_or_else(|| default_enemy_stats_entry("boss_death")),
+                .unwrap_or_default()
+                .into_entry("boss_death"),
             mini_death: p
                 .mini_death
-                .unwrap_or_else(|| default_enemy_stats_entry("mini_death")),
+                .unwrap_or_default()
+                .into_entry("mini_death"),
             mini_boss: p
                 .mini_boss
-                .unwrap_or_else(|| default_enemy_stats_entry("mini_boss")),
+                .unwrap_or_default()
+                .into_entry("mini_boss"),
             spawn_base_interval: p.spawn_base_interval.unwrap_or_else(|| {
                 warn!(
                     "enemy.ron: `spawn_base_interval` missing → using default {DEFAULT_ENEMY_SPAWN_BASE_INTERVAL}"
@@ -323,12 +401,18 @@ impl From<EnemyConfigPartial> for EnemyConfig {
                 );
                 DEFAULT_MINI_BOSS_INTERVAL
             }),
-            medusa_behavior: p
-                .medusa_behavior
-                .unwrap_or_else(|| default_medusa_behavior("medusa_behavior")),
-            dragon_behavior: p
-                .dragon_behavior
-                .unwrap_or_else(|| default_dragon_behavior("dragon_behavior")),
+            medusa_behavior: MedusaBehaviorConfig::from(
+                p.medusa_behavior.unwrap_or_else(|| {
+                    warn!("enemy.ron: `medusa_behavior` block missing → using built-in baseline");
+                    MedusaBehaviorConfigPartial::default()
+                }),
+            ),
+            dragon_behavior: DragonBehaviorConfig::from(
+                p.dragon_behavior.unwrap_or_else(|| {
+                    warn!("enemy.ron: `dragon_behavior` block missing → using built-in baseline");
+                    DragonBehaviorConfigPartial::default()
+                }),
+            ),
         }
     }
 }

@@ -12,6 +12,13 @@ use serde::Deserialize;
 
 const DEFAULT_SPREAD_ANGLE_DEG: f32 = 30.0;
 const DEFAULT_COLLIDER_RADIUS: f32 = 8.0;
+const DEFAULT_DAMAGE_BY_LEVEL: &[f32] =
+    &[50.0, 60.0, 70.0, 80.0, 90.0, 110.0, 130.0, 160.0];
+const DEFAULT_SPEED_BY_LEVEL: &[f32] =
+    &[300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 430.0, 460.0];
+const DEFAULT_MAX_RANGE_BY_LEVEL: &[f32] =
+    &[150.0, 160.0, 175.0, 190.0, 205.0, 220.0, 235.0, 250.0];
+const DEFAULT_COUNT_BY_LEVEL: &[u32] = &[1, 1, 1, 1, 2, 2, 2, 2];
 
 /// Deserialization mirror of [`CrossConfig`] — every field is `Option<T>` so
 /// RON files with missing fields still load and emit a `warn!` instead of failing.
@@ -48,19 +55,19 @@ impl From<CrossConfigPartial> for CrossConfig {
         CrossConfig {
             damage_by_level: p.damage_by_level.unwrap_or_else(|| {
                 warn!("cross.ron: `damage_by_level` missing → using default");
-                vec![]
+                DEFAULT_DAMAGE_BY_LEVEL.to_vec()
             }),
             speed_by_level: p.speed_by_level.unwrap_or_else(|| {
                 warn!("cross.ron: `speed_by_level` missing → using default");
-                vec![]
+                DEFAULT_SPEED_BY_LEVEL.to_vec()
             }),
             max_range_by_level: p.max_range_by_level.unwrap_or_else(|| {
                 warn!("cross.ron: `max_range_by_level` missing → using default");
-                vec![]
+                DEFAULT_MAX_RANGE_BY_LEVEL.to_vec()
             }),
             count_by_level: p.count_by_level.unwrap_or_else(|| {
                 warn!("cross.ron: `count_by_level` missing → using default");
-                vec![]
+                DEFAULT_COUNT_BY_LEVEL.to_vec()
             }),
             spread_angle_deg: p.spread_angle_deg.unwrap_or_else(|| {
                 warn!(

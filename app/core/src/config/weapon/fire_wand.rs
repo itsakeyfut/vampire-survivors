@@ -15,6 +15,12 @@ const DEFAULT_LIFETIME: f32 = 3.0;
 const DEFAULT_COLLIDER_RADIUS: f32 = 12.0;
 const DEFAULT_EXPLOSION_DURATION: f32 = 0.3;
 const DEFAULT_EXPLOSION_Z: f32 = 7.0;
+const DEFAULT_DAMAGE_BY_LEVEL: [f32; 8] =
+    [80.0, 100.0, 120.0, 150.0, 180.0, 220.0, 270.0, 330.0];
+const DEFAULT_AOE_DAMAGE_BY_LEVEL: [f32; 8] =
+    [40.0, 50.0, 60.0, 75.0, 90.0, 110.0, 135.0, 165.0];
+const DEFAULT_AOE_RADIUS_BY_LEVEL: [f32; 8] =
+    [80.0, 90.0, 100.0, 110.0, 120.0, 130.0, 140.0, 150.0];
 
 /// Deserialization mirror of [`FireWandConfig`] — every field is `Option<T>` so
 /// RON files with missing fields still load and emit a `warn!` instead of failing.
@@ -60,15 +66,15 @@ impl From<FireWandConfigPartial> for FireWandConfig {
         FireWandConfig {
             damage_by_level: p.damage_by_level.unwrap_or_else(|| {
                 warn!("fire_wand.ron: `damage_by_level` missing → using default");
-                [0.0; 8]
+                DEFAULT_DAMAGE_BY_LEVEL
             }),
             aoe_damage_by_level: p.aoe_damage_by_level.unwrap_or_else(|| {
                 warn!("fire_wand.ron: `aoe_damage_by_level` missing → using default");
-                [0.0; 8]
+                DEFAULT_AOE_DAMAGE_BY_LEVEL
             }),
             aoe_radius_by_level: p.aoe_radius_by_level.unwrap_or_else(|| {
                 warn!("fire_wand.ron: `aoe_radius_by_level` missing → using default");
-                [0.0; 8]
+                DEFAULT_AOE_RADIUS_BY_LEVEL
             }),
             speed: p.speed.unwrap_or_else(|| {
                 warn!("fire_wand.ron: `speed` missing → using default {DEFAULT_SPEED}");

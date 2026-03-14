@@ -4,21 +4,88 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use serde::Deserialize;
 
-use crate::types::{CharacterBaseStats, CharacterType};
+use crate::types::{CharacterBaseStats, CharacterType, WeaponType};
 
 // ---------------------------------------------------------------------------
-// Asset type
+// Partial structs for deserialization
 // ---------------------------------------------------------------------------
+
+/// Deserialization mirror of [`CharacterBaseStats`] — every field is `Option<T>`
+/// so RON blocks with missing inner fields still load and emit `warn!`.
+#[derive(Deserialize, Default)]
+#[serde(default)]
+pub(super) struct CharacterBaseStatsPartial {
+    pub max_hp: Option<f32>,
+    pub move_speed: Option<f32>,
+    pub starting_weapon: Option<WeaponType>,
+    pub damage_multiplier: Option<f32>,
+    pub cooldown_reduction: Option<f32>,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub unlock_cost: Option<u32>,
+}
+
+impl CharacterBaseStatsPartial {
+    /// Converts into a full [`CharacterBaseStats`], using the built-in baseline
+    /// stats for `char_type` as fallbacks for any missing field.
+    fn into_stats(self, char_type: CharacterType, field_prefix: &str) -> CharacterBaseStats {
+        let fallback = crate::types::get_character_stats(char_type);
+        CharacterBaseStats {
+            max_hp: self.max_hp.unwrap_or_else(|| {
+                warn!(
+                    "character.ron: `{field_prefix}.max_hp` missing → using built-in baseline"
+                );
+                fallback.max_hp
+            }),
+            move_speed: self.move_speed.unwrap_or_else(|| {
+                warn!(
+                    "character.ron: `{field_prefix}.move_speed` missing → using built-in baseline"
+                );
+                fallback.move_speed
+            }),
+            starting_weapon: self.starting_weapon.unwrap_or_else(|| {
+                warn!("character.ron: `{field_prefix}.starting_weapon` missing → using built-in baseline");
+                fallback.starting_weapon
+            }),
+            damage_multiplier: self.damage_multiplier.unwrap_or_else(|| {
+                warn!("character.ron: `{field_prefix}.damage_multiplier` missing → using built-in baseline");
+                fallback.damage_multiplier
+            }),
+            cooldown_reduction: self.cooldown_reduction.unwrap_or_else(|| {
+                warn!("character.ron: `{field_prefix}.cooldown_reduction` missing → using built-in baseline");
+                fallback.cooldown_reduction
+            }),
+            name: self.name.unwrap_or_else(|| {
+                warn!(
+                    "character.ron: `{field_prefix}.name` missing → using built-in baseline"
+                );
+                fallback.name.clone()
+            }),
+            description: self.description.unwrap_or_else(|| {
+                warn!(
+                    "character.ron: `{field_prefix}.description` missing → using built-in baseline"
+                );
+                fallback.description.clone()
+            }),
+            unlock_cost: self.unlock_cost.unwrap_or_else(|| {
+                warn!(
+                    "character.ron: `{field_prefix}.unlock_cost` missing → using built-in baseline"
+                );
+                fallback.unlock_cost
+            }),
+        }
+    }
+}
 
 /// Deserialization mirror of [`CharacterConfig`] — every field is `Option<T>` so
 /// RON files with missing fields still load and emit a `warn!` instead of failing.
 #[derive(Deserialize, Default)]
 #[serde(default, rename = "CharacterConfig")]
 pub(super) struct CharacterConfigPartial {
-    pub default_character: Option<CharacterBaseStats>,
-    pub magician: Option<CharacterBaseStats>,
-    pub thief: Option<CharacterBaseStats>,
-    pub knight: Option<CharacterBaseStats>,
+    pub default_character: Option<CharacterBaseStatsPartial>,
+    pub magician: Option<CharacterBaseStatsPartial>,
+    pub thief: Option<CharacterBaseStatsPartial>,
+    pub knight: Option<CharacterBaseStatsPartial>,
 }
 
 /// Full character configuration, loaded from `assets/config/character.ron`.
@@ -37,22 +104,22 @@ pub struct CharacterConfig {
 impl From<CharacterConfigPartial> for CharacterConfig {
     fn from(p: CharacterConfigPartial) -> Self {
         CharacterConfig {
-            default_character: p.default_character.unwrap_or_else(|| {
-                warn!("character.ron: `default_character` missing → using default zero stats");
-                crate::types::get_character_stats(CharacterType::DefaultCharacter)
-            }),
-            magician: p.magician.unwrap_or_else(|| {
-                warn!("character.ron: `magician` missing → using default zero stats");
-                crate::types::get_character_stats(CharacterType::Magician)
-            }),
-            thief: p.thief.unwrap_or_else(|| {
-                warn!("character.ron: `thief` missing → using default zero stats");
-                crate::types::get_character_stats(CharacterType::Thief)
-            }),
-            knight: p.knight.unwrap_or_else(|| {
-                warn!("character.ron: `knight` missing → using default zero stats");
-                crate::types::get_character_stats(CharacterType::Knight)
-            }),
+            default_character: p
+                .default_character
+                .unwrap_or_default()
+                .into_stats(CharacterType::DefaultCharacter, "default_character"),
+            magician: p
+                .magician
+                .unwrap_or_default()
+                .into_stats(CharacterType::Magician, "magician"),
+            thief: p
+                .thief
+                .unwrap_or_default()
+                .into_stats(CharacterType::Thief, "thief"),
+            knight: p
+                .knight
+                .unwrap_or_default()
+                .into_stats(CharacterType::Knight, "knight"),
         }
     }
 }

@@ -12,6 +12,13 @@ use serde::Deserialize;
 
 const DEFAULT_ORB_COLLISION_RADIUS: f32 = 12.0;
 const DEFAULT_HIT_COOLDOWN_SECS: f32 = 1.5;
+const DEFAULT_DAMAGE_BY_LEVEL: &[f32] =
+    &[20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0, 80.0];
+const DEFAULT_ORBIT_RADIUS_BY_LEVEL: &[f32] =
+    &[80.0, 80.0, 80.0, 90.0, 90.0, 100.0, 100.0, 110.0];
+const DEFAULT_ORBIT_SPEED_BY_LEVEL: &[f32] =
+    &[2.0, 2.0, 2.3, 2.3, 2.5, 2.5, 2.8, 3.0];
+const DEFAULT_COUNT_BY_LEVEL: &[u32] = &[1, 1, 2, 2, 3, 3, 3, 3];
 
 /// Deserialization mirror of [`BibleConfig`] — every field is `Option<T>` so
 /// RON files with missing fields still load and emit a `warn!` instead of failing.
@@ -48,19 +55,19 @@ impl From<BibleConfigPartial> for BibleConfig {
         BibleConfig {
             damage_by_level: p.damage_by_level.unwrap_or_else(|| {
                 warn!("bible.ron: `damage_by_level` missing → using default");
-                vec![]
+                DEFAULT_DAMAGE_BY_LEVEL.to_vec()
             }),
             orbit_radius_by_level: p.orbit_radius_by_level.unwrap_or_else(|| {
                 warn!("bible.ron: `orbit_radius_by_level` missing → using default");
-                vec![]
+                DEFAULT_ORBIT_RADIUS_BY_LEVEL.to_vec()
             }),
             orbit_speed_by_level: p.orbit_speed_by_level.unwrap_or_else(|| {
                 warn!("bible.ron: `orbit_speed_by_level` missing → using default");
-                vec![]
+                DEFAULT_ORBIT_SPEED_BY_LEVEL.to_vec()
             }),
             count_by_level: p.count_by_level.unwrap_or_else(|| {
                 warn!("bible.ron: `count_by_level` missing → using default");
-                vec![]
+                DEFAULT_COUNT_BY_LEVEL.to_vec()
             }),
             orb_collision_radius: p.orb_collision_radius.unwrap_or_else(|| {
                 warn!(
