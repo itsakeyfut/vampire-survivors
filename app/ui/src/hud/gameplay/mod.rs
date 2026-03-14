@@ -56,8 +56,8 @@ use crate::i18n::font_for_lang;
 // Constants
 // ---------------------------------------------------------------------------
 
-/// Height of the XP bar (10 px) plus a small gap — positions bottom widgets above it.
-const BOTTOM_WIDGET_OFFSET: f32 = 18.0;
+/// Gap between the top of the XP bar and the widgets anchored just above it.
+const BOTTOM_WIDGET_GAP: f32 = 8.0;
 
 // ---------------------------------------------------------------------------
 // Anchor marker components
@@ -120,6 +120,7 @@ pub fn setup_gameplay_hud(
         .unwrap_or_default();
 
     let edge = layout_cfg.edge_margin();
+    let bottom_widget_offset = xp_bar_cfg.bar_height() + BOTTOM_WIDGET_GAP;
 
     commands
         .spawn((
@@ -186,7 +187,7 @@ pub fn setup_gameplay_hud(
             root.spawn((
                 Node {
                     position_type: PositionType::Absolute,
-                    bottom: Val::Px(BOTTOM_WIDGET_OFFSET),
+                    bottom: Val::Px(bottom_widget_offset),
                     left: Val::Px(0.0),
                     right: Val::Px(0.0),
                     justify_content: JustifyContent::Center,
@@ -205,7 +206,7 @@ pub fn setup_gameplay_hud(
             root.spawn((
                 Node {
                     position_type: PositionType::Absolute,
-                    bottom: Val::Px(BOTTOM_WIDGET_OFFSET + gold_extra),
+                    bottom: Val::Px(bottom_widget_offset + gold_extra),
                     right: Val::Px(edge),
                     ..default()
                 },
@@ -221,7 +222,7 @@ pub fn setup_gameplay_hud(
             root.spawn((
                 Node {
                     position_type: PositionType::Absolute,
-                    bottom: Val::Px(BOTTOM_WIDGET_OFFSET),
+                    bottom: Val::Px(bottom_widget_offset),
                     right: Val::Px(edge),
                     ..default()
                 },
@@ -257,6 +258,7 @@ pub fn setup_gameplay_hud(
 /// Repositions HUD anchor nodes when `config/ui/hud/gameplay/layout.ron` is
 /// loaded or modified.
 #[allow(clippy::type_complexity)]
+#[allow(clippy::too_many_arguments)]
 pub fn hot_reload_gameplay_layout(
     mut events: MessageReader<AssetEvent<GameplayHudLayoutConfig>>,
     cfg_assets: Res<Assets<GameplayHudLayoutConfig>>,
@@ -269,6 +271,25 @@ pub fn hot_reload_gameplay_layout(
             With<HudTimerAnchor>,
             Without<HudHpBarAnchor>,
             Without<HudLevelAnchor>,
+        ),
+    >,
+    mut gold_q: Query<
+        &mut Node,
+        (
+            With<HudGoldAnchor>,
+            Without<HudHpBarAnchor>,
+            Without<HudLevelAnchor>,
+            Without<HudTimerAnchor>,
+        ),
+    >,
+    mut kill_q: Query<
+        &mut Node,
+        (
+            With<HudKillCountAnchor>,
+            Without<HudHpBarAnchor>,
+            Without<HudLevelAnchor>,
+            Without<HudTimerAnchor>,
+            Without<HudGoldAnchor>,
         ),
     >,
 ) {
@@ -307,6 +328,11 @@ pub fn hot_reload_gameplay_layout(
             node.top = Val::Px(edge);
             node.right = Val::Px(edge);
         }
-        // XP bar, weapon slots, and kill count use fixed bottom offsets — not updated here.
+        if let Ok(mut node) = gold_q.single_mut() {
+            node.right = Val::Px(edge);
+        }
+        if let Ok(mut node) = kill_q.single_mut() {
+            node.right = Val::Px(edge);
+        }
     }
 }
