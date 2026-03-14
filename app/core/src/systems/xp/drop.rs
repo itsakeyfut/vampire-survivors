@@ -19,11 +19,8 @@ use crate::{
     config::GameParams,
     events::EnemyDiedEvent,
     systems::xp::treasure::spawn_treasure,
-    types::EnemyType,
+    types::{EnemyType, GemTier},
 };
-
-/// Gem visual radius in pixels (placeholder; replace with real sprite later).
-const GEM_RADIUS: f32 = 6.0;
 
 // ---------------------------------------------------------------------------
 // System
@@ -42,15 +39,17 @@ const GEM_RADIUS: f32 = 6.0;
 /// reads them.
 pub fn spawn_xp_gems(mut commands: Commands, mut died_events: MessageReader<EnemyDiedEvent>) {
     for event in died_events.read() {
+        let tier = GemTier::from_value(event.xp_value);
         commands.spawn((
             GameSessionEntity,
             ExperienceGem {
                 value: event.xp_value,
+                tier,
             },
-            // Green circle placeholder sprite; replace with real art in Phase 17.
+            // Tiered color/size placeholder sprite; replace with real art in Phase 17.
             Sprite {
-                color: Color::srgb(0.2, 0.9, 0.2),
-                custom_size: Some(Vec2::splat(GEM_RADIUS * 2.0)),
+                color: tier.color(),
+                custom_size: Some(Vec2::splat(tier.radius() * 2.0)),
                 ..default()
             },
             // z = 0.5 — above ground (z = 0) but below enemies (z ≈ 1).
@@ -116,7 +115,15 @@ mod tests {
     fn gems(app: &mut App) -> Vec<(ExperienceGem, Transform)> {
         let mut q = app.world_mut().query::<(&ExperienceGem, &Transform)>();
         q.iter(app.world())
-            .map(|(g, t)| (ExperienceGem { value: g.value }, *t))
+            .map(|(g, t)| {
+                (
+                    ExperienceGem {
+                        value: g.value,
+                        tier: g.tier,
+                    },
+                    *t,
+                )
+            })
             .collect()
     }
 

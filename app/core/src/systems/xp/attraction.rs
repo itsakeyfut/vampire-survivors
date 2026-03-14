@@ -124,6 +124,7 @@ mod tests {
     use crate::{
         components::{AttractedToPlayer, ExperienceGem, Player, PlayerStats},
         resources::GameData,
+        types::GemTier,
     };
 
     fn build_app() -> App {
@@ -146,7 +147,10 @@ mod tests {
     fn spawn_gem(app: &mut App, pos: Vec2, value: u32) -> Entity {
         app.world_mut()
             .spawn((
-                ExperienceGem { value },
+                ExperienceGem {
+                    value,
+                    tier: GemTier::from_value(value),
+                },
                 Transform::from_xyz(pos.x, pos.y, 0.5),
             ))
             .id()
@@ -197,7 +201,10 @@ mod tests {
         let gem = app
             .world_mut()
             .spawn((
-                ExperienceGem { value: 3 },
+                ExperienceGem {
+                    value: 3,
+                    tier: GemTier::from_value(3),
+                },
                 Transform::from_xyz(10.0, 0.0, 0.5),
                 AttractedToPlayer { speed: 999.0 }, // sentinel speed
             ))
@@ -239,7 +246,10 @@ mod tests {
         let gem = app
             .world_mut()
             .spawn((
-                ExperienceGem { value: 3 },
+                ExperienceGem {
+                    value: 3,
+                    tier: GemTier::from_value(3),
+                },
                 Transform::from_xyz(100.0, 0.0, 0.5),
                 AttractedToPlayer {
                     speed: PlayerStats::default().gem_attraction_speed,
@@ -273,7 +283,10 @@ mod tests {
         spawn_player(&mut app, Vec2::ZERO);
         // Place gem very close to player (within ABSORPTION_RADIUS).
         app.world_mut().spawn((
-            ExperienceGem { value: 5 },
+            ExperienceGem {
+                value: 5,
+                tier: GemTier::from_value(5),
+            },
             Transform::from_xyz(2.0, 0.0, 0.5), // distance 2.0 < gem_absorption_radius (8.0)
             AttractedToPlayer {
                 speed: PlayerStats::default().gem_attraction_speed,
@@ -301,7 +314,10 @@ mod tests {
         spawn_player(&mut app, Vec2::ZERO);
         for value in [3, 5, 8] {
             app.world_mut().spawn((
-                ExperienceGem { value },
+                ExperienceGem {
+                    value,
+                    tier: GemTier::from_value(value),
+                },
                 Transform::from_xyz(1.0, 0.0, 0.5),
                 AttractedToPlayer {
                     speed: PlayerStats::default().gem_attraction_speed,
@@ -337,7 +353,10 @@ mod tests {
 
         for _ in 0..4 {
             app.world_mut().spawn((
-                ExperienceGem { value: 3 },
+                ExperienceGem {
+                    value: 3,
+                    tier: GemTier::from_value(3),
+                },
                 Transform::from_xyz(1.0, 0.0, 0.5),
                 AttractedToPlayer {
                     speed: PlayerStats::default().gem_attraction_speed,
@@ -368,7 +387,10 @@ mod tests {
     fn move_no_player_no_panic() {
         let mut app = build_app();
         app.world_mut().spawn((
-            ExperienceGem { value: 3 },
+            ExperienceGem {
+                value: 3,
+                tier: GemTier::from_value(3),
+            },
             Transform::from_xyz(1.0, 0.0, 0.5),
             AttractedToPlayer {
                 speed: PlayerStats::default().gem_attraction_speed,

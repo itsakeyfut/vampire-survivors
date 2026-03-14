@@ -1,9 +1,12 @@
 use bevy::prelude::*;
 
+use crate::types::GemTier;
+
 /// An XP gem dropped by a defeated enemy.
 #[derive(Component, Debug)]
 pub struct ExperienceGem {
     pub value: u32,
+    pub tier: GemTier,
 }
 
 /// A gold coin dropped by a defeated enemy.
