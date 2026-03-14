@@ -20,9 +20,23 @@ const DEFAULT_EMPTY_COLOR: Color = Color::srgb(0.10, 0.07, 0.15);
 const DEFAULT_ACTIVE_COLOR: Color = Color::srgb(0.35, 0.20, 0.55);
 const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
 
+/// Deserialization mirror of [`WeaponSlotsHudConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "WeaponSlotsHudConfig")]
+pub(crate) struct WeaponSlotsHudConfigPartial {
+    pub slot_size: Option<f32>,
+    pub slot_gap: Option<f32>,
+    pub slot_radius: Option<f32>,
+    pub label_font_size: Option<f32>,
+    pub empty_color: Option<SrgbColor>,
+    pub active_color: Option<SrgbColor>,
+    pub text_color: Option<SrgbColor>,
+}
+
 /// Weapon slots HUD config loaded from
 /// `config/ui/hud/gameplay/weapon_slots.ron`.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct WeaponSlotsHudConfig {
     /// Side length of each square slot in pixels.
     pub slot_size: f32,
@@ -38,6 +52,45 @@ pub struct WeaponSlotsHudConfig {
     pub active_color: SrgbColor,
     /// Text color for the weapon abbreviation label.
     pub text_color: SrgbColor,
+}
+
+impl From<WeaponSlotsHudConfigPartial> for WeaponSlotsHudConfig {
+    fn from(p: WeaponSlotsHudConfigPartial) -> Self {
+        WeaponSlotsHudConfig {
+            slot_size: p.slot_size.unwrap_or_else(|| {
+                warn!("weapon_slots.ron: `slot_size` missing → using default {DEFAULT_SLOT_SIZE}");
+                DEFAULT_SLOT_SIZE
+            }),
+            slot_gap: p.slot_gap.unwrap_or_else(|| {
+                warn!("weapon_slots.ron: `slot_gap` missing → using default {DEFAULT_SLOT_GAP}");
+                DEFAULT_SLOT_GAP
+            }),
+            slot_radius: p.slot_radius.unwrap_or_else(|| {
+                warn!(
+                    "weapon_slots.ron: `slot_radius` missing → using default {DEFAULT_SLOT_RADIUS}"
+                );
+                DEFAULT_SLOT_RADIUS
+            }),
+            label_font_size: p.label_font_size.unwrap_or_else(|| {
+                warn!(
+                    "weapon_slots.ron: `label_font_size` missing → using default {DEFAULT_LABEL_FONT_SIZE}"
+                );
+                DEFAULT_LABEL_FONT_SIZE
+            }),
+            empty_color: p.empty_color.unwrap_or_else(|| {
+                warn!("weapon_slots.ron: `empty_color` missing → using default");
+                SrgbColor { r: 0.10, g: 0.07, b: 0.15 }
+            }),
+            active_color: p.active_color.unwrap_or_else(|| {
+                warn!("weapon_slots.ron: `active_color` missing → using default");
+                SrgbColor { r: 0.35, g: 0.20, b: 0.55 }
+            }),
+            text_color: p.text_color.unwrap_or_else(|| {
+                warn!("weapon_slots.ron: `text_color` missing → using default");
+                SrgbColor { r: 0.95, g: 0.90, b: 0.85 }
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`WeaponSlotsHudConfig`].
@@ -122,7 +175,11 @@ WeaponSlotsHudConfig(
 
     #[test]
     fn weapon_slots_hud_config_deserialization() {
-        let cfg: WeaponSlotsHudConfig = ron::de::from_str(RON).expect("RON parse must succeed");
+        let partial: WeaponSlotsHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .expect("RON parse must succeed");
+        let cfg = WeaponSlotsHudConfig::from(partial);
         assert_eq!(cfg.slot_size, 40.0);
         assert_eq!(cfg.slot_gap, 4.0);
         assert_eq!(cfg.slot_radius, 4.0);
@@ -133,7 +190,11 @@ WeaponSlotsHudConfig(
 
     #[test]
     fn slot_dimensions_are_positive() {
-        let cfg: WeaponSlotsHudConfig = ron::de::from_str(RON).unwrap();
+        let partial: WeaponSlotsHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .unwrap();
+        let cfg = WeaponSlotsHudConfig::from(partial);
         assert!(cfg.slot_size > 0.0);
         assert!(cfg.label_font_size > 0.0);
     }

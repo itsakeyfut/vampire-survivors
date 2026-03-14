@@ -35,11 +35,38 @@ const DEFAULT_GEM_ABSORPTION_RADIUS: f32 = 8.0;
 // Asset type
 // ---------------------------------------------------------------------------
 
+/// Deserialization mirror of [`PlayerConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "PlayerConfig")]
+pub(super) struct PlayerConfigPartial {
+    pub base_hp: Option<f32>,
+    pub base_speed: Option<f32>,
+    pub base_damage_mult: Option<f32>,
+    pub base_cooldown_reduction: Option<f32>,
+    pub base_projectile_speed: Option<f32>,
+    pub base_duration_mult: Option<f32>,
+    pub base_area_mult: Option<f32>,
+    pub base_luck: Option<f32>,
+    pub base_hp_regen: Option<f32>,
+    pub base_xp_mult: Option<f32>,
+    pub pickup_radius: Option<f32>,
+    pub invincibility_time: Option<f32>,
+    pub collider_radius: Option<f32>,
+    pub collider_projectile_small: Option<f32>,
+    pub collider_projectile_large: Option<f32>,
+    pub collider_xp_gem: Option<f32>,
+    pub collider_gold_coin: Option<f32>,
+    pub collider_treasure: Option<f32>,
+    pub gem_attraction_speed: Option<f32>,
+    pub gem_absorption_radius: Option<f32>,
+}
+
 /// Player base stats and collider radii, loaded from `assets/config/player.ron`.
 ///
 /// Hot-reloading this file during gameplay immediately updates the live
 /// `PlayerStats` component on the player entity.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct PlayerConfig {
     // Base player stats
     pub base_hp: f32,
@@ -65,6 +92,127 @@ pub struct PlayerConfig {
     // XP gem attraction
     pub gem_attraction_speed: f32,
     pub gem_absorption_radius: f32,
+}
+
+impl From<PlayerConfigPartial> for PlayerConfig {
+    fn from(p: PlayerConfigPartial) -> Self {
+        PlayerConfig {
+            base_hp: p.base_hp.unwrap_or_else(|| {
+                warn!("player.ron: `base_hp` missing → using default {DEFAULT_BASE_HP}");
+                DEFAULT_BASE_HP
+            }),
+            base_speed: p.base_speed.unwrap_or_else(|| {
+                warn!("player.ron: `base_speed` missing → using default {DEFAULT_BASE_SPEED}");
+                DEFAULT_BASE_SPEED
+            }),
+            base_damage_mult: p.base_damage_mult.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `base_damage_mult` missing → using default {DEFAULT_BASE_DAMAGE_MULT}"
+                );
+                DEFAULT_BASE_DAMAGE_MULT
+            }),
+            base_cooldown_reduction: p.base_cooldown_reduction.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `base_cooldown_reduction` missing → using default {DEFAULT_BASE_COOLDOWN_REDUCTION}"
+                );
+                DEFAULT_BASE_COOLDOWN_REDUCTION
+            }),
+            base_projectile_speed: p.base_projectile_speed.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `base_projectile_speed` missing → using default {DEFAULT_BASE_PROJECTILE_SPEED}"
+                );
+                DEFAULT_BASE_PROJECTILE_SPEED
+            }),
+            base_duration_mult: p.base_duration_mult.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `base_duration_mult` missing → using default {DEFAULT_BASE_DURATION_MULT}"
+                );
+                DEFAULT_BASE_DURATION_MULT
+            }),
+            base_area_mult: p.base_area_mult.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `base_area_mult` missing → using default {DEFAULT_BASE_AREA_MULT}"
+                );
+                DEFAULT_BASE_AREA_MULT
+            }),
+            base_luck: p.base_luck.unwrap_or_else(|| {
+                warn!("player.ron: `base_luck` missing → using default {DEFAULT_BASE_LUCK}");
+                DEFAULT_BASE_LUCK
+            }),
+            base_hp_regen: p.base_hp_regen.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `base_hp_regen` missing → using default {DEFAULT_BASE_HP_REGEN}"
+                );
+                DEFAULT_BASE_HP_REGEN
+            }),
+            base_xp_mult: p.base_xp_mult.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `base_xp_mult` missing → using default {DEFAULT_BASE_XP_MULT}"
+                );
+                DEFAULT_BASE_XP_MULT
+            }),
+            pickup_radius: p.pickup_radius.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `pickup_radius` missing → using default {DEFAULT_PICKUP_RADIUS}"
+                );
+                DEFAULT_PICKUP_RADIUS
+            }),
+            invincibility_time: p.invincibility_time.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `invincibility_time` missing → using default {DEFAULT_INVINCIBILITY_TIME}"
+                );
+                DEFAULT_INVINCIBILITY_TIME
+            }),
+            collider_radius: p.collider_radius.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `collider_radius` missing → using default {DEFAULT_COLLIDER_RADIUS}"
+                );
+                DEFAULT_COLLIDER_RADIUS
+            }),
+            collider_projectile_small: p.collider_projectile_small.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `collider_projectile_small` missing → using default {DEFAULT_COLLIDER_PROJECTILE_SMALL}"
+                );
+                DEFAULT_COLLIDER_PROJECTILE_SMALL
+            }),
+            collider_projectile_large: p.collider_projectile_large.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `collider_projectile_large` missing → using default {DEFAULT_COLLIDER_PROJECTILE_LARGE}"
+                );
+                DEFAULT_COLLIDER_PROJECTILE_LARGE
+            }),
+            collider_xp_gem: p.collider_xp_gem.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `collider_xp_gem` missing → using default {DEFAULT_COLLIDER_XP_GEM}"
+                );
+                DEFAULT_COLLIDER_XP_GEM
+            }),
+            collider_gold_coin: p.collider_gold_coin.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `collider_gold_coin` missing → using default {DEFAULT_COLLIDER_GOLD_COIN}"
+                );
+                DEFAULT_COLLIDER_GOLD_COIN
+            }),
+            collider_treasure: p.collider_treasure.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `collider_treasure` missing → using default {DEFAULT_COLLIDER_TREASURE}"
+                );
+                DEFAULT_COLLIDER_TREASURE
+            }),
+            gem_attraction_speed: p.gem_attraction_speed.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `gem_attraction_speed` missing → using default {DEFAULT_GEM_ATTRACTION_SPEED}"
+                );
+                DEFAULT_GEM_ATTRACTION_SPEED
+            }),
+            gem_absorption_radius: p.gem_absorption_radius.unwrap_or_else(|| {
+                warn!(
+                    "player.ron: `gem_absorption_radius` missing → using default {DEFAULT_GEM_ABSORPTION_RADIUS}"
+                );
+                DEFAULT_GEM_ABSORPTION_RADIUS
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded player configuration.
@@ -308,7 +456,11 @@ PlayerConfig(
     gem_absorption_radius: 8.0,
 )
 "#;
-        let config: PlayerConfig = ron::de::from_str(ron_data).unwrap();
+        let partial: PlayerConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .unwrap();
+        let config = PlayerConfig::from(partial);
         assert_eq!(config.base_hp, 100.0);
         assert_eq!(config.base_speed, 200.0);
         assert_eq!(config.base_damage_mult, 1.0);

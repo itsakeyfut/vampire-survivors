@@ -31,3 +31,13 @@ pub use knife::{KnifeConfig, KnifeConfigHandle, KnifeParams};
 pub use magic_wand::{MagicWandConfig, MagicWandConfigHandle, MagicWandParams};
 pub use thunder_ring::{ThunderRingConfig, ThunderRingConfigHandle, ThunderRingParams};
 pub use whip::{WhipConfig, WhipConfigHandle, WhipParams};
+
+// Re-export Partial types so config/mod.rs loaders can reference them.
+pub(crate) use bible::BibleConfigPartial;
+pub(crate) use cross::CrossConfigPartial;
+pub(crate) use fire_wand::FireWandConfigPartial;
+pub(crate) use garlic::GarlicConfigPartial;
+pub(crate) use knife::KnifeConfigPartial;
+pub(crate) use magic_wand::MagicWandConfigPartial;
+pub(crate) use thunder_ring::ThunderRingConfigPartial;
+pub(crate) use whip::WhipConfigPartial;

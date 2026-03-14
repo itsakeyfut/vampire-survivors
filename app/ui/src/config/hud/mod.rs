@@ -32,8 +32,17 @@ pub use gameplay::{
     WeaponSlotsHudConfigHandle, WeaponSlotsHudParams, XpBarHudConfig, XpBarHudConfigHandle,
     XpBarHudParams,
 };
+pub(crate) use gameplay::{
+    BossHpBarHudConfigPartial, BossWarningHudConfigPartial, EvolutionNotificationHudConfigPartial,
+    GameplayHudLayoutConfigPartial, GoldHudConfigPartial, HpBarHudConfigPartial,
+    KillCountHudConfigPartial, LevelHudConfigPartial, TimerHudConfigPartial,
+    WeaponSlotsHudConfigPartial, XpBarHudConfigPartial,
+};
+pub(crate) use menu_button::MenuButtonHudConfigPartial;
 pub use menu_button::{MenuButtonHudConfig, MenuButtonHudConfigHandle, MenuButtonHudParams};
+pub(crate) use screen_heading::ScreenHeadingHudConfigPartial;
 pub use screen_heading::{
     ScreenHeadingHudConfig, ScreenHeadingHudConfigHandle, ScreenHeadingHudParams,
 };
+pub(crate) use upgrade_card::UpgradeCardHudConfigPartial;
 pub use upgrade_card::{UpgradeCardHudConfig, UpgradeCardHudConfigHandle, UpgradeCardHudParams};

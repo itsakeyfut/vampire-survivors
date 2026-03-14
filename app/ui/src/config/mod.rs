@@ -70,6 +70,21 @@ use bevy::asset::io::Reader;
 use bevy::asset::{AssetLoader, LoadContext};
 use bevy::prelude::*;
 
+// Partial types used by the loader macro below.
+use character_select::CharacterSelectScreenConfigPartial;
+use game_over::GameOverScreenConfigPartial;
+use hud::{
+    BossHpBarHudConfigPartial, BossWarningHudConfigPartial, EvolutionNotificationHudConfigPartial,
+    GameplayHudLayoutConfigPartial, GoldHudConfigPartial, HpBarHudConfigPartial,
+    KillCountHudConfigPartial, LevelHudConfigPartial, MenuButtonHudConfigPartial,
+    ScreenHeadingHudConfigPartial, TimerHudConfigPartial, UpgradeCardHudConfigPartial,
+    WeaponSlotsHudConfigPartial, XpBarHudConfigPartial,
+};
+use level_up::LevelUpScreenConfigPartial;
+use pause::PauseScreenConfigPartial;
+use styles::UiStyleConfigPartial;
+use victory::VictoryScreenConfigPartial;
+
 // ---------------------------------------------------------------------------
 // RON asset loader macro (mirrors the pattern in vs-core/src/config/mod.rs)
 // ---------------------------------------------------------------------------
@@ -78,8 +93,14 @@ use bevy::prelude::*;
 ///
 /// All UI config assets use identical loading logic (read bytes → `ron::de::from_bytes`),
 /// so this macro eliminates the repetition while keeping each loader a distinct type.
+///
+/// # Usage (two-step form: deserialize as `$partial`, then convert to `$asset` via `From`)
+/// ```ignore
+/// ron_asset_loader!(MyConfigLoader, MyConfigPartial => MyConfig);
+/// ```
 macro_rules! ron_asset_loader {
-    ($loader:ident, $asset:ty) => {
+    // Two-step form: deserialize as $partial, then convert to $asset via From
+    ($loader:ident, $partial:ty => $asset:ty) => {
         #[derive(Default)]
         struct $loader;
 
@@ -96,8 +117,12 @@ macro_rules! ron_asset_loader {
             ) -> Result<Self::Asset, Self::Error> {
                 let mut bytes = Vec::new();
                 reader.read_to_end(&mut bytes).await?;
-                ron::de::from_bytes(&bytes)
-                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+                let options = ron::Options::default()
+                    .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME);
+                let partial: $partial = options
+                    .from_bytes(&bytes)
+                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+                Ok(<$asset>::from(partial))
             }
 
             fn extensions(&self) -> &[&str] {
@@ -108,36 +133,36 @@ macro_rules! ron_asset_loader {
 }
 
 // Screen config loaders
-ron_asset_loader!(UiStyleConfigLoader, UiStyleConfig);
+ron_asset_loader!(UiStyleConfigLoader, UiStyleConfigPartial => UiStyleConfig);
 ron_asset_loader!(
     CharacterSelectScreenConfigLoader,
-    CharacterSelectScreenConfig
+    CharacterSelectScreenConfigPartial => CharacterSelectScreenConfig
 );
-ron_asset_loader!(GameOverScreenConfigLoader, GameOverScreenConfig);
-ron_asset_loader!(LevelUpScreenConfigLoader, LevelUpScreenConfig);
-ron_asset_loader!(PauseScreenConfigLoader, PauseScreenConfig);
-ron_asset_loader!(VictoryScreenConfigLoader, VictoryScreenConfig);
+ron_asset_loader!(GameOverScreenConfigLoader, GameOverScreenConfigPartial => GameOverScreenConfig);
+ron_asset_loader!(LevelUpScreenConfigLoader, LevelUpScreenConfigPartial => LevelUpScreenConfig);
+ron_asset_loader!(PauseScreenConfigLoader, PauseScreenConfigPartial => PauseScreenConfig);
+ron_asset_loader!(VictoryScreenConfigLoader, VictoryScreenConfigPartial => VictoryScreenConfig);
 
 // HUD config loaders
-ron_asset_loader!(ScreenHeadingHudConfigLoader, ScreenHeadingHudConfig);
-ron_asset_loader!(MenuButtonHudConfigLoader, MenuButtonHudConfig);
-ron_asset_loader!(UpgradeCardHudConfigLoader, UpgradeCardHudConfig);
+ron_asset_loader!(ScreenHeadingHudConfigLoader, ScreenHeadingHudConfigPartial => ScreenHeadingHudConfig);
+ron_asset_loader!(MenuButtonHudConfigLoader, MenuButtonHudConfigPartial => MenuButtonHudConfig);
+ron_asset_loader!(UpgradeCardHudConfigLoader, UpgradeCardHudConfigPartial => UpgradeCardHudConfig);
 
 // Gameplay HUD config loaders
-ron_asset_loader!(HpBarHudConfigLoader, HpBarHudConfig);
-ron_asset_loader!(XpBarHudConfigLoader, XpBarHudConfig);
-ron_asset_loader!(TimerHudConfigLoader, TimerHudConfig);
-ron_asset_loader!(LevelHudConfigLoader, LevelHudConfig);
-ron_asset_loader!(GameplayHudLayoutConfigLoader, GameplayHudLayoutConfig);
+ron_asset_loader!(HpBarHudConfigLoader, HpBarHudConfigPartial => HpBarHudConfig);
+ron_asset_loader!(XpBarHudConfigLoader, XpBarHudConfigPartial => XpBarHudConfig);
+ron_asset_loader!(TimerHudConfigLoader, TimerHudConfigPartial => TimerHudConfig);
+ron_asset_loader!(LevelHudConfigLoader, LevelHudConfigPartial => LevelHudConfig);
+ron_asset_loader!(GameplayHudLayoutConfigLoader, GameplayHudLayoutConfigPartial => GameplayHudLayoutConfig);
 ron_asset_loader!(
     EvolutionNotificationHudConfigLoader,
-    EvolutionNotificationHudConfig
+    EvolutionNotificationHudConfigPartial => EvolutionNotificationHudConfig
 );
-ron_asset_loader!(BossWarningHudConfigLoader, BossWarningHudConfig);
-ron_asset_loader!(BossHpBarHudConfigLoader, BossHpBarHudConfig);
-ron_asset_loader!(KillCountHudConfigLoader, KillCountHudConfig);
-ron_asset_loader!(GoldHudConfigLoader, GoldHudConfig);
-ron_asset_loader!(WeaponSlotsHudConfigLoader, WeaponSlotsHudConfig);
+ron_asset_loader!(BossWarningHudConfigLoader, BossWarningHudConfigPartial => BossWarningHudConfig);
+ron_asset_loader!(BossHpBarHudConfigLoader, BossHpBarHudConfigPartial => BossHpBarHudConfig);
+ron_asset_loader!(KillCountHudConfigLoader, KillCountHudConfigPartial => KillCountHudConfig);
+ron_asset_loader!(GoldHudConfigLoader, GoldHudConfigPartial => GoldHudConfig);
+ron_asset_loader!(WeaponSlotsHudConfigLoader, WeaponSlotsHudConfigPartial => WeaponSlotsHudConfig);
 
 // ---------------------------------------------------------------------------
 // Plugin

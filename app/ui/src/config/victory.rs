@@ -25,11 +25,24 @@ const DEFAULT_ROW_GAP: f32 = 8.0;
 // Config asset
 // ---------------------------------------------------------------------------
 
+/// Deserialization mirror of [`VictoryScreenConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "VictoryScreenConfig")]
+pub(crate) struct VictoryScreenConfigPartial {
+    pub victory_color: Option<SrgbColor>,
+    pub stat_color: Option<SrgbColor>,
+    pub stat_font_size: Option<f32>,
+    pub stats_margin_top: Option<f32>,
+    pub button_margin_top: Option<f32>,
+    pub row_gap: Option<f32>,
+}
+
 /// Victory screen style config loaded from `config/ui/screen/victory.ron`.
 ///
 /// Controls the visual appearance of the victory screen: heading color, stat
 /// text color and size, and spacing between sections.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct VictoryScreenConfig {
     /// Color of the "YOU WIN!" heading text.
     pub victory_color: SrgbColor,
@@ -43,6 +56,43 @@ pub struct VictoryScreenConfig {
     pub button_margin_top: f32,
     /// Vertical gap between individual stat lines (pixels).
     pub row_gap: f32,
+}
+
+impl From<VictoryScreenConfigPartial> for VictoryScreenConfig {
+    fn from(p: VictoryScreenConfigPartial) -> Self {
+        VictoryScreenConfig {
+            victory_color: p.victory_color.unwrap_or_else(|| {
+                warn!("victory.ron: `victory_color` missing → using default");
+                SrgbColor { r: 1.0, g: 0.85, b: 0.10 }
+            }),
+            stat_color: p.stat_color.unwrap_or_else(|| {
+                warn!("victory.ron: `stat_color` missing → using default");
+                SrgbColor { r: 0.85, g: 0.85, b: 0.85 }
+            }),
+            stat_font_size: p.stat_font_size.unwrap_or_else(|| {
+                warn!(
+                    "victory.ron: `stat_font_size` missing → using default {DEFAULT_STAT_FONT_SIZE}"
+                );
+                DEFAULT_STAT_FONT_SIZE
+            }),
+            stats_margin_top: p.stats_margin_top.unwrap_or_else(|| {
+                warn!(
+                    "victory.ron: `stats_margin_top` missing → using default {DEFAULT_STATS_MARGIN_TOP}"
+                );
+                DEFAULT_STATS_MARGIN_TOP
+            }),
+            button_margin_top: p.button_margin_top.unwrap_or_else(|| {
+                warn!(
+                    "victory.ron: `button_margin_top` missing → using default {DEFAULT_BUTTON_MARGIN_TOP}"
+                );
+                DEFAULT_BUTTON_MARGIN_TOP
+            }),
+            row_gap: p.row_gap.unwrap_or_else(|| {
+                warn!("victory.ron: `row_gap` missing → using default {DEFAULT_ROW_GAP}");
+                DEFAULT_ROW_GAP
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`VictoryScreenConfig`].
@@ -153,7 +203,11 @@ VictoryScreenConfig(
     row_gap:          8.0,
 )
 "#;
-        let cfg: VictoryScreenConfig = ron::de::from_str(ron_data).expect("RON parse must succeed");
+        let partial: VictoryScreenConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
+        let cfg = VictoryScreenConfig::from(partial);
 
         assert!((cfg.victory_color.r - 1.0).abs() < 1e-6);
         assert!((cfg.victory_color.g - 0.85).abs() < 1e-6);

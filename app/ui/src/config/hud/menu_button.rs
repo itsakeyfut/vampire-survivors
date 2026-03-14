@@ -26,11 +26,25 @@ const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
 // Config asset
 // ---------------------------------------------------------------------------
 
+/// Deserialization mirror of [`MenuButtonHudConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "MenuButtonHudConfig")]
+pub(crate) struct MenuButtonHudConfigPartial {
+    pub width: Option<f32>,
+    pub height: Option<f32>,
+    pub font_size: Option<f32>,
+    pub color_normal: Option<SrgbColor>,
+    pub color_hover: Option<SrgbColor>,
+    pub color_pressed: Option<SrgbColor>,
+    pub text_color: Option<SrgbColor>,
+}
+
 /// Large menu button HUD config loaded from `config/ui/hud/menu_button.ron`.
 ///
 /// Covers all visual properties of the primary action button: dimensions,
 /// label font size, and the three interaction-state colors.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct MenuButtonHudConfig {
     /// Button width in pixels.
     pub width: f32,
@@ -46,6 +60,57 @@ pub struct MenuButtonHudConfig {
     pub color_pressed: SrgbColor,
     /// Label text color.
     pub text_color: SrgbColor,
+}
+
+impl From<MenuButtonHudConfigPartial> for MenuButtonHudConfig {
+    fn from(p: MenuButtonHudConfigPartial) -> Self {
+        MenuButtonHudConfig {
+            width: p.width.unwrap_or_else(|| {
+                warn!("menu_button.ron: `width` missing → using default {DEFAULT_WIDTH}");
+                DEFAULT_WIDTH
+            }),
+            height: p.height.unwrap_or_else(|| {
+                warn!("menu_button.ron: `height` missing → using default {DEFAULT_HEIGHT}");
+                DEFAULT_HEIGHT
+            }),
+            font_size: p.font_size.unwrap_or_else(|| {
+                warn!("menu_button.ron: `font_size` missing → using default {DEFAULT_FONT_SIZE}");
+                DEFAULT_FONT_SIZE
+            }),
+            color_normal: p.color_normal.unwrap_or_else(|| {
+                warn!("menu_button.ron: `color_normal` missing → using default");
+                SrgbColor {
+                    r: 0.30,
+                    g: 0.05,
+                    b: 0.05,
+                }
+            }),
+            color_hover: p.color_hover.unwrap_or_else(|| {
+                warn!("menu_button.ron: `color_hover` missing → using default");
+                SrgbColor {
+                    r: 0.60,
+                    g: 0.10,
+                    b: 0.10,
+                }
+            }),
+            color_pressed: p.color_pressed.unwrap_or_else(|| {
+                warn!("menu_button.ron: `color_pressed` missing → using default");
+                SrgbColor {
+                    r: 0.20,
+                    g: 0.02,
+                    b: 0.02,
+                }
+            }),
+            text_color: p.text_color.unwrap_or_else(|| {
+                warn!("menu_button.ron: `text_color` missing → using default");
+                SrgbColor {
+                    r: 0.95,
+                    g: 0.90,
+                    b: 0.85,
+                }
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`MenuButtonHudConfig`].
@@ -133,7 +198,11 @@ MenuButtonHudConfig(
     text_color:    (r: 0.95, g: 0.90, b: 0.85),
 )
 "#;
-        let cfg: MenuButtonHudConfig = ron::de::from_str(ron_data).expect("RON parse must succeed");
+        let partial: MenuButtonHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
+        let cfg = MenuButtonHudConfig::from(partial);
         assert_eq!(cfg.width, 280.0);
         assert_eq!(cfg.height, 80.0);
         assert_eq!(cfg.font_size, 48.0);

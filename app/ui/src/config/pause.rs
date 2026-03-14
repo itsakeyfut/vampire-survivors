@@ -20,16 +20,49 @@ const DEFAULT_HEADING_COLOR: Color = Color::srgb(1.0, 0.85, 0.20);
 // Config asset
 // ---------------------------------------------------------------------------
 
+/// Deserialization mirror of [`PauseScreenConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "PauseScreenConfig")]
+pub(super) struct PauseScreenConfigPartial {
+    pub overlay_color: Option<SrgbaColor>,
+    pub heading_color: Option<SrgbColor>,
+}
+
 /// Pause screen style config loaded from `config/ui/screen/pause.ron`.
 ///
 /// The pause overlay is positioned absolutely over the game scene, so
 /// `overlay_color` should carry a meaningful alpha value.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct PauseScreenConfig {
     /// Semi-transparent overlay background color (supports alpha).
     pub overlay_color: SrgbaColor,
     /// "PAUSED" / "ポーズ" heading text color.
     pub heading_color: SrgbColor,
+}
+
+impl From<PauseScreenConfigPartial> for PauseScreenConfig {
+    fn from(p: PauseScreenConfigPartial) -> Self {
+        PauseScreenConfig {
+            overlay_color: p.overlay_color.unwrap_or_else(|| {
+                warn!("pause.ron: `overlay_color` missing → using default");
+                SrgbaColor {
+                    r: 0.02,
+                    g: 0.02,
+                    b: 0.06,
+                    a: 0.88,
+                }
+            }),
+            heading_color: p.heading_color.unwrap_or_else(|| {
+                warn!("pause.ron: `heading_color` missing → using default");
+                SrgbColor {
+                    r: 1.0,
+                    g: 0.85,
+                    b: 0.20,
+                }
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`PauseScreenConfig`].
@@ -110,7 +143,11 @@ PauseScreenConfig(
     heading_color: (r: 1.0, g: 0.85, b: 0.20),
 )
 "#;
-        let cfg: PauseScreenConfig = ron::de::from_str(ron_data).expect("RON parse must succeed");
+        let partial: PauseScreenConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
+        let cfg = PauseScreenConfig::from(partial);
 
         assert!(
             (cfg.overlay_color.a - 0.88).abs() < 1e-6,

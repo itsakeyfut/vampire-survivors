@@ -19,16 +19,44 @@ const DEFAULT_MARGIN_BOTTOM: f32 = 80.0;
 // Config asset
 // ---------------------------------------------------------------------------
 
+/// Deserialization mirror of [`ScreenHeadingHudConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "ScreenHeadingHudConfig")]
+pub(crate) struct ScreenHeadingHudConfigPartial {
+    pub font_size: Option<f32>,
+    pub margin_bottom: Option<f32>,
+}
+
 /// Screen heading HUD config loaded from `config/ui/hud/screen_heading.ron`.
 ///
 /// Controls layout parameters shared by all screen heading widgets.
 /// Text colour is screen-specific and passed to the spawn function directly.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct ScreenHeadingHudConfig {
     /// Font size of the heading text in points.
     pub font_size: f32,
     /// Bottom margin below the heading in pixels (spacing before the next element).
     pub margin_bottom: f32,
+}
+
+impl From<ScreenHeadingHudConfigPartial> for ScreenHeadingHudConfig {
+    fn from(p: ScreenHeadingHudConfigPartial) -> Self {
+        ScreenHeadingHudConfig {
+            font_size: p.font_size.unwrap_or_else(|| {
+                warn!(
+                    "screen_heading.ron: `font_size` missing → using default {DEFAULT_FONT_SIZE}"
+                );
+                DEFAULT_FONT_SIZE
+            }),
+            margin_bottom: p.margin_bottom.unwrap_or_else(|| {
+                warn!(
+                    "screen_heading.ron: `margin_bottom` missing → using default {DEFAULT_MARGIN_BOTTOM}"
+                );
+                DEFAULT_MARGIN_BOTTOM
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`ScreenHeadingHudConfig`].
@@ -85,8 +113,11 @@ ScreenHeadingHudConfig(
     margin_bottom: 80.0,
 )
 "#;
-        let cfg: ScreenHeadingHudConfig =
-            ron::de::from_str(ron_data).expect("RON parse must succeed");
+        let partial: ScreenHeadingHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
+        let cfg = ScreenHeadingHudConfig::from(partial);
         assert_eq!(cfg.font_size, 72.0);
         assert_eq!(cfg.margin_bottom, 80.0);
     }

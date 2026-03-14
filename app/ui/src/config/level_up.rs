@@ -21,18 +21,51 @@ const DEFAULT_HEADING_COLOR: Color = Color::srgb(1.0, 0.85, 0.20);
 // Config asset
 // ---------------------------------------------------------------------------
 
+/// Deserialization mirror of [`LevelUpScreenConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "LevelUpScreenConfig")]
+pub(super) struct LevelUpScreenConfigPartial {
+    pub overlay_color: Option<SrgbaColor>,
+    pub heading_color: Option<SrgbColor>,
+}
+
 /// Level-up screen style config loaded from
 /// `config/ui/screen/level_up.ron`.
 ///
 /// Controls the visual appearance of the card selection overlay.
 /// Card-specific colors and dimensions live in
 /// [`super::hud::upgrade_card::UpgradeCardHudConfig`].
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct LevelUpScreenConfig {
     /// Semi-transparent overlay background color (supports alpha).
     pub overlay_color: SrgbaColor,
     /// "LEVEL UP!" heading text color.
     pub heading_color: SrgbColor,
+}
+
+impl From<LevelUpScreenConfigPartial> for LevelUpScreenConfig {
+    fn from(p: LevelUpScreenConfigPartial) -> Self {
+        LevelUpScreenConfig {
+            overlay_color: p.overlay_color.unwrap_or_else(|| {
+                warn!("level_up.ron: `overlay_color` missing → using default");
+                SrgbaColor {
+                    r: 0.02,
+                    g: 0.02,
+                    b: 0.06,
+                    a: 0.92,
+                }
+            }),
+            heading_color: p.heading_color.unwrap_or_else(|| {
+                warn!("level_up.ron: `heading_color` missing → using default");
+                SrgbColor {
+                    r: 1.0,
+                    g: 0.85,
+                    b: 0.20,
+                }
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`LevelUpScreenConfig`].
@@ -117,7 +150,11 @@ LevelUpScreenConfig(
     heading_color: (r: 1.0,  g: 0.85, b: 0.20),
 )
 "#;
-        let cfg: LevelUpScreenConfig = ron::de::from_str(ron_data).expect("RON parse must succeed");
+        let partial: LevelUpScreenConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
+        let cfg = LevelUpScreenConfig::from(partial);
 
         assert!(
             (cfg.overlay_color.a - 0.92).abs() < 1e-6,

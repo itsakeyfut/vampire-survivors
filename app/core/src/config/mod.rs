@@ -47,12 +47,13 @@ use crate::states::AppState;
 /// All game config assets use identical loading logic (read bytes → `ron::de::from_bytes`),
 /// so this macro eliminates the repetition while keeping each loader a distinct type.
 ///
-/// # Usage
+/// # Usage (two-step form: deserialize as `$partial`, then convert to `$asset` via `From`)
 /// ```ignore
-/// ron_asset_loader!(MyConfigLoader, MyConfig);
+/// ron_asset_loader!(MyConfigLoader, MyConfigPartial => MyConfig);
 /// ```
 macro_rules! ron_asset_loader {
-    ($loader:ident, $asset:ty) => {
+    // Two-step form: deserialize as $partial, then convert to $asset via From
+    ($loader:ident, $partial:ty => $asset:ty) => {
         #[derive(Default)]
         struct $loader;
 
@@ -69,8 +70,12 @@ macro_rules! ron_asset_loader {
             ) -> Result<Self::Asset, Self::Error> {
                 let mut bytes = Vec::new();
                 reader.read_to_end(&mut bytes).await?;
-                ron::de::from_bytes(&bytes)
-                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+                let options = ron::Options::default()
+                    .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME);
+                let partial: $partial = options
+                    .from_bytes(&bytes)
+                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+                Ok(<$asset>::from(partial))
             }
 
             fn extensions(&self) -> &[&str] {
@@ -101,21 +106,21 @@ struct FontLoadHandles {
 }
 
 // Non-weapon config loaders
-ron_asset_loader!(PlayerConfigLoader, PlayerConfig);
-ron_asset_loader!(EnemyConfigLoader, EnemyConfig);
-ron_asset_loader!(GameConfigLoader, GameConfig);
-ron_asset_loader!(PassiveConfigLoader, PassiveConfig);
-ron_asset_loader!(CharacterConfigLoader, CharacterConfig);
+ron_asset_loader!(PlayerConfigLoader, PlayerConfigPartial => PlayerConfig);
+ron_asset_loader!(EnemyConfigLoader, EnemyConfigPartial => EnemyConfig);
+ron_asset_loader!(GameConfigLoader, GameConfigPartial => GameConfig);
+ron_asset_loader!(PassiveConfigLoader, PassiveConfigPartial => PassiveConfig);
+ron_asset_loader!(CharacterConfigLoader, CharacterConfigPartial => CharacterConfig);
 
 // Per-weapon config loaders
-ron_asset_loader!(WhipConfigLoader, WhipConfig);
-ron_asset_loader!(MagicWandConfigLoader, MagicWandConfig);
-ron_asset_loader!(KnifeConfigLoader, KnifeConfig);
-ron_asset_loader!(GarlicConfigLoader, GarlicConfig);
-ron_asset_loader!(BibleConfigLoader, BibleConfig);
-ron_asset_loader!(ThunderRingConfigLoader, ThunderRingConfig);
-ron_asset_loader!(CrossConfigLoader, CrossConfig);
-ron_asset_loader!(FireWandConfigLoader, FireWandConfig);
+ron_asset_loader!(WhipConfigLoader, WhipConfigPartial => WhipConfig);
+ron_asset_loader!(MagicWandConfigLoader, MagicWandConfigPartial => MagicWandConfig);
+ron_asset_loader!(KnifeConfigLoader, KnifeConfigPartial => KnifeConfig);
+ron_asset_loader!(GarlicConfigLoader, GarlicConfigPartial => GarlicConfig);
+ron_asset_loader!(BibleConfigLoader, BibleConfigPartial => BibleConfig);
+ron_asset_loader!(ThunderRingConfigLoader, ThunderRingConfigPartial => ThunderRingConfig);
+ron_asset_loader!(CrossConfigLoader, CrossConfigPartial => CrossConfig);
+ron_asset_loader!(FireWandConfigLoader, FireWandConfigPartial => FireWandConfig);
 
 // ---------------------------------------------------------------------------
 // AllConfigs — private SystemParam for wait_for_configs

@@ -6,8 +6,40 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use serde::Deserialize;
 
+// ---------------------------------------------------------------------------
+// Fallback constants (used while fire_wand.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_SPEED: f32 = 250.0;
+const DEFAULT_LIFETIME: f32 = 3.0;
+const DEFAULT_COLLIDER_RADIUS: f32 = 12.0;
+const DEFAULT_EXPLOSION_DURATION: f32 = 0.3;
+const DEFAULT_EXPLOSION_Z: f32 = 7.0;
+const DEFAULT_DAMAGE_BY_LEVEL: [f32; 8] =
+    [80.0, 100.0, 120.0, 150.0, 180.0, 220.0, 270.0, 330.0];
+const DEFAULT_AOE_DAMAGE_BY_LEVEL: [f32; 8] =
+    [40.0, 50.0, 60.0, 75.0, 90.0, 110.0, 135.0, 165.0];
+const DEFAULT_AOE_RADIUS_BY_LEVEL: [f32; 8] =
+    [80.0, 90.0, 100.0, 110.0, 120.0, 130.0, 140.0, 150.0];
+
+/// Deserialization mirror of [`FireWandConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "FireWandConfig")]
+pub(crate) struct FireWandConfigPartial {
+    pub damage_by_level: Option<[f32; 8]>,
+    pub aoe_damage_by_level: Option<[f32; 8]>,
+    pub aoe_radius_by_level: Option<[f32; 8]>,
+    pub speed: Option<f32>,
+    pub lifetime: Option<f32>,
+    pub collider_radius: Option<f32>,
+    pub explosion_duration: Option<f32>,
+    pub explosion_color: Option<(f32, f32, f32, f32)>,
+    pub explosion_z: Option<f32>,
+}
+
 /// Tunable parameters for the Fire Wand weapon.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct FireWandConfig {
     /// Direct-hit damage at each weapon level (index 0 = level 1).
     pub damage_by_level: [f32; 8],
@@ -27,6 +59,55 @@ pub struct FireWandConfig {
     pub explosion_color: (f32, f32, f32, f32),
     /// Z-depth of spawned explosion visual entities.
     pub explosion_z: f32,
+}
+
+impl From<FireWandConfigPartial> for FireWandConfig {
+    fn from(p: FireWandConfigPartial) -> Self {
+        FireWandConfig {
+            damage_by_level: p.damage_by_level.unwrap_or_else(|| {
+                warn!("fire_wand.ron: `damage_by_level` missing → using default");
+                DEFAULT_DAMAGE_BY_LEVEL
+            }),
+            aoe_damage_by_level: p.aoe_damage_by_level.unwrap_or_else(|| {
+                warn!("fire_wand.ron: `aoe_damage_by_level` missing → using default");
+                DEFAULT_AOE_DAMAGE_BY_LEVEL
+            }),
+            aoe_radius_by_level: p.aoe_radius_by_level.unwrap_or_else(|| {
+                warn!("fire_wand.ron: `aoe_radius_by_level` missing → using default");
+                DEFAULT_AOE_RADIUS_BY_LEVEL
+            }),
+            speed: p.speed.unwrap_or_else(|| {
+                warn!("fire_wand.ron: `speed` missing → using default {DEFAULT_SPEED}");
+                DEFAULT_SPEED
+            }),
+            lifetime: p.lifetime.unwrap_or_else(|| {
+                warn!("fire_wand.ron: `lifetime` missing → using default {DEFAULT_LIFETIME}");
+                DEFAULT_LIFETIME
+            }),
+            collider_radius: p.collider_radius.unwrap_or_else(|| {
+                warn!(
+                    "fire_wand.ron: `collider_radius` missing → using default {DEFAULT_COLLIDER_RADIUS}"
+                );
+                DEFAULT_COLLIDER_RADIUS
+            }),
+            explosion_duration: p.explosion_duration.unwrap_or_else(|| {
+                warn!(
+                    "fire_wand.ron: `explosion_duration` missing → using default {DEFAULT_EXPLOSION_DURATION}"
+                );
+                DEFAULT_EXPLOSION_DURATION
+            }),
+            explosion_color: p.explosion_color.unwrap_or_else(|| {
+                warn!("fire_wand.ron: `explosion_color` missing → using default");
+                (1.0, 1.0, 1.0, 1.0)
+            }),
+            explosion_z: p.explosion_z.unwrap_or_else(|| {
+                warn!(
+                    "fire_wand.ron: `explosion_z` missing → using default {DEFAULT_EXPLOSION_Z}"
+                );
+                DEFAULT_EXPLOSION_Z
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`FireWandConfig`].
@@ -78,7 +159,11 @@ FireWandConfig(
 
     #[test]
     fn fire_wand_config_deserialization() {
-        let cfg: FireWandConfig = ron::de::from_str(full_ron()).unwrap();
+        let partial: FireWandConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(full_ron())
+            .unwrap();
+        let cfg = FireWandConfig::from(partial);
         assert_eq!(cfg.damage_by_level[0], 80.0);
         assert_eq!(cfg.damage_by_level[7], 330.0);
         assert_eq!(cfg.aoe_damage_by_level[0], 40.0);
@@ -93,7 +178,11 @@ FireWandConfig(
 
     #[test]
     fn fire_wand_config_damage_increases_with_level() {
-        let cfg: FireWandConfig = ron::de::from_str(full_ron()).unwrap();
+        let partial: FireWandConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(full_ron())
+            .unwrap();
+        let cfg = FireWandConfig::from(partial);
         for i in 1..cfg.damage_by_level.len() {
             assert!(
                 cfg.damage_by_level[i] >= cfg.damage_by_level[i - 1],
@@ -106,7 +195,11 @@ FireWandConfig(
 
     #[test]
     fn fire_wand_config_aoe_radius_increases_with_level() {
-        let cfg: FireWandConfig = ron::de::from_str(full_ron()).unwrap();
+        let partial: FireWandConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(full_ron())
+            .unwrap();
+        let cfg = FireWandConfig::from(partial);
         for i in 1..cfg.aoe_radius_by_level.len() {
             assert!(
                 cfg.aoe_radius_by_level[i] >= cfg.aoe_radius_by_level[i - 1],

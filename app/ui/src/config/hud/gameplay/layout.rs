@@ -13,11 +13,30 @@ use serde::Deserialize;
 
 const DEFAULT_EDGE_MARGIN: f32 = 12.0;
 
+/// Deserialization mirror of [`GameplayHudLayoutConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "GameplayHudLayoutConfig")]
+pub(crate) struct GameplayHudLayoutConfigPartial {
+    pub edge_margin: Option<f32>,
+}
+
 /// Gameplay HUD layout config loaded from `config/ui/hud/gameplay/layout.ron`.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct GameplayHudLayoutConfig {
     /// Distance in pixels from each screen edge to the nearest widget anchor.
     pub edge_margin: f32,
+}
+
+impl From<GameplayHudLayoutConfigPartial> for GameplayHudLayoutConfig {
+    fn from(p: GameplayHudLayoutConfigPartial) -> Self {
+        GameplayHudLayoutConfig {
+            edge_margin: p.edge_margin.unwrap_or_else(|| {
+                warn!("layout.ron: `edge_margin` missing → using default {DEFAULT_EDGE_MARGIN}");
+                DEFAULT_EDGE_MARGIN
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`GameplayHudLayoutConfig`].
@@ -64,13 +83,21 @@ GameplayHudLayoutConfig(
 
     #[test]
     fn gameplay_hud_layout_config_deserialization() {
-        let cfg: GameplayHudLayoutConfig = ron::de::from_str(RON).expect("RON parse must succeed");
+        let partial: GameplayHudLayoutConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .expect("RON parse must succeed");
+        let cfg = GameplayHudLayoutConfig::from(partial);
         assert_eq!(cfg.edge_margin, 12.0);
     }
 
     #[test]
     fn edge_margin_is_non_negative() {
-        let cfg: GameplayHudLayoutConfig = ron::de::from_str(RON).unwrap();
+        let partial: GameplayHudLayoutConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .unwrap();
+        let cfg = GameplayHudLayoutConfig::from(partial);
         assert!(cfg.edge_margin >= 0.0);
     }
 }
