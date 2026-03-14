@@ -7,9 +7,11 @@
 
 use bevy::prelude::*;
 use vs_core::config::{CharacterConfig, CharacterParams, GameConfig, GameParams};
-use vs_core::resources::{GameSettings, MetaProgress, PendingUpgradeIndex};
+use vs_core::resources::{GameSettings, MetaProgress, PendingUpgradeIndex, SelectedStage};
 use vs_core::states::AppState;
-use vs_core::types::{CharacterType, MetaUpgradeType, get_character_stats, upgrade_cost};
+use vs_core::types::{
+    CharacterType, MetaUpgradeType, StageType, get_character_stats, upgrade_cost,
+};
 
 use crate::config::MenuButtonHudParams;
 
@@ -41,6 +43,8 @@ pub enum ButtonAction {
     StartGame,
     /// Transition from Title to CharacterSelect — the normal new-run entry point.
     GoToCharacterSelect,
+    /// Transition from CharacterSelect to StageSelect.
+    GoToStageSelect,
     /// Transition from Title to MetaShop.
     GoToMetaShop,
     /// Transition from Title to Settings.
@@ -57,6 +61,8 @@ pub enum ButtonAction {
     SelectUpgrade(usize),
     /// Resume gameplay from the pause screen — transitions Paused → Playing.
     ResumeGame,
+    /// Select a stage and update [`SelectedStage`].
+    SelectStage(StageType),
     /// Unlock a character in the gold shop.
     ///
     /// Deducts the character's unlock cost from [`MetaProgress::total_gold`] and
@@ -92,6 +98,7 @@ pub fn handle_button_interaction(
     mut pending: Option<ResMut<PendingUpgradeIndex>>,
     mut settings: Option<ResMut<GameSettings>>,
     mut meta: Option<ResMut<MetaProgress>>,
+    mut selected_stage: Option<ResMut<SelectedStage>>,
     char_params: CharacterParams,
     game_params: GameParams,
 ) {
@@ -109,6 +116,7 @@ pub fn handle_button_interaction(
                     &mut pending,
                     &mut settings,
                     &mut meta,
+                    &mut selected_stage,
                     char_params.get(),
                     game_params.get(),
                 );
@@ -123,12 +131,14 @@ pub fn handle_button_interaction(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn apply_action(
     action: ButtonAction,
     next_state: &mut NextState<AppState>,
     pending: &mut Option<ResMut<PendingUpgradeIndex>>,
     settings: &mut Option<ResMut<GameSettings>>,
     meta: &mut Option<ResMut<MetaProgress>>,
+    selected_stage: &mut Option<ResMut<SelectedStage>>,
     char_cfg: Option<&CharacterConfig>,
     game_cfg: Option<&GameConfig>,
 ) {
@@ -138,6 +148,14 @@ fn apply_action(
         }
         ButtonAction::GoToCharacterSelect => {
             next_state.set(AppState::CharacterSelect);
+        }
+        ButtonAction::GoToStageSelect => {
+            next_state.set(AppState::StageSelect);
+        }
+        ButtonAction::SelectStage(stage) => {
+            if let Some(s) = selected_stage {
+                s.0 = stage;
+            }
         }
         ButtonAction::GoToMetaShop => {
             next_state.set(AppState::MetaShop);
@@ -229,6 +247,7 @@ mod tests {
                 &mut None,
                 &mut None,
                 &mut None,
+                &mut None,
                 None,
                 None,
             );
@@ -262,6 +281,7 @@ mod tests {
                 &mut None,
                 &mut None,
                 &mut None,
+                &mut None,
                 None,
                 None,
             );
@@ -284,6 +304,7 @@ mod tests {
             apply_action(
                 ButtonAction::SelectUpgrade(1),
                 &mut next_state,
+                &mut None,
                 &mut None,
                 &mut None,
                 &mut None,

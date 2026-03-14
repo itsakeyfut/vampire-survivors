@@ -27,8 +27,8 @@ use rand::RngExt;
 
 use crate::{
     components::{CircleCollider, Enemy, EnemyAI, GameSessionEntity, PhaseThrough},
-    config::{EnemyParams, EnemyStatsEntry, GameParams},
-    resources::{EnemySpawner, GameData},
+    config::{EnemyParams, EnemyStatsEntry, GameParams, StageParams},
+    resources::{EnemySpawner, GameData, SelectedStage},
     types::{AIType, EnemyType},
 };
 
@@ -115,6 +115,8 @@ pub fn spawn_enemies(
     enemy_cfg: EnemyParams,
     game_cfg: GameParams,
     game_data: Res<GameData>,
+    stage_params: StageParams,
+    selected_stage: Option<Res<SelectedStage>>,
 ) {
     if !spawner.active {
         return;
@@ -233,11 +235,26 @@ pub fn spawn_enemies(
         ));
     }
 
+    // Apply stage filter: keep only enemy types allowed by the selected stage.
+    let stage = selected_stage.as_deref().map(|s| s.0);
+    if let Some(cfg) = stage_params.get()
+        && let Some(stage) = stage
+    {
+        let allowed = &cfg.entry_for(stage).enemy_types;
+        table.retain(|(etype, _)| allowed.contains(etype));
+    }
+
     let mut rng = rand::rng();
     let Some(enemy_type) = weighted_random(&mut rng, &table) else {
-        // All entries have zero weight — skip this spawn tick.
+        // All entries have zero weight or stage filter removed all — skip.
         return;
     };
+
+    // Stage HP/speed multipliers (default 1.0 when config not loaded).
+    let (stage_hp_mult, stage_speed_mult) = stage
+        .and_then(|s| stage_params.get().map(|c| c.entry_for(s)))
+        .map(|e| (e.enemy_hp_multiplier, e.enemy_speed_multiplier))
+        .unwrap_or((1.0, 1.0));
 
     // Derive all enemy stats from config when available, falling back to constants.
     let cfg_stats = enemy_cfg.get().map(|c| c.stats_for(enemy_type).clone());
@@ -251,6 +268,8 @@ pub fn spawn_enemies(
         enemy_type,
         spawn_pos,
         spawner.difficulty_multiplier,
+        stage_hp_mult,
+        stage_speed_mult,
         collider_radius,
         cfg_stats.as_ref(),
     );
@@ -359,21 +378,35 @@ fn fallback_collider_radius(enemy_type: EnemyType) -> f32 {
 /// Uses `cfg_stats` to build the [`Enemy`] component when available so that
 /// all stats (HP, speed, damage, XP, gold) reflect the loaded RON config.
 /// Falls back to compile-time `DEFAULT_ENEMY_STATS_*` constants otherwise.
+/// `hp_mult` and `speed_mult` are applied on top of difficulty scaling to
+/// implement per-stage difficulty modifiers.
 /// Ghost enemies additionally receive [`PhaseThrough`].
 /// Medusa enemies use [`AIType::KeepDistance`] instead of `ChasePlayer`.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn spawn_enemy(
     commands: &mut Commands,
     enemy_type: EnemyType,
     position: Vec2,
     difficulty: f32,
+    hp_mult: f32,
+    speed_mult: f32,
     collider_radius: f32,
     cfg_stats: Option<&EnemyStatsEntry>,
 ) {
     let color = enemy_color(enemy_type);
-    let enemy_component = match cfg_stats {
+    let mut enemy_component = match cfg_stats {
         Some(stats) => Enemy::from_config(enemy_type, stats, difficulty),
         None => Enemy::from_type(enemy_type, difficulty),
     };
+
+    // Apply stage multipliers when they differ from 1.0.
+    if (hp_mult - 1.0).abs() > f32::EPSILON {
+        enemy_component.max_hp *= hp_mult;
+        enemy_component.current_hp = enemy_component.max_hp;
+    }
+    if (speed_mult - 1.0).abs() > f32::EPSILON {
+        enemy_component.move_speed *= speed_mult;
+    }
     let ai = if enemy_type == EnemyType::Medusa {
         EnemyAI {
             ai_type: AIType::KeepDistance,

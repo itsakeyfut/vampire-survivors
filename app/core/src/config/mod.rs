@@ -22,6 +22,7 @@ pub mod enemy;
 pub mod game;
 pub mod passive;
 pub mod player;
+pub mod stage;
 pub mod weapon;
 
 pub use character::*;
@@ -29,6 +30,7 @@ pub use enemy::*;
 pub use game::*;
 pub use passive::*;
 pub use player::*;
+pub use stage::*;
 pub use weapon::*;
 
 use bevy::asset::io::Reader;
@@ -111,6 +113,7 @@ ron_asset_loader!(EnemyConfigLoader, EnemyConfigPartial => EnemyConfig);
 ron_asset_loader!(GameConfigLoader, GameConfigPartial => GameConfig);
 ron_asset_loader!(PassiveConfigLoader, PassiveConfigPartial => PassiveConfig);
 ron_asset_loader!(CharacterConfigLoader, CharacterConfigPartial => CharacterConfig);
+ron_asset_loader!(StageConfigLoader, StageConfigPartial => StageConfig);
 
 // Per-weapon config loaders
 ron_asset_loader!(WhipConfigLoader, WhipConfigPartial => WhipConfig);
@@ -156,6 +159,8 @@ struct AllConfigs<'w> {
     fire_wand_assets: Res<'w, Assets<FireWandConfig>>,
     character_handle: Res<'w, CharacterConfigHandle>,
     character_assets: Res<'w, Assets<CharacterConfig>>,
+    stage_handle: Res<'w, StageConfigHandle>,
+    stage_assets: Res<'w, Assets<StageConfig>>,
     font_handles: Res<'w, FontLoadHandles>,
     font_assets: Res<'w, Assets<Font>>,
 }
@@ -188,7 +193,9 @@ impl Plugin for GameConfigPlugin {
             .init_asset::<PassiveConfig>()
             .register_asset_loader(PassiveConfigLoader)
             .init_asset::<CharacterConfig>()
-            .register_asset_loader(CharacterConfigLoader);
+            .register_asset_loader(CharacterConfigLoader)
+            .init_asset::<StageConfig>()
+            .register_asset_loader(StageConfigLoader);
 
         // Register per-weapon asset types and loaders.
         app.init_asset::<WhipConfig>()
@@ -226,6 +233,7 @@ impl Plugin for GameConfigPlugin {
         let fire_wand_handle: Handle<FireWandConfig> =
             asset_server.load("config/weapons/fire_wand.ron");
         let character_handle: Handle<CharacterConfig> = asset_server.load("config/character.ron");
+        let stage_handle: Handle<StageConfig> = asset_server.load("config/stage.ron");
 
         let font_text: Handle<Font> = asset_server.load(FONT_TEXT);
 
@@ -242,6 +250,7 @@ impl Plugin for GameConfigPlugin {
             .insert_resource(CrossConfigHandle(cross_handle))
             .insert_resource(FireWandConfigHandle(fire_wand_handle))
             .insert_resource(CharacterConfigHandle(character_handle))
+            .insert_resource(StageConfigHandle(stage_handle))
             .insert_resource(FontLoadHandles { game: font_text });
 
         // Hot-reload systems run in all states so live-editing always works.
@@ -252,6 +261,7 @@ impl Plugin for GameConfigPlugin {
                 hot_reload_enemy_config,
                 hot_reload_game_config,
                 hot_reload_character_config,
+                hot_reload_stage_config,
             ),
         );
 
@@ -259,7 +269,7 @@ impl Plugin for GameConfigPlugin {
         app.add_systems(Update, wait_for_configs.run_if(in_state(AppState::Loading)));
 
         info!(
-            "✅ GameConfigPlugin initialized (player, enemy, game, passive, character, whip, magic_wand, knife, garlic, bible, thunder_ring, cross, fire_wand configs loading)"
+            "✅ GameConfigPlugin initialized (player, enemy, game, passive, character, stage, whip, magic_wand, knife, garlic, bible, thunder_ring, cross, fire_wand configs loading)"
         );
     }
 }
@@ -304,6 +314,7 @@ fn wait_for_configs(configs: AllConfigs, mut next_state: ResMut<NextState<AppSta
             .character_assets
             .get(&configs.character_handle.0)
             .is_some()
+        && configs.stage_assets.get(&configs.stage_handle.0).is_some()
         && configs
             .font_assets
             .get(&configs.font_handles.game)

@@ -35,6 +35,8 @@ pub enum AppState {
     Title,
     /// Character selection screen.
     CharacterSelect,
+    /// Stage selection screen (entered after CharacterSelect).
+    StageSelect,
     /// Main gameplay.
     Playing,
     /// Level-up card selection overlay (gameplay paused underneath).

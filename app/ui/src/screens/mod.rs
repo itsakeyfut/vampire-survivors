@@ -6,5 +6,6 @@ pub mod level_up;
 pub mod meta_shop;
 pub mod pause;
 pub mod settings;
+pub mod stage_select;
 pub mod title;
 pub mod victory;

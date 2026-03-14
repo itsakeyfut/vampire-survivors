@@ -335,7 +335,7 @@ pub fn setup_character_select_screen(
                 spawn_large_menu_button(
                     btns,
                     t("btn_start_with_char", lang),
-                    ButtonAction::StartGame,
+                    ButtonAction::GoToStageSelect,
                     btn_cfg.get(),
                     font.clone(),
                     Some("btn_start_with_char"),
@@ -552,8 +552,8 @@ mod tests {
         let mut q = app.world_mut().query::<&MenuButton>();
         let actions: Vec<ButtonAction> = q.iter(app.world()).map(|b| b.action).collect();
         assert!(
-            actions.contains(&ButtonAction::StartGame),
-            "Start button must exist"
+            actions.contains(&ButtonAction::GoToStageSelect),
+            "Start button must navigate to StageSelect"
         );
         assert!(
             actions.contains(&ButtonAction::GoToTitle),

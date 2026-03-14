@@ -98,11 +98,13 @@ pub fn spawn_mini_boss(
         .map(|c| c.mini_boss.collider_radius)
         .unwrap_or(DEFAULT_COLLIDER_MINI_BOSS);
 
-    // Mini-boss HP is not scaled by difficulty (fixed challenge per spawn).
+    // Mini-boss HP is not scaled by difficulty or stage (fixed challenge per spawn).
     spawn_enemy(
         &mut commands,
         EnemyType::MiniBoss,
         spawn_pos,
+        1.0,
+        1.0,
         1.0,
         radius,
         enemy_cfg.get().map(|c| &c.mini_boss),

@@ -57,6 +57,20 @@ impl Plugin for GameUIPlugin {
                 )
                     .run_if(in_state(AppState::CharacterSelect)),
             )
+            // Stage select screen
+            .add_systems(
+                OnEnter(AppState::StageSelect),
+                screens::stage_select::setup_stage_select_screen,
+            )
+            .add_systems(
+                Update,
+                (
+                    screens::stage_select::handle_stage_card_interaction,
+                    screens::stage_select::update_stage_select
+                        .after(screens::stage_select::handle_stage_card_interaction),
+                )
+                    .run_if(in_state(AppState::StageSelect)),
+            )
             // Meta shop screen
             .add_systems(
                 OnEnter(AppState::MetaShop),
