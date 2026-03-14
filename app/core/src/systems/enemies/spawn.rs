@@ -88,10 +88,6 @@ const DEFAULT_WINDOW_WIDTH: u32 = 1280;
 const DEFAULT_WINDOW_HEIGHT: u32 = 720;
 /// Extra pixels beyond the half-viewport edge at which enemies appear.
 const DEFAULT_SPAWN_MARGIN: f32 = 60.0;
-/// Base enemy spawn interval in seconds (mirrors EnemyConfig default).
-/// Only used in tests to set `spawn_timer` past the threshold.
-#[cfg(test)]
-const DEFAULT_ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
 
 // ---------------------------------------------------------------------------
 // System
@@ -420,6 +416,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
+    use crate::config::enemy::DEFAULT_ENEMY_SPAWN_BASE_INTERVAL;
     use crate::resources::GameData;
     use crate::states::AppState;
 

@@ -22,7 +22,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    config::EnemyParams,
+    config::{EnemyParams, enemy::DEFAULT_ENEMY_SPAWN_BASE_INTERVAL},
     resources::{EnemySpawner, GameData},
 };
 
@@ -30,8 +30,6 @@ use crate::{
 // Fallback constants (used when RON config is not yet loaded)
 // ---------------------------------------------------------------------------
 
-/// Base enemy spawn interval in seconds.
-const DEFAULT_ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
 /// Hard cap for the difficulty multiplier.
 const DEFAULT_DIFFICULTY_MAX: f32 = 10.0;
 
@@ -78,10 +76,7 @@ pub fn update_difficulty(
     mut spawner: ResMut<EnemySpawner>,
     enemy_cfg: EnemyParams,
 ) {
-    let base_interval = enemy_cfg
-        .get()
-        .map(|c| c.spawn_base_interval)
-        .unwrap_or(DEFAULT_ENEMY_SPAWN_BASE_INTERVAL);
+    let base_interval = enemy_cfg.spawn_base_interval();
     let diff_max = enemy_cfg
         .get()
         .map(|c| c.difficulty_max)
