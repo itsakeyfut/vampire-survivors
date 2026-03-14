@@ -203,8 +203,10 @@ GameOverScreenConfig(
     row_gap:           8.0,
 )
 "#;
-        let partial: GameOverScreenConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).expect("RON parse must succeed");
+        let partial: GameOverScreenConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
         let cfg = GameOverScreenConfig::from(partial);
 
         assert!((cfg.heading_color.r - 0.8).abs() < 1e-6);

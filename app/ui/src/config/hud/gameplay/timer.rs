@@ -42,7 +42,11 @@ impl From<TimerHudConfigPartial> for TimerHudConfig {
             }),
             text_color: p.text_color.unwrap_or_else(|| {
                 warn!("timer.ron: `text_color` missing → using default");
-                SrgbColor { r: 0.95, g: 0.90, b: 0.85 }
+                SrgbColor {
+                    r: 0.95,
+                    g: 0.90,
+                    b: 0.85,
+                }
             }),
         }
     }
@@ -97,7 +101,10 @@ TimerHudConfig(
 
     #[test]
     fn timer_hud_config_deserialization() {
-        let partial: TimerHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let partial: TimerHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .expect("RON parse must succeed");
         let cfg = TimerHudConfig::from(partial);
         assert_eq!(cfg.font_size, 28.0);
         assert!((cfg.text_color.r - 0.95).abs() < 1e-6);
@@ -105,7 +112,10 @@ TimerHudConfig(
 
     #[test]
     fn timer_font_size_is_positive() {
-        let partial: TimerHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let partial: TimerHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .unwrap();
         let cfg = TimerHudConfig::from(partial);
         assert!(cfg.font_size > 0.0);
     }

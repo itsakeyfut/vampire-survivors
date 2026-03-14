@@ -522,7 +522,10 @@ EnemyConfig(
     ),
 )
 "#;
-        let partial: EnemyConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).unwrap();
+        let partial: EnemyConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .unwrap();
         let config = EnemyConfig::from(partial);
         assert_eq!(config.bat.base_hp, 10.0);
         assert_eq!(config.bat.speed, 150.0);
@@ -593,7 +596,10 @@ EnemyConfig(
     ),
 )
 "#;
-        let partial: EnemyConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).unwrap();
+        let partial: EnemyConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .unwrap();
         let config = EnemyConfig::from(partial);
         assert_eq!(config.stats_for(EnemyType::Bat).base_hp, 10.0);
         assert_eq!(config.stats_for(EnemyType::Bat).collider_radius, 8.0);

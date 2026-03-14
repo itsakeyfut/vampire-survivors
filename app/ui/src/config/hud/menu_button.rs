@@ -74,26 +74,40 @@ impl From<MenuButtonHudConfigPartial> for MenuButtonHudConfig {
                 DEFAULT_HEIGHT
             }),
             font_size: p.font_size.unwrap_or_else(|| {
-                warn!(
-                    "menu_button.ron: `font_size` missing → using default {DEFAULT_FONT_SIZE}"
-                );
+                warn!("menu_button.ron: `font_size` missing → using default {DEFAULT_FONT_SIZE}");
                 DEFAULT_FONT_SIZE
             }),
             color_normal: p.color_normal.unwrap_or_else(|| {
                 warn!("menu_button.ron: `color_normal` missing → using default");
-                SrgbColor { r: 0.30, g: 0.05, b: 0.05 }
+                SrgbColor {
+                    r: 0.30,
+                    g: 0.05,
+                    b: 0.05,
+                }
             }),
             color_hover: p.color_hover.unwrap_or_else(|| {
                 warn!("menu_button.ron: `color_hover` missing → using default");
-                SrgbColor { r: 0.60, g: 0.10, b: 0.10 }
+                SrgbColor {
+                    r: 0.60,
+                    g: 0.10,
+                    b: 0.10,
+                }
             }),
             color_pressed: p.color_pressed.unwrap_or_else(|| {
                 warn!("menu_button.ron: `color_pressed` missing → using default");
-                SrgbColor { r: 0.20, g: 0.02, b: 0.02 }
+                SrgbColor {
+                    r: 0.20,
+                    g: 0.02,
+                    b: 0.02,
+                }
             }),
             text_color: p.text_color.unwrap_or_else(|| {
                 warn!("menu_button.ron: `text_color` missing → using default");
-                SrgbColor { r: 0.95, g: 0.90, b: 0.85 }
+                SrgbColor {
+                    r: 0.95,
+                    g: 0.90,
+                    b: 0.85,
+                }
             }),
         }
     }
@@ -184,8 +198,10 @@ MenuButtonHudConfig(
     text_color:    (r: 0.95, g: 0.90, b: 0.85),
 )
 "#;
-        let partial: MenuButtonHudConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).expect("RON parse must succeed");
+        let partial: MenuButtonHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
         let cfg = MenuButtonHudConfig::from(partial);
         assert_eq!(cfg.width, 280.0);
         assert_eq!(cfg.height, 80.0);

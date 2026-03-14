@@ -124,7 +124,10 @@ BibleConfig(
 
     #[test]
     fn bible_config_deserialization() {
-        let partial: BibleConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(full_ron()).unwrap();
+        let partial: BibleConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(full_ron())
+            .unwrap();
         let cfg = BibleConfig::from(partial);
         assert_eq!(cfg.damage_by_level[0], 20.0);
         assert_eq!(cfg.damage_by_level[7], 80.0);
@@ -137,7 +140,10 @@ BibleConfig(
 
     #[test]
     fn bible_config_count_increases_with_level() {
-        let partial: BibleConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(full_ron()).unwrap();
+        let partial: BibleConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(full_ron())
+            .unwrap();
         let cfg = BibleConfig::from(partial);
         // Level 1/2 → 1 orb; Level 3/4 → 2 orbs; Level 5+ → 3 orbs
         assert_eq!(cfg.count_by_level[0], 1);

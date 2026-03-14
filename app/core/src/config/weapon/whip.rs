@@ -118,7 +118,10 @@ WhipConfig(
     spread_factor: 0.6,
 )
 "#;
-        let partial: WhipConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron).unwrap();
+        let partial: WhipConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron)
+            .unwrap();
         let cfg = WhipConfig::from(partial);
         assert_eq!(cfg.range, 160.0);
         assert_eq!(cfg.base_damage, 20.0);

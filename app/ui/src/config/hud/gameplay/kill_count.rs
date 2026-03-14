@@ -42,7 +42,11 @@ impl From<KillCountHudConfigPartial> for KillCountHudConfig {
             }),
             text_color: p.text_color.unwrap_or_else(|| {
                 warn!("kill_count.ron: `text_color` missing → using default");
-                SrgbColor { r: 0.95, g: 0.90, b: 0.85 }
+                SrgbColor {
+                    r: 0.95,
+                    g: 0.90,
+                    b: 0.85,
+                }
             }),
         }
     }
@@ -97,8 +101,10 @@ KillCountHudConfig(
 
     #[test]
     fn kill_count_hud_config_deserialization() {
-        let partial: KillCountHudConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let partial: KillCountHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .expect("RON parse must succeed");
         let cfg = KillCountHudConfig::from(partial);
         assert_eq!(cfg.font_size, 14.0);
         assert!((cfg.text_color.r - 0.95).abs() < 1e-6);
@@ -106,7 +112,10 @@ KillCountHudConfig(
 
     #[test]
     fn font_size_is_positive() {
-        let partial: KillCountHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let partial: KillCountHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .unwrap();
         let cfg = KillCountHudConfig::from(partial);
         assert!(cfg.font_size > 0.0);
     }

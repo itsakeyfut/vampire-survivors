@@ -49,11 +49,20 @@ impl From<LevelUpScreenConfigPartial> for LevelUpScreenConfig {
         LevelUpScreenConfig {
             overlay_color: p.overlay_color.unwrap_or_else(|| {
                 warn!("level_up.ron: `overlay_color` missing → using default");
-                SrgbaColor { r: 0.02, g: 0.02, b: 0.06, a: 0.92 }
+                SrgbaColor {
+                    r: 0.02,
+                    g: 0.02,
+                    b: 0.06,
+                    a: 0.92,
+                }
             }),
             heading_color: p.heading_color.unwrap_or_else(|| {
                 warn!("level_up.ron: `heading_color` missing → using default");
-                SrgbColor { r: 1.0, g: 0.85, b: 0.20 }
+                SrgbColor {
+                    r: 1.0,
+                    g: 0.85,
+                    b: 0.20,
+                }
             }),
         }
     }
@@ -141,8 +150,10 @@ LevelUpScreenConfig(
     heading_color: (r: 1.0,  g: 0.85, b: 0.20),
 )
 "#;
-        let partial: LevelUpScreenConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).expect("RON parse must succeed");
+        let partial: LevelUpScreenConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
         let cfg = LevelUpScreenConfig::from(partial);
 
         assert!(

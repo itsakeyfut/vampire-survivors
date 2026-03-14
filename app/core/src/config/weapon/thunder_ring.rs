@@ -139,7 +139,10 @@ ThunderRingConfig(
 
     #[test]
     fn thunder_ring_config_deserialization() {
-        let partial: ThunderRingConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(full_ron()).unwrap();
+        let partial: ThunderRingConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(full_ron())
+            .unwrap();
         let cfg = ThunderRingConfig::from(partial);
         assert_eq!(cfg.damage_by_level[0], 40.0);
         assert_eq!(cfg.damage_by_level[7], 100.0);
@@ -153,7 +156,10 @@ ThunderRingConfig(
 
     #[test]
     fn thunder_ring_config_count_increases_with_level() {
-        let partial: ThunderRingConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(full_ron()).unwrap();
+        let partial: ThunderRingConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(full_ron())
+            .unwrap();
         let cfg = ThunderRingConfig::from(partial);
         // Level 1/2 → 1 strike; Level 3/4 → 2 strikes; Level 5+ → 3-4 strikes
         assert_eq!(cfg.count_by_level[0], 1);

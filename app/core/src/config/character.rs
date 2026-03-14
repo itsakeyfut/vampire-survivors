@@ -190,7 +190,10 @@ CharacterConfig(
 
     #[test]
     fn character_config_deserializes() {
-        let partial: CharacterConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(sample_ron()).unwrap();
+        let partial: CharacterConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(sample_ron())
+            .unwrap();
         let config = CharacterConfig::from(partial);
         assert_eq!(config.default_character.max_hp, 100.0);
         assert_eq!(config.default_character.starting_weapon, WeaponType::Whip);
@@ -208,7 +211,10 @@ CharacterConfig(
 
     #[test]
     fn stats_for_returns_correct_entry() {
-        let partial: CharacterConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(sample_ron()).unwrap();
+        let partial: CharacterConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(sample_ron())
+            .unwrap();
         let config = CharacterConfig::from(partial);
         assert_eq!(
             config.stats_for(CharacterType::DefaultCharacter).max_hp,
@@ -224,7 +230,10 @@ CharacterConfig(
 
     #[test]
     fn all_entries_have_positive_hp_and_speed() {
-        let partial: CharacterConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(sample_ron()).unwrap();
+        let partial: CharacterConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(sample_ron())
+            .unwrap();
         let config = CharacterConfig::from(partial);
         for char_type in [
             CharacterType::DefaultCharacter,
@@ -248,7 +257,10 @@ CharacterConfig(
 
     #[test]
     fn all_entries_have_non_empty_name_and_description() {
-        let partial: CharacterConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(sample_ron()).unwrap();
+        let partial: CharacterConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(sample_ron())
+            .unwrap();
         let config = CharacterConfig::from(partial);
         for char_type in [
             CharacterType::DefaultCharacter,

@@ -250,8 +250,10 @@ UiStyleConfig(
     title_color: (r: 0.85, g: 0.15, b: 0.15),
 )
 "#;
-        let partial: UiStyleConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).expect("RON parse must succeed");
+        let partial: UiStyleConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
         let cfg = UiStyleConfig::from(partial);
         assert!((cfg.bg_color.r - 0.05).abs() < 1e-6);
         assert!((cfg.title_color.r - 0.85).abs() < 1e-6);

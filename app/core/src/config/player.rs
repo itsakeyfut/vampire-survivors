@@ -456,7 +456,10 @@ PlayerConfig(
     gem_absorption_radius: 8.0,
 )
 "#;
-        let partial: PlayerConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).unwrap();
+        let partial: PlayerConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .unwrap();
         let config = PlayerConfig::from(partial);
         assert_eq!(config.base_hp, 100.0);
         assert_eq!(config.base_speed, 200.0);

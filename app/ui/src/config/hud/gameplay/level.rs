@@ -42,7 +42,11 @@ impl From<LevelHudConfigPartial> for LevelHudConfig {
             }),
             text_color: p.text_color.unwrap_or_else(|| {
                 warn!("level.ron: `text_color` missing → using default");
-                SrgbColor { r: 0.95, g: 0.90, b: 0.85 }
+                SrgbColor {
+                    r: 0.95,
+                    g: 0.90,
+                    b: 0.85,
+                }
             }),
         }
     }
@@ -97,7 +101,10 @@ LevelHudConfig(
 
     #[test]
     fn level_hud_config_deserialization() {
-        let partial: LevelHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let partial: LevelHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .expect("RON parse must succeed");
         let cfg = LevelHudConfig::from(partial);
         assert_eq!(cfg.font_size, 22.0);
         assert!((cfg.text_color.b - 0.85).abs() < 1e-6);
@@ -105,7 +112,10 @@ LevelHudConfig(
 
     #[test]
     fn level_font_size_is_positive() {
-        let partial: LevelHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let partial: LevelHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .unwrap();
         let cfg = LevelHudConfig::from(partial);
         assert!(cfg.font_size > 0.0);
     }

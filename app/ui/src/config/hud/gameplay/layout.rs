@@ -32,9 +32,7 @@ impl From<GameplayHudLayoutConfigPartial> for GameplayHudLayoutConfig {
     fn from(p: GameplayHudLayoutConfigPartial) -> Self {
         GameplayHudLayoutConfig {
             edge_margin: p.edge_margin.unwrap_or_else(|| {
-                warn!(
-                    "layout.ron: `edge_margin` missing → using default {DEFAULT_EDGE_MARGIN}"
-                );
+                warn!("layout.ron: `edge_margin` missing → using default {DEFAULT_EDGE_MARGIN}");
                 DEFAULT_EDGE_MARGIN
             }),
         }
@@ -85,15 +83,20 @@ GameplayHudLayoutConfig(
 
     #[test]
     fn gameplay_hud_layout_config_deserialization() {
-        let partial: GameplayHudLayoutConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let partial: GameplayHudLayoutConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .expect("RON parse must succeed");
         let cfg = GameplayHudLayoutConfig::from(partial);
         assert_eq!(cfg.edge_margin, 12.0);
     }
 
     #[test]
     fn edge_margin_is_non_negative() {
-        let partial: GameplayHudLayoutConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let partial: GameplayHudLayoutConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .unwrap();
         let cfg = GameplayHudLayoutConfig::from(partial);
         assert!(cfg.edge_margin >= 0.0);
     }

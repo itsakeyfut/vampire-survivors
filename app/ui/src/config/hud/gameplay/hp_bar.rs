@@ -217,7 +217,10 @@ HpBarHudConfig(
 
     #[test]
     fn hp_bar_hud_config_deserialization() {
-        let partial: HpBarHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let partial: HpBarHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .expect("RON parse must succeed");
         let cfg = HpBarHudConfig::from(partial);
         assert_eq!(cfg.bar_width, 200.0);
         assert_eq!(cfg.bar_height, 16.0);
@@ -231,7 +234,10 @@ HpBarHudConfig(
 
     #[test]
     fn hp_bar_dimensions_are_positive() {
-        let partial: HpBarHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let partial: HpBarHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .unwrap();
         let cfg = HpBarHudConfig::from(partial);
         assert!(cfg.bar_width > 0.0);
         assert!(cfg.bar_height > 0.0);

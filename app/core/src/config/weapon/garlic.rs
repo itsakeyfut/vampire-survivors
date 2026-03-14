@@ -78,7 +78,10 @@ GarlicConfig(
     radius_by_level: [80.0, 90.0, 90.0, 100.0, 110.0, 120.0, 130.0, 150.0],
 )
 "#;
-        let partial: GarlicConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron).unwrap();
+        let partial: GarlicConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron)
+            .unwrap();
         let cfg = GarlicConfig::from(partial);
         assert_eq!(
             cfg.damage_by_level,

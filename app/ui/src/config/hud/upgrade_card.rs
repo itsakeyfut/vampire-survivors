@@ -355,8 +355,10 @@ UpgradeCardHudConfig(
     icon_color_passive_upgrade: (r: 0.40, g: 0.90, b: 0.65),
 )
 "#;
-        let partial: UpgradeCardHudConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).expect("RON parse must succeed");
+        let partial: UpgradeCardHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
         let cfg = UpgradeCardHudConfig::from(partial);
         assert_eq!(cfg.card_width, 260.0);
         assert_eq!(cfg.card_height, 320.0);

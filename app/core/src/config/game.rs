@@ -772,7 +772,10 @@ GameConfig(
     meta_upgrade_xp_bonus: 0.1,
 )
 "#;
-        let partial: GameConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).unwrap();
+        let partial: GameConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .unwrap();
         let config = GameConfig::from(partial);
         assert_eq!(config.window_width, 1280);
         assert_eq!(config.window_height, 720);

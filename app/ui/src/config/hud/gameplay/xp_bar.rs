@@ -46,11 +46,19 @@ impl From<XpBarHudConfigPartial> for XpBarHudConfig {
             }),
             fill_color: p.fill_color.unwrap_or_else(|| {
                 warn!("xp_bar.ron: `fill_color` missing → using default");
-                SrgbColor { r: 0.25, g: 0.65, b: 1.00 }
+                SrgbColor {
+                    r: 0.25,
+                    g: 0.65,
+                    b: 1.00,
+                }
             }),
             track_color: p.track_color.unwrap_or_else(|| {
                 warn!("xp_bar.ron: `track_color` missing → using default");
-                SrgbColor { r: 0.05, g: 0.08, b: 0.20 }
+                SrgbColor {
+                    r: 0.05,
+                    g: 0.08,
+                    b: 0.20,
+                }
             }),
         }
     }
@@ -114,7 +122,10 @@ XpBarHudConfig(
 
     #[test]
     fn xp_bar_hud_config_deserialization() {
-        let partial: XpBarHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let partial: XpBarHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .expect("RON parse must succeed");
         let cfg = XpBarHudConfig::from(partial);
         assert_eq!(cfg.bar_height, 10.0);
         assert!((cfg.fill_color.g - 0.65).abs() < 1e-6);
@@ -122,7 +133,10 @@ XpBarHudConfig(
 
     #[test]
     fn xp_bar_height_is_positive() {
-        let partial: XpBarHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let partial: XpBarHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .unwrap();
         let cfg = XpBarHudConfig::from(partial);
         assert!(cfg.bar_height > 0.0);
     }

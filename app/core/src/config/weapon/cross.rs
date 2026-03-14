@@ -124,7 +124,10 @@ CrossConfig(
 
     #[test]
     fn cross_config_deserialization() {
-        let partial: CrossConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(full_ron()).unwrap();
+        let partial: CrossConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(full_ron())
+            .unwrap();
         let cfg = CrossConfig::from(partial);
         assert_eq!(cfg.damage_by_level[0], 50.0);
         assert_eq!(cfg.damage_by_level[7], 160.0);
@@ -137,7 +140,10 @@ CrossConfig(
 
     #[test]
     fn cross_config_damage_increases_with_level() {
-        let partial: CrossConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(full_ron()).unwrap();
+        let partial: CrossConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(full_ron())
+            .unwrap();
         let cfg = CrossConfig::from(partial);
         // Each level should be >= the previous.
         for i in 1..cfg.damage_by_level.len() {
@@ -152,7 +158,10 @@ CrossConfig(
 
     #[test]
     fn cross_config_count_increases_at_level_5() {
-        let partial: CrossConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(full_ron()).unwrap();
+        let partial: CrossConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(full_ron())
+            .unwrap();
         let cfg = CrossConfig::from(partial);
         // Lv1-4: 1 projectile; Lv5-8: 2 projectiles
         assert_eq!(cfg.count_by_level[0], 1);

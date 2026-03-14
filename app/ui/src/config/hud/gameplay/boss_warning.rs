@@ -151,8 +151,10 @@ BossWarningHudConfig(
 
     #[test]
     fn boss_warning_hud_config_deserialization() {
-        let partial: BossWarningHudConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let partial: BossWarningHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .expect("RON parse must succeed");
         let cfg = BossWarningHudConfig::from(partial);
         assert_eq!(cfg.display_duration, 4.0);
         assert_eq!(cfg.fade_start, 2.0);
@@ -165,14 +167,20 @@ BossWarningHudConfig(
 
     #[test]
     fn display_duration_is_positive() {
-        let partial: BossWarningHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let partial: BossWarningHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .unwrap();
         let cfg = BossWarningHudConfig::from(partial);
         assert!(cfg.display_duration > 0.0);
     }
 
     #[test]
     fn fade_start_is_before_display_duration() {
-        let partial: BossWarningHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let partial: BossWarningHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .unwrap();
         let cfg = BossWarningHudConfig::from(partial);
         assert!(cfg.fade_start < cfg.display_duration);
     }

@@ -21,12 +21,6 @@ pub mod menu_button;
 pub mod screen_heading;
 pub mod upgrade_card;
 
-pub(crate) use gameplay::{
-    BossHpBarHudConfigPartial, BossWarningHudConfigPartial, EvolutionNotificationHudConfigPartial,
-    GameplayHudLayoutConfigPartial, GoldHudConfigPartial, HpBarHudConfigPartial,
-    KillCountHudConfigPartial, LevelHudConfigPartial, TimerHudConfigPartial,
-    WeaponSlotsHudConfigPartial, XpBarHudConfigPartial,
-};
 pub use gameplay::{
     BossHpBarHudConfig, BossHpBarHudConfigHandle, BossHpBarHudParams, BossWarningHudConfig,
     BossWarningHudConfigHandle, BossWarningHudParams, EvolutionNotificationHudConfig,
@@ -37,6 +31,12 @@ pub use gameplay::{
     LevelHudParams, TimerHudConfig, TimerHudConfigHandle, TimerHudParams, WeaponSlotsHudConfig,
     WeaponSlotsHudConfigHandle, WeaponSlotsHudParams, XpBarHudConfig, XpBarHudConfigHandle,
     XpBarHudParams,
+};
+pub(crate) use gameplay::{
+    BossHpBarHudConfigPartial, BossWarningHudConfigPartial, EvolutionNotificationHudConfigPartial,
+    GameplayHudLayoutConfigPartial, GoldHudConfigPartial, HpBarHudConfigPartial,
+    KillCountHudConfigPartial, LevelHudConfigPartial, TimerHudConfigPartial,
+    WeaponSlotsHudConfigPartial, XpBarHudConfigPartial,
 };
 pub(crate) use menu_button::MenuButtonHudConfigPartial;
 pub use menu_button::{MenuButtonHudConfig, MenuButtonHudConfigHandle, MenuButtonHudParams};

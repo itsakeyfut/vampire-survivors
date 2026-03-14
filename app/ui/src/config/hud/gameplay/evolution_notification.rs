@@ -151,8 +151,10 @@ EvolutionNotificationHudConfig(
 
     #[test]
     fn evolution_notification_hud_config_deserialization() {
-        let partial: EvolutionNotificationHudConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let partial: EvolutionNotificationHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .expect("RON parse must succeed");
         let cfg = EvolutionNotificationHudConfig::from(partial);
         assert_eq!(cfg.display_duration, 3.0);
         assert_eq!(cfg.fade_start, 1.5);
@@ -165,14 +167,20 @@ EvolutionNotificationHudConfig(
 
     #[test]
     fn display_duration_is_positive() {
-        let partial: EvolutionNotificationHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let partial: EvolutionNotificationHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .unwrap();
         let cfg = EvolutionNotificationHudConfig::from(partial);
         assert!(cfg.display_duration > 0.0);
     }
 
     #[test]
     fn fade_start_is_before_display_duration() {
-        let partial: EvolutionNotificationHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let partial: EvolutionNotificationHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .unwrap();
         let cfg = EvolutionNotificationHudConfig::from(partial);
         assert!(cfg.fade_start < cfg.display_duration);
     }

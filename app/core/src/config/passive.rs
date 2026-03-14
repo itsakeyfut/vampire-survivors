@@ -237,8 +237,10 @@ PassiveConfig(
     pummarola_regen_per_level:      0.5,
 )
 "#;
-        let partial: PassiveConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).expect("RON parse must succeed");
+        let partial: PassiveConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
         let cfg = PassiveConfig::from(partial);
         assert!((cfg.spinach_damage_per_level - 0.10).abs() < 1e-6);
         assert!((cfg.wings_speed_per_level - 20.0).abs() < 1e-6);
@@ -261,8 +263,10 @@ PassiveConfig(
     pummarola_regen_per_level:      0.5,
 )
 "#;
-        let partial: PassiveConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).expect("RON parse must succeed");
+        let partial: PassiveConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
         let cfg = PassiveConfig::from(partial);
         assert!(cfg.spinach_damage_per_level > 0.0);
         assert!(cfg.wings_speed_per_level > 0.0);

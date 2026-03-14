@@ -153,7 +153,10 @@ FireWandConfig(
 
     #[test]
     fn fire_wand_config_deserialization() {
-        let partial: FireWandConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(full_ron()).unwrap();
+        let partial: FireWandConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(full_ron())
+            .unwrap();
         let cfg = FireWandConfig::from(partial);
         assert_eq!(cfg.damage_by_level[0], 80.0);
         assert_eq!(cfg.damage_by_level[7], 330.0);
@@ -169,7 +172,10 @@ FireWandConfig(
 
     #[test]
     fn fire_wand_config_damage_increases_with_level() {
-        let partial: FireWandConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(full_ron()).unwrap();
+        let partial: FireWandConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(full_ron())
+            .unwrap();
         let cfg = FireWandConfig::from(partial);
         for i in 1..cfg.damage_by_level.len() {
             assert!(
@@ -183,7 +189,10 @@ FireWandConfig(
 
     #[test]
     fn fire_wand_config_aoe_radius_increases_with_level() {
-        let partial: FireWandConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(full_ron()).unwrap();
+        let partial: FireWandConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(full_ron())
+            .unwrap();
         let cfg = FireWandConfig::from(partial);
         for i in 1..cfg.aoe_radius_by_level.len() {
             assert!(

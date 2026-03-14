@@ -146,7 +146,10 @@ KnifeConfig(
     count_by_level: [1, 1, 2, 2, 3, 3, 4, 5],
 )
 "#;
-        let partial: KnifeConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron).unwrap();
+        let partial: KnifeConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron)
+            .unwrap();
         let cfg = KnifeConfig::from(partial);
         assert_eq!(cfg.base_speed, 600.0);
         assert_eq!(cfg.base_damage, 15.0);

@@ -47,7 +47,11 @@ impl From<GoldHudConfigPartial> for GoldHudConfig {
             }),
             text_color: p.text_color.unwrap_or_else(|| {
                 warn!("gold.ron: `text_color` missing → using default");
-                SrgbColor { r: 1.0, g: 0.85, b: 0.2 }
+                SrgbColor {
+                    r: 1.0,
+                    g: 0.85,
+                    b: 0.2,
+                }
             }),
             vertical_offset: p.vertical_offset.unwrap_or_else(|| {
                 warn!(
@@ -115,7 +119,10 @@ GoldHudConfig(
 
     #[test]
     fn gold_hud_config_deserialization() {
-        let partial: GoldHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let partial: GoldHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .expect("RON parse must succeed");
         let cfg = GoldHudConfig::from(partial);
         assert_eq!(cfg.font_size, 14.0);
         assert!((cfg.text_color.r - 1.0).abs() < 1e-6);
@@ -125,7 +132,10 @@ GoldHudConfig(
 
     #[test]
     fn font_size_is_positive() {
-        let partial: GoldHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let partial: GoldHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .unwrap();
         let cfg = GoldHudConfig::from(partial);
         assert!(cfg.font_size > 0.0);
     }

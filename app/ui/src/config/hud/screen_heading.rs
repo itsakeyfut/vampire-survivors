@@ -113,8 +113,10 @@ ScreenHeadingHudConfig(
     margin_bottom: 80.0,
 )
 "#;
-        let partial: ScreenHeadingHudConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).expect("RON parse must succeed");
+        let partial: ScreenHeadingHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
         let cfg = ScreenHeadingHudConfig::from(partial);
         assert_eq!(cfg.font_size, 72.0);
         assert_eq!(cfg.margin_bottom, 80.0);

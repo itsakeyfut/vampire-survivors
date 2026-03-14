@@ -377,8 +377,10 @@ CharacterSelectScreenConfig(
     detail_panel_width:      580.0,
 )
 "#;
-        let partial: CharacterSelectScreenConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).expect("RON parse must succeed");
+        let partial: CharacterSelectScreenConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
         let cfg = CharacterSelectScreenConfig::from(partial);
 
         assert_eq!(cfg.card_width, 160.0);

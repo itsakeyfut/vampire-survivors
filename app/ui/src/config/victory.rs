@@ -203,8 +203,10 @@ VictoryScreenConfig(
     row_gap:          8.0,
 )
 "#;
-        let partial: VictoryScreenConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).expect("RON parse must succeed");
+        let partial: VictoryScreenConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron_data)
+            .expect("RON parse must succeed");
         let cfg = VictoryScreenConfig::from(partial);
 
         assert!((cfg.victory_color.r - 1.0).abs() < 1e-6);

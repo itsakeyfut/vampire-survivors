@@ -140,7 +140,10 @@ MagicWandConfig(
     holy_wand_piercing: 4294967295,
 )
 "#;
-        let partial: MagicWandConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron).unwrap();
+        let partial: MagicWandConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(ron)
+            .unwrap();
         let cfg = MagicWandConfig::from(partial);
         assert_eq!(cfg.speed, 600.0);
         assert_eq!(cfg.base_damage, 20.0);

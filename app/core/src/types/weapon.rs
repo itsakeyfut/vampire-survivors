@@ -398,10 +398,12 @@ mod tests {
     #[test]
     fn base_damage_whip_matches_ron_config() {
         use crate::config::weapon::{WhipConfig, WhipConfigPartial};
-        let partial: WhipConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
-            "../../../vampire-survivors/assets/config/weapons/whip.ron"
-        ))
-        .expect("whip.ron should parse");
+        let partial: WhipConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(include_str!(
+                "../../../vampire-survivors/assets/config/weapons/whip.ron"
+            ))
+            .expect("whip.ron should parse");
         let cfg = WhipConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Whip);
         for level in 1..=8u8 {
@@ -419,10 +421,12 @@ mod tests {
     #[test]
     fn base_damage_magic_wand_matches_ron_config() {
         use crate::config::weapon::{MagicWandConfig, MagicWandConfigPartial};
-        let partial: MagicWandConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
-            "../../../vampire-survivors/assets/config/weapons/magic_wand.ron"
-        ))
-        .expect("magic_wand.ron should parse");
+        let partial: MagicWandConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(include_str!(
+                "../../../vampire-survivors/assets/config/weapons/magic_wand.ron"
+            ))
+            .expect("magic_wand.ron should parse");
         let cfg = MagicWandConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::MagicWand);
         for level in 1..=8u8 {
@@ -440,10 +444,12 @@ mod tests {
     #[test]
     fn base_damage_knife_matches_ron_config() {
         use crate::config::weapon::{KnifeConfig, KnifeConfigPartial};
-        let partial: KnifeConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
-            "../../../vampire-survivors/assets/config/weapons/knife.ron"
-        ))
-        .expect("knife.ron should parse");
+        let partial: KnifeConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(include_str!(
+                "../../../vampire-survivors/assets/config/weapons/knife.ron"
+            ))
+            .expect("knife.ron should parse");
         let cfg = KnifeConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Knife);
         for level in 1..=8u8 {
@@ -462,10 +468,12 @@ mod tests {
     #[test]
     fn base_damage_garlic_matches_ron_config() {
         use crate::config::weapon::{GarlicConfig, GarlicConfigPartial};
-        let partial: GarlicConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
-            "../../../vampire-survivors/assets/config/weapons/garlic.ron"
-        ))
-        .expect("garlic.ron should parse");
+        let partial: GarlicConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(include_str!(
+                "../../../vampire-survivors/assets/config/weapons/garlic.ron"
+            ))
+            .expect("garlic.ron should parse");
         let cfg = GarlicConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Garlic);
         for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
@@ -478,10 +486,12 @@ mod tests {
     #[test]
     fn base_damage_bible_matches_ron_config() {
         use crate::config::weapon::{BibleConfig, BibleConfigPartial};
-        let partial: BibleConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
-            "../../../vampire-survivors/assets/config/weapons/bible.ron"
-        ))
-        .expect("bible.ron should parse");
+        let partial: BibleConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(include_str!(
+                "../../../vampire-survivors/assets/config/weapons/bible.ron"
+            ))
+            .expect("bible.ron should parse");
         let cfg = BibleConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Bible);
         for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
@@ -494,10 +504,12 @@ mod tests {
     #[test]
     fn base_damage_thunder_ring_matches_ron_config() {
         use crate::config::weapon::{ThunderRingConfig, ThunderRingConfigPartial};
-        let partial: ThunderRingConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
-            "../../../vampire-survivors/assets/config/weapons/thunder_ring.ron"
-        ))
-        .expect("thunder_ring.ron should parse");
+        let partial: ThunderRingConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(include_str!(
+                "../../../vampire-survivors/assets/config/weapons/thunder_ring.ron"
+            ))
+            .expect("thunder_ring.ron should parse");
         let cfg = ThunderRingConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::ThunderRing);
         for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
@@ -510,10 +522,12 @@ mod tests {
     #[test]
     fn base_damage_cross_matches_ron_config() {
         use crate::config::weapon::{CrossConfig, CrossConfigPartial};
-        let partial: CrossConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
-            "../../../vampire-survivors/assets/config/weapons/cross.ron"
-        ))
-        .expect("cross.ron should parse");
+        let partial: CrossConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(include_str!(
+                "../../../vampire-survivors/assets/config/weapons/cross.ron"
+            ))
+            .expect("cross.ron should parse");
         let cfg = CrossConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Cross);
         for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
@@ -526,10 +540,12 @@ mod tests {
     #[test]
     fn base_damage_fire_wand_matches_ron_config() {
         use crate::config::weapon::{FireWandConfig, FireWandConfigPartial};
-        let partial: FireWandConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
-            "../../../vampire-survivors/assets/config/weapons/fire_wand.ron"
-        ))
-        .expect("fire_wand.ron should parse");
+        let partial: FireWandConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(include_str!(
+                "../../../vampire-survivors/assets/config/weapons/fire_wand.ron"
+            ))
+            .expect("fire_wand.ron should parse");
         let cfg = FireWandConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::FireWand);
         for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
@@ -605,10 +621,12 @@ mod tests {
     #[test]
     fn base_count_knife_matches_ron_config() {
         use crate::config::weapon::{KnifeConfig, KnifeConfigPartial};
-        let partial: KnifeConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
-            "../../../vampire-survivors/assets/config/weapons/knife.ron"
-        ))
-        .expect("knife.ron should parse");
+        let partial: KnifeConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(include_str!(
+                "../../../vampire-survivors/assets/config/weapons/knife.ron"
+            ))
+            .expect("knife.ron should parse");
         let cfg = KnifeConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Knife);
         for (i, &expected) in cfg.count_by_level.iter().enumerate() {
@@ -621,10 +639,12 @@ mod tests {
     #[test]
     fn base_count_bible_matches_ron_config() {
         use crate::config::weapon::{BibleConfig, BibleConfigPartial};
-        let partial: BibleConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
-            "../../../vampire-survivors/assets/config/weapons/bible.ron"
-        ))
-        .expect("bible.ron should parse");
+        let partial: BibleConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(include_str!(
+                "../../../vampire-survivors/assets/config/weapons/bible.ron"
+            ))
+            .expect("bible.ron should parse");
         let cfg = BibleConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Bible);
         for (i, &expected) in cfg.count_by_level.iter().enumerate() {
@@ -637,10 +657,12 @@ mod tests {
     #[test]
     fn base_count_thunder_ring_matches_ron_config() {
         use crate::config::weapon::{ThunderRingConfig, ThunderRingConfigPartial};
-        let partial: ThunderRingConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
-            "../../../vampire-survivors/assets/config/weapons/thunder_ring.ron"
-        ))
-        .expect("thunder_ring.ron should parse");
+        let partial: ThunderRingConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(include_str!(
+                "../../../vampire-survivors/assets/config/weapons/thunder_ring.ron"
+            ))
+            .expect("thunder_ring.ron should parse");
         let cfg = ThunderRingConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::ThunderRing);
         for (i, &expected) in cfg.count_by_level.iter().enumerate() {
@@ -653,10 +675,12 @@ mod tests {
     #[test]
     fn base_count_cross_matches_ron_config() {
         use crate::config::weapon::{CrossConfig, CrossConfigPartial};
-        let partial: CrossConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
-            "../../../vampire-survivors/assets/config/weapons/cross.ron"
-        ))
-        .expect("cross.ron should parse");
+        let partial: CrossConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(include_str!(
+                "../../../vampire-survivors/assets/config/weapons/cross.ron"
+            ))
+            .expect("cross.ron should parse");
         let cfg = CrossConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Cross);
         for (i, &expected) in cfg.count_by_level.iter().enumerate() {

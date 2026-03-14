@@ -175,8 +175,10 @@ WeaponSlotsHudConfig(
 
     #[test]
     fn weapon_slots_hud_config_deserialization() {
-        let partial: WeaponSlotsHudConfigPartial =
-            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let partial: WeaponSlotsHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .expect("RON parse must succeed");
         let cfg = WeaponSlotsHudConfig::from(partial);
         assert_eq!(cfg.slot_size, 40.0);
         assert_eq!(cfg.slot_gap, 4.0);
@@ -188,7 +190,10 @@ WeaponSlotsHudConfig(
 
     #[test]
     fn slot_dimensions_are_positive() {
-        let partial: WeaponSlotsHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let partial: WeaponSlotsHudConfigPartial = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+            .from_str(RON)
+            .unwrap();
         let cfg = WeaponSlotsHudConfig::from(partial);
         assert!(cfg.slot_size > 0.0);
         assert!(cfg.label_font_size > 0.0);
