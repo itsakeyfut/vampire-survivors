@@ -2,12 +2,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-// ---------------------------------------------------------------------------
-// Fallback constants (used when RON config is not yet loaded)
-// ---------------------------------------------------------------------------
-
-/// Grid cell size for spatial partitioning (pixels).
-const DEFAULT_SPATIAL_GRID_CELL_SIZE: f32 = 64.0;
+use crate::config::game::DEFAULT_SPATIAL_GRID_CELL_SIZE;
 
 /// Grid-based spatial partitioning used to accelerate collision detection.
 ///

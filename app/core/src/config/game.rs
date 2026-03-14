@@ -26,6 +26,9 @@ pub(crate) const DEFAULT_XP_LEVEL_MULTIPLIER: f32 = 1.2;
 pub(crate) const DEFAULT_CHOICE_COUNT: usize = 3;
 pub(crate) const DEFAULT_LUCK_BONUS_CHOICE_THRESHOLD: f32 = 1.5;
 
+// --- spatial grid ---
+pub(crate) const DEFAULT_SPATIAL_GRID_CELL_SIZE: f32 = 64.0;
+
 // --- treasure chests ---
 pub(crate) const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
 pub(crate) const DEFAULT_TREASURE_GOLD: u32 = 50;
@@ -327,6 +330,12 @@ impl<'w> GameParams<'w> {
         self.get()
             .map(|c| c.treasure_spawn_flash_duration)
             .unwrap_or(DEFAULT_TREASURE_SPAWN_FLASH_DURATION)
+    }
+
+    pub fn spatial_grid_cell_size(&self) -> f32 {
+        self.get()
+            .map(|c| c.spatial_grid_cell_size)
+            .unwrap_or(DEFAULT_SPATIAL_GRID_CELL_SIZE)
     }
 }
 
