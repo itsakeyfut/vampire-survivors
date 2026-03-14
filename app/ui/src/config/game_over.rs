@@ -25,11 +25,24 @@ const DEFAULT_ROW_GAP: f32 = 8.0;
 // Config asset
 // ---------------------------------------------------------------------------
 
+/// Deserialization mirror of [`GameOverScreenConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "GameOverScreenConfig")]
+pub(super) struct GameOverScreenConfigPartial {
+    pub heading_color: Option<SrgbColor>,
+    pub stat_color: Option<SrgbColor>,
+    pub stat_font_size: Option<f32>,
+    pub stats_margin_top: Option<f32>,
+    pub button_margin_top: Option<f32>,
+    pub row_gap: Option<f32>,
+}
+
 /// Game-over screen style config loaded from `config/ui/screen/game_over.ron`.
 ///
 /// Controls the visual appearance of the game-over screen: heading color,
 /// stat text color and size, and spacing between sections.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct GameOverScreenConfig {
     /// Color of the "GAME OVER" heading text.
     pub heading_color: SrgbColor,
@@ -43,6 +56,43 @@ pub struct GameOverScreenConfig {
     pub button_margin_top: f32,
     /// Vertical gap between individual stat lines and between buttons (pixels).
     pub row_gap: f32,
+}
+
+impl From<GameOverScreenConfigPartial> for GameOverScreenConfig {
+    fn from(p: GameOverScreenConfigPartial) -> Self {
+        GameOverScreenConfig {
+            heading_color: p.heading_color.unwrap_or_else(|| {
+                warn!("game_over.ron: `heading_color` missing → using default");
+                SrgbColor { r: 0.8, g: 0.2, b: 0.2 }
+            }),
+            stat_color: p.stat_color.unwrap_or_else(|| {
+                warn!("game_over.ron: `stat_color` missing → using default");
+                SrgbColor { r: 0.85, g: 0.85, b: 0.85 }
+            }),
+            stat_font_size: p.stat_font_size.unwrap_or_else(|| {
+                warn!(
+                    "game_over.ron: `stat_font_size` missing → using default {DEFAULT_STAT_FONT_SIZE}"
+                );
+                DEFAULT_STAT_FONT_SIZE
+            }),
+            stats_margin_top: p.stats_margin_top.unwrap_or_else(|| {
+                warn!(
+                    "game_over.ron: `stats_margin_top` missing → using default {DEFAULT_STATS_MARGIN_TOP}"
+                );
+                DEFAULT_STATS_MARGIN_TOP
+            }),
+            button_margin_top: p.button_margin_top.unwrap_or_else(|| {
+                warn!(
+                    "game_over.ron: `button_margin_top` missing → using default {DEFAULT_BUTTON_MARGIN_TOP}"
+                );
+                DEFAULT_BUTTON_MARGIN_TOP
+            }),
+            row_gap: p.row_gap.unwrap_or_else(|| {
+                warn!("game_over.ron: `row_gap` missing → using default {DEFAULT_ROW_GAP}");
+                DEFAULT_ROW_GAP
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`GameOverScreenConfig`].
@@ -153,8 +203,9 @@ GameOverScreenConfig(
     row_gap:           8.0,
 )
 "#;
-        let cfg: GameOverScreenConfig =
-            ron::de::from_str(ron_data).expect("RON parse must succeed");
+        let partial: GameOverScreenConfigPartial =
+            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).expect("RON parse must succeed");
+        let cfg = GameOverScreenConfig::from(partial);
 
         assert!((cfg.heading_color.r - 0.8).abs() < 1e-6);
         assert!((cfg.stat_color.r - 0.85).abs() < 1e-6);

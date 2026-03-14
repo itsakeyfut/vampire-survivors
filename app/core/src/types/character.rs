@@ -229,7 +229,7 @@ mod tests {
     unlock_cost: 0,
 )
 "#;
-        let stats: CharacterBaseStats = ron::de::from_str(ron_str).unwrap();
+        let stats: CharacterBaseStats = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_str).unwrap();
         assert_eq!(stats.max_hp, 100.0);
         assert_eq!(stats.starting_weapon, WeaponType::Whip);
         assert_eq!(stats.name, "Default");

@@ -18,9 +18,21 @@ const DEFAULT_FONT_SIZE: f32 = 40.0;
 const DEFAULT_TOP_PERCENT: f32 = 38.0;
 const DEFAULT_TEXT_COLOR: Color = Color::srgb(1.0, 0.85, 0.2);
 
+/// Deserialization mirror of [`EvolutionNotificationHudConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "EvolutionNotificationHudConfig")]
+pub(crate) struct EvolutionNotificationHudConfigPartial {
+    pub display_duration: Option<f32>,
+    pub fade_start: Option<f32>,
+    pub font_size: Option<f32>,
+    pub top_percent: Option<f32>,
+    pub text_color: Option<SrgbColor>,
+}
+
 /// Evolution notification HUD config loaded from
 /// `config/ui/hud/gameplay/evolution_notification.ron`.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct EvolutionNotificationHudConfig {
     /// Total display duration before the notification is despawned (seconds).
     pub display_duration: f32,
@@ -32,6 +44,41 @@ pub struct EvolutionNotificationHudConfig {
     pub top_percent: f32,
     /// Notification text color.
     pub text_color: SrgbColor,
+}
+
+impl From<EvolutionNotificationHudConfigPartial> for EvolutionNotificationHudConfig {
+    fn from(p: EvolutionNotificationHudConfigPartial) -> Self {
+        EvolutionNotificationHudConfig {
+            display_duration: p.display_duration.unwrap_or_else(|| {
+                warn!(
+                    "evolution_notification.ron: `display_duration` missing → using default {DEFAULT_DISPLAY_DURATION}"
+                );
+                DEFAULT_DISPLAY_DURATION
+            }),
+            fade_start: p.fade_start.unwrap_or_else(|| {
+                warn!(
+                    "evolution_notification.ron: `fade_start` missing → using default {DEFAULT_FADE_START}"
+                );
+                DEFAULT_FADE_START
+            }),
+            font_size: p.font_size.unwrap_or_else(|| {
+                warn!(
+                    "evolution_notification.ron: `font_size` missing → using default {DEFAULT_FONT_SIZE}"
+                );
+                DEFAULT_FONT_SIZE
+            }),
+            top_percent: p.top_percent.unwrap_or_else(|| {
+                warn!(
+                    "evolution_notification.ron: `top_percent` missing → using default {DEFAULT_TOP_PERCENT}"
+                );
+                DEFAULT_TOP_PERCENT
+            }),
+            text_color: p.text_color.unwrap_or_else(|| {
+                warn!("evolution_notification.ron: `text_color` missing → using default");
+                SrgbColor { r: 1.0, g: 0.85, b: 0.2 }
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`EvolutionNotificationHudConfig`].
@@ -104,8 +151,9 @@ EvolutionNotificationHudConfig(
 
     #[test]
     fn evolution_notification_hud_config_deserialization() {
-        let cfg: EvolutionNotificationHudConfig =
-            ron::de::from_str(RON).expect("RON parse must succeed");
+        let partial: EvolutionNotificationHudConfigPartial =
+            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let cfg = EvolutionNotificationHudConfig::from(partial);
         assert_eq!(cfg.display_duration, 3.0);
         assert_eq!(cfg.fade_start, 1.5);
         assert_eq!(cfg.font_size, 40.0);
@@ -117,13 +165,15 @@ EvolutionNotificationHudConfig(
 
     #[test]
     fn display_duration_is_positive() {
-        let cfg: EvolutionNotificationHudConfig = ron::de::from_str(RON).unwrap();
+        let partial: EvolutionNotificationHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let cfg = EvolutionNotificationHudConfig::from(partial);
         assert!(cfg.display_duration > 0.0);
     }
 
     #[test]
     fn fade_start_is_before_display_duration() {
-        let cfg: EvolutionNotificationHudConfig = ron::de::from_str(RON).unwrap();
+        let partial: EvolutionNotificationHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let cfg = EvolutionNotificationHudConfig::from(partial);
         assert!(cfg.fade_start < cfg.display_duration);
     }
 }

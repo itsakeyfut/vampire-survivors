@@ -36,12 +36,36 @@ const DEFAULT_DETAIL_PANEL_WIDTH: f32 = 580.0;
 // Config asset
 // ---------------------------------------------------------------------------
 
+/// Deserialization mirror of [`CharacterSelectScreenConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "CharacterSelectScreenConfig")]
+pub(super) struct CharacterSelectScreenConfigPartial {
+    pub card_width: Option<f32>,
+    pub card_height: Option<f32>,
+    pub card_gap: Option<f32>,
+    pub card_name_font_size: Option<f32>,
+    pub card_color_unlocked: Option<SrgbColor>,
+    pub card_color_selected: Option<SrgbColor>,
+    pub card_color_hover: Option<SrgbColor>,
+    pub card_color_pressed: Option<SrgbColor>,
+    pub card_color_locked: Option<SrgbColor>,
+    pub card_color_locked_hover: Option<SrgbColor>,
+    pub card_text_color: Option<SrgbColor>,
+    pub card_text_locked_color: Option<SrgbColor>,
+    pub detail_bg_color: Option<SrgbColor>,
+    pub detail_text_color: Option<SrgbColor>,
+    pub detail_locked_color: Option<SrgbColor>,
+    pub detail_font_size: Option<f32>,
+    pub detail_panel_width: Option<f32>,
+}
+
 /// Character-select screen style config loaded from
 /// `config/ui/screen/character_select.ron`.
 ///
 /// Controls card dimensions, card and detail panel colors, and text sizes for
 /// the character-select screen.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct CharacterSelectScreenConfig {
     /// Width of each character card in pixels.
     pub card_width: f32,
@@ -77,6 +101,93 @@ pub struct CharacterSelectScreenConfig {
     pub detail_font_size: f32,
     /// Width of the detail panel in pixels.
     pub detail_panel_width: f32,
+}
+
+impl From<CharacterSelectScreenConfigPartial> for CharacterSelectScreenConfig {
+    fn from(p: CharacterSelectScreenConfigPartial) -> Self {
+        CharacterSelectScreenConfig {
+            card_width: p.card_width.unwrap_or_else(|| {
+                warn!(
+                    "character_select.ron: `card_width` missing → using default {DEFAULT_CARD_WIDTH}"
+                );
+                DEFAULT_CARD_WIDTH
+            }),
+            card_height: p.card_height.unwrap_or_else(|| {
+                warn!(
+                    "character_select.ron: `card_height` missing → using default {DEFAULT_CARD_HEIGHT}"
+                );
+                DEFAULT_CARD_HEIGHT
+            }),
+            card_gap: p.card_gap.unwrap_or_else(|| {
+                warn!(
+                    "character_select.ron: `card_gap` missing → using default {DEFAULT_CARD_GAP}"
+                );
+                DEFAULT_CARD_GAP
+            }),
+            card_name_font_size: p.card_name_font_size.unwrap_or_else(|| {
+                warn!(
+                    "character_select.ron: `card_name_font_size` missing → using default {DEFAULT_CARD_NAME_FONT_SIZE}"
+                );
+                DEFAULT_CARD_NAME_FONT_SIZE
+            }),
+            card_color_unlocked: p.card_color_unlocked.unwrap_or_else(|| {
+                warn!("character_select.ron: `card_color_unlocked` missing → using default");
+                SrgbColor { r: 0.133, g: 0.200, b: 0.400 }
+            }),
+            card_color_selected: p.card_color_selected.unwrap_or_else(|| {
+                warn!("character_select.ron: `card_color_selected` missing → using default");
+                SrgbColor { r: 0.300, g: 0.500, b: 0.900 }
+            }),
+            card_color_hover: p.card_color_hover.unwrap_or_else(|| {
+                warn!("character_select.ron: `card_color_hover` missing → using default");
+                SrgbColor { r: 0.200, g: 0.350, b: 0.650 }
+            }),
+            card_color_pressed: p.card_color_pressed.unwrap_or_else(|| {
+                warn!("character_select.ron: `card_color_pressed` missing → using default");
+                SrgbColor { r: 0.086, g: 0.133, b: 0.267 }
+            }),
+            card_color_locked: p.card_color_locked.unwrap_or_else(|| {
+                warn!("character_select.ron: `card_color_locked` missing → using default");
+                SrgbColor { r: 0.100, g: 0.100, b: 0.150 }
+            }),
+            card_color_locked_hover: p.card_color_locked_hover.unwrap_or_else(|| {
+                warn!("character_select.ron: `card_color_locked_hover` missing → using default");
+                SrgbColor { r: 0.130, g: 0.130, b: 0.180 }
+            }),
+            card_text_color: p.card_text_color.unwrap_or_else(|| {
+                warn!("character_select.ron: `card_text_color` missing → using default");
+                SrgbColor { r: 1.000, g: 1.000, b: 1.000 }
+            }),
+            card_text_locked_color: p.card_text_locked_color.unwrap_or_else(|| {
+                warn!("character_select.ron: `card_text_locked_color` missing → using default");
+                SrgbColor { r: 0.500, g: 0.500, b: 0.550 }
+            }),
+            detail_bg_color: p.detail_bg_color.unwrap_or_else(|| {
+                warn!("character_select.ron: `detail_bg_color` missing → using default");
+                SrgbColor { r: 0.080, g: 0.040, b: 0.160 }
+            }),
+            detail_text_color: p.detail_text_color.unwrap_or_else(|| {
+                warn!("character_select.ron: `detail_text_color` missing → using default");
+                SrgbColor { r: 0.900, g: 0.900, b: 0.900 }
+            }),
+            detail_locked_color: p.detail_locked_color.unwrap_or_else(|| {
+                warn!("character_select.ron: `detail_locked_color` missing → using default");
+                SrgbColor { r: 0.500, g: 0.500, b: 0.550 }
+            }),
+            detail_font_size: p.detail_font_size.unwrap_or_else(|| {
+                warn!(
+                    "character_select.ron: `detail_font_size` missing → using default {DEFAULT_DETAIL_FONT_SIZE}"
+                );
+                DEFAULT_DETAIL_FONT_SIZE
+            }),
+            detail_panel_width: p.detail_panel_width.unwrap_or_else(|| {
+                warn!(
+                    "character_select.ron: `detail_panel_width` missing → using default {DEFAULT_DETAIL_PANEL_WIDTH}"
+                );
+                DEFAULT_DETAIL_PANEL_WIDTH
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`CharacterSelectScreenConfig`].
@@ -266,8 +377,9 @@ CharacterSelectScreenConfig(
     detail_panel_width:      580.0,
 )
 "#;
-        let cfg: CharacterSelectScreenConfig =
-            ron::de::from_str(ron_data).expect("RON parse must succeed");
+        let partial: CharacterSelectScreenConfigPartial =
+            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).expect("RON parse must succeed");
+        let cfg = CharacterSelectScreenConfig::from(partial);
 
         assert_eq!(cfg.card_width, 160.0);
         assert_eq!(cfg.card_height, 140.0);

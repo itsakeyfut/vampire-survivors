@@ -75,6 +75,15 @@ const DEFAULT_TITLE_COLOR: Color = Color::srgb(0.85, 0.15, 0.15);
 // UiStyleConfig
 // ---------------------------------------------------------------------------
 
+/// Deserialization mirror of [`UiStyleConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "UiStyleConfig")]
+pub(super) struct UiStyleConfigPartial {
+    pub bg_color: Option<SrgbColor>,
+    pub title_color: Option<SrgbColor>,
+}
+
 /// UI style configuration loaded from `config/ui/styles.ron`.
 ///
 /// Covers screen-level appearance that is shared across states: background
@@ -82,12 +91,35 @@ const DEFAULT_TITLE_COLOR: Color = Color::srgb(0.85, 0.15, 0.15);
 /// live in the HUD config files under `config/ui/hud/`.
 /// Systems that read via [`UiStyleParams`] pick up hot-reloaded values
 /// automatically on the next frame.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct UiStyleConfig {
     /// Background color for full-screen overlays (title, game-over, etc.).
     pub bg_color: SrgbColor,
     /// Color of the game title heading on the title screen.
     pub title_color: SrgbColor,
+}
+
+impl From<UiStyleConfigPartial> for UiStyleConfig {
+    fn from(p: UiStyleConfigPartial) -> Self {
+        UiStyleConfig {
+            bg_color: p.bg_color.unwrap_or_else(|| {
+                warn!("styles.ron: `bg_color` missing → using default");
+                SrgbColor {
+                    r: 0.05,
+                    g: 0.05,
+                    b: 0.08,
+                }
+            }),
+            title_color: p.title_color.unwrap_or_else(|| {
+                warn!("styles.ron: `title_color` missing → using default");
+                SrgbColor {
+                    r: 0.85,
+                    g: 0.15,
+                    b: 0.15,
+                }
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`UiStyleConfig`].
@@ -218,7 +250,9 @@ UiStyleConfig(
     title_color: (r: 0.85, g: 0.15, b: 0.15),
 )
 "#;
-        let cfg: UiStyleConfig = ron::de::from_str(ron_data).expect("RON parse must succeed");
+        let partial: UiStyleConfigPartial =
+            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).expect("RON parse must succeed");
+        let cfg = UiStyleConfig::from(partial);
         assert!((cfg.bg_color.r - 0.05).abs() < 1e-6);
         assert!((cfg.title_color.r - 0.85).abs() < 1e-6);
     }

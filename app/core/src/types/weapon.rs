@@ -397,11 +397,12 @@ mod tests {
     /// Whip base_damage() matches the RON config formula for all 8 levels.
     #[test]
     fn base_damage_whip_matches_ron_config() {
-        use crate::config::weapon::WhipConfig;
-        let cfg: WhipConfig = ron::de::from_str(include_str!(
+        use crate::config::weapon::{WhipConfig, WhipConfigPartial};
+        let partial: WhipConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
             "../../../vampire-survivors/assets/config/weapons/whip.ron"
         ))
         .expect("whip.ron should parse");
+        let cfg = WhipConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Whip);
         for level in 1..=8u8 {
             state.level = level;
@@ -417,11 +418,12 @@ mod tests {
     /// MagicWand base_damage() matches the RON config formula for all 8 levels.
     #[test]
     fn base_damage_magic_wand_matches_ron_config() {
-        use crate::config::weapon::MagicWandConfig;
-        let cfg: MagicWandConfig = ron::de::from_str(include_str!(
+        use crate::config::weapon::{MagicWandConfig, MagicWandConfigPartial};
+        let partial: MagicWandConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
             "../../../vampire-survivors/assets/config/weapons/magic_wand.ron"
         ))
         .expect("magic_wand.ron should parse");
+        let cfg = MagicWandConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::MagicWand);
         for level in 1..=8u8 {
             state.level = level;
@@ -437,11 +439,12 @@ mod tests {
     /// Knife base_damage() matches the RON config step formula for all 8 levels.
     #[test]
     fn base_damage_knife_matches_ron_config() {
-        use crate::config::weapon::KnifeConfig;
-        let cfg: KnifeConfig = ron::de::from_str(include_str!(
+        use crate::config::weapon::{KnifeConfig, KnifeConfigPartial};
+        let partial: KnifeConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
             "../../../vampire-survivors/assets/config/weapons/knife.ron"
         ))
         .expect("knife.ron should parse");
+        let cfg = KnifeConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Knife);
         for level in 1..=8u8 {
             state.level = level;
@@ -458,11 +461,12 @@ mod tests {
     /// Garlic base_damage() matches the per-level table in garlic.ron.
     #[test]
     fn base_damage_garlic_matches_ron_config() {
-        use crate::config::weapon::GarlicConfig;
-        let cfg: GarlicConfig = ron::de::from_str(include_str!(
+        use crate::config::weapon::{GarlicConfig, GarlicConfigPartial};
+        let partial: GarlicConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
             "../../../vampire-survivors/assets/config/weapons/garlic.ron"
         ))
         .expect("garlic.ron should parse");
+        let cfg = GarlicConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Garlic);
         for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
             state.level = (i + 1) as u8;
@@ -473,11 +477,12 @@ mod tests {
     /// Bible base_damage() matches the per-level table in bible.ron.
     #[test]
     fn base_damage_bible_matches_ron_config() {
-        use crate::config::weapon::BibleConfig;
-        let cfg: BibleConfig = ron::de::from_str(include_str!(
+        use crate::config::weapon::{BibleConfig, BibleConfigPartial};
+        let partial: BibleConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
             "../../../vampire-survivors/assets/config/weapons/bible.ron"
         ))
         .expect("bible.ron should parse");
+        let cfg = BibleConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Bible);
         for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
             state.level = (i + 1) as u8;
@@ -488,11 +493,12 @@ mod tests {
     /// ThunderRing base_damage() matches the per-level table in thunder_ring.ron.
     #[test]
     fn base_damage_thunder_ring_matches_ron_config() {
-        use crate::config::weapon::ThunderRingConfig;
-        let cfg: ThunderRingConfig = ron::de::from_str(include_str!(
+        use crate::config::weapon::{ThunderRingConfig, ThunderRingConfigPartial};
+        let partial: ThunderRingConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
             "../../../vampire-survivors/assets/config/weapons/thunder_ring.ron"
         ))
         .expect("thunder_ring.ron should parse");
+        let cfg = ThunderRingConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::ThunderRing);
         for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
             state.level = (i + 1) as u8;
@@ -503,11 +509,12 @@ mod tests {
     /// Cross base_damage() matches the per-level table in cross.ron.
     #[test]
     fn base_damage_cross_matches_ron_config() {
-        use crate::config::weapon::CrossConfig;
-        let cfg: CrossConfig = ron::de::from_str(include_str!(
+        use crate::config::weapon::{CrossConfig, CrossConfigPartial};
+        let partial: CrossConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
             "../../../vampire-survivors/assets/config/weapons/cross.ron"
         ))
         .expect("cross.ron should parse");
+        let cfg = CrossConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Cross);
         for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
             state.level = (i + 1) as u8;
@@ -518,11 +525,12 @@ mod tests {
     /// FireWand base_damage() matches the per-level table in fire_wand.ron.
     #[test]
     fn base_damage_fire_wand_matches_ron_config() {
-        use crate::config::weapon::FireWandConfig;
-        let cfg: FireWandConfig = ron::de::from_str(include_str!(
+        use crate::config::weapon::{FireWandConfig, FireWandConfigPartial};
+        let partial: FireWandConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
             "../../../vampire-survivors/assets/config/weapons/fire_wand.ron"
         ))
         .expect("fire_wand.ron should parse");
+        let cfg = FireWandConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::FireWand);
         for (i, &expected) in cfg.damage_by_level.iter().enumerate() {
             state.level = (i + 1) as u8;
@@ -596,11 +604,12 @@ mod tests {
     /// Knife base_count() matches the per-level table in knife.ron.
     #[test]
     fn base_count_knife_matches_ron_config() {
-        use crate::config::weapon::KnifeConfig;
-        let cfg: KnifeConfig = ron::de::from_str(include_str!(
+        use crate::config::weapon::{KnifeConfig, KnifeConfigPartial};
+        let partial: KnifeConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
             "../../../vampire-survivors/assets/config/weapons/knife.ron"
         ))
         .expect("knife.ron should parse");
+        let cfg = KnifeConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Knife);
         for (i, &expected) in cfg.count_by_level.iter().enumerate() {
             state.level = (i + 1) as u8;
@@ -611,11 +620,12 @@ mod tests {
     /// Bible base_count() matches the per-level table in bible.ron.
     #[test]
     fn base_count_bible_matches_ron_config() {
-        use crate::config::weapon::BibleConfig;
-        let cfg: BibleConfig = ron::de::from_str(include_str!(
+        use crate::config::weapon::{BibleConfig, BibleConfigPartial};
+        let partial: BibleConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
             "../../../vampire-survivors/assets/config/weapons/bible.ron"
         ))
         .expect("bible.ron should parse");
+        let cfg = BibleConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Bible);
         for (i, &expected) in cfg.count_by_level.iter().enumerate() {
             state.level = (i + 1) as u8;
@@ -626,11 +636,12 @@ mod tests {
     /// ThunderRing base_count() matches the per-level table in thunder_ring.ron.
     #[test]
     fn base_count_thunder_ring_matches_ron_config() {
-        use crate::config::weapon::ThunderRingConfig;
-        let cfg: ThunderRingConfig = ron::de::from_str(include_str!(
+        use crate::config::weapon::{ThunderRingConfig, ThunderRingConfigPartial};
+        let partial: ThunderRingConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
             "../../../vampire-survivors/assets/config/weapons/thunder_ring.ron"
         ))
         .expect("thunder_ring.ron should parse");
+        let cfg = ThunderRingConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::ThunderRing);
         for (i, &expected) in cfg.count_by_level.iter().enumerate() {
             state.level = (i + 1) as u8;
@@ -641,11 +652,12 @@ mod tests {
     /// Cross base_count() matches the per-level table in cross.ron.
     #[test]
     fn base_count_cross_matches_ron_config() {
-        use crate::config::weapon::CrossConfig;
-        let cfg: CrossConfig = ron::de::from_str(include_str!(
+        use crate::config::weapon::{CrossConfig, CrossConfigPartial};
+        let partial: CrossConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(include_str!(
             "../../../vampire-survivors/assets/config/weapons/cross.ron"
         ))
         .expect("cross.ron should parse");
+        let cfg = CrossConfig::from(partial);
         let mut state = WeaponState::new(WeaponType::Cross);
         for (i, &expected) in cfg.count_by_level.iter().enumerate() {
             state.level = (i + 1) as u8;

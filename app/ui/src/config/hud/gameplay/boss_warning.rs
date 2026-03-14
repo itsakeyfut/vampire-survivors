@@ -18,9 +18,21 @@ const DEFAULT_FONT_SIZE: f32 = 52.0;
 const DEFAULT_TOP_PERCENT: f32 = 35.0;
 const DEFAULT_TEXT_COLOR: Color = Color::srgb(1.0, 0.15, 0.15);
 
+/// Deserialization mirror of [`BossWarningHudConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "BossWarningHudConfig")]
+pub(crate) struct BossWarningHudConfigPartial {
+    pub display_duration: Option<f32>,
+    pub fade_start: Option<f32>,
+    pub font_size: Option<f32>,
+    pub top_percent: Option<f32>,
+    pub text_color: Option<SrgbColor>,
+}
+
 /// Boss warning HUD config loaded from
 /// `config/ui/hud/gameplay/boss_warning.ron`.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct BossWarningHudConfig {
     /// Total display duration before the notification is despawned (seconds).
     pub display_duration: f32,
@@ -32,6 +44,41 @@ pub struct BossWarningHudConfig {
     pub top_percent: f32,
     /// Warning text color.
     pub text_color: SrgbColor,
+}
+
+impl From<BossWarningHudConfigPartial> for BossWarningHudConfig {
+    fn from(p: BossWarningHudConfigPartial) -> Self {
+        BossWarningHudConfig {
+            display_duration: p.display_duration.unwrap_or_else(|| {
+                warn!(
+                    "boss_warning.ron: `display_duration` missing → using default {DEFAULT_DISPLAY_DURATION}"
+                );
+                DEFAULT_DISPLAY_DURATION
+            }),
+            fade_start: p.fade_start.unwrap_or_else(|| {
+                warn!(
+                    "boss_warning.ron: `fade_start` missing → using default {DEFAULT_FADE_START}"
+                );
+                DEFAULT_FADE_START
+            }),
+            font_size: p.font_size.unwrap_or_else(|| {
+                warn!(
+                    "boss_warning.ron: `font_size` missing → using default {DEFAULT_FONT_SIZE}"
+                );
+                DEFAULT_FONT_SIZE
+            }),
+            top_percent: p.top_percent.unwrap_or_else(|| {
+                warn!(
+                    "boss_warning.ron: `top_percent` missing → using default {DEFAULT_TOP_PERCENT}"
+                );
+                DEFAULT_TOP_PERCENT
+            }),
+            text_color: p.text_color.unwrap_or_else(|| {
+                warn!("boss_warning.ron: `text_color` missing → using default");
+                SrgbColor { r: 1.0, g: 0.15, b: 0.15 }
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`BossWarningHudConfig`].
@@ -104,7 +151,9 @@ BossWarningHudConfig(
 
     #[test]
     fn boss_warning_hud_config_deserialization() {
-        let cfg: BossWarningHudConfig = ron::de::from_str(RON).expect("RON parse must succeed");
+        let partial: BossWarningHudConfigPartial =
+            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let cfg = BossWarningHudConfig::from(partial);
         assert_eq!(cfg.display_duration, 4.0);
         assert_eq!(cfg.fade_start, 2.0);
         assert_eq!(cfg.font_size, 52.0);
@@ -116,13 +165,15 @@ BossWarningHudConfig(
 
     #[test]
     fn display_duration_is_positive() {
-        let cfg: BossWarningHudConfig = ron::de::from_str(RON).unwrap();
+        let partial: BossWarningHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let cfg = BossWarningHudConfig::from(partial);
         assert!(cfg.display_duration > 0.0);
     }
 
     #[test]
     fn fade_start_is_before_display_duration() {
-        let cfg: BossWarningHudConfig = ron::de::from_str(RON).unwrap();
+        let partial: BossWarningHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let cfg = BossWarningHudConfig::from(partial);
         assert!(cfg.fade_start < cfg.display_duration);
     }
 }

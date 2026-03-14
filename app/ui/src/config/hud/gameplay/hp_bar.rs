@@ -23,8 +23,25 @@ const DEFAULT_FILL_COLOR_LOW: Color = Color::srgb(0.85, 0.20, 0.20);
 const DEFAULT_TRACK_COLOR: Color = Color::srgb(0.10, 0.10, 0.10);
 const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
 
+/// Deserialization mirror of [`HpBarHudConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "HpBarHudConfig")]
+pub(crate) struct HpBarHudConfigPartial {
+    pub bar_width: Option<f32>,
+    pub bar_height: Option<f32>,
+    pub bar_radius: Option<f32>,
+    pub label_font_size: Option<f32>,
+    pub label_gap: Option<f32>,
+    pub fill_color: Option<SrgbColor>,
+    pub fill_color_mid: Option<SrgbColor>,
+    pub fill_color_low: Option<SrgbColor>,
+    pub track_color: Option<SrgbColor>,
+    pub text_color: Option<SrgbColor>,
+}
+
 /// HP bar HUD config loaded from `config/ui/hud/gameplay/hp_bar.ron`.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct HpBarHudConfig {
     /// Width of the bar track in pixels.
     pub bar_width: f32,
@@ -46,6 +63,55 @@ pub struct HpBarHudConfig {
     pub track_color: SrgbColor,
     /// Label text color.
     pub text_color: SrgbColor,
+}
+
+impl From<HpBarHudConfigPartial> for HpBarHudConfig {
+    fn from(p: HpBarHudConfigPartial) -> Self {
+        HpBarHudConfig {
+            bar_width: p.bar_width.unwrap_or_else(|| {
+                warn!("hp_bar.ron: `bar_width` missing → using default {DEFAULT_BAR_WIDTH}");
+                DEFAULT_BAR_WIDTH
+            }),
+            bar_height: p.bar_height.unwrap_or_else(|| {
+                warn!("hp_bar.ron: `bar_height` missing → using default {DEFAULT_BAR_HEIGHT}");
+                DEFAULT_BAR_HEIGHT
+            }),
+            bar_radius: p.bar_radius.unwrap_or_else(|| {
+                warn!("hp_bar.ron: `bar_radius` missing → using default {DEFAULT_BAR_RADIUS}");
+                DEFAULT_BAR_RADIUS
+            }),
+            label_font_size: p.label_font_size.unwrap_or_else(|| {
+                warn!(
+                    "hp_bar.ron: `label_font_size` missing → using default {DEFAULT_LABEL_FONT_SIZE}"
+                );
+                DEFAULT_LABEL_FONT_SIZE
+            }),
+            label_gap: p.label_gap.unwrap_or_else(|| {
+                warn!("hp_bar.ron: `label_gap` missing → using default {DEFAULT_LABEL_GAP}");
+                DEFAULT_LABEL_GAP
+            }),
+            fill_color: p.fill_color.unwrap_or_else(|| {
+                warn!("hp_bar.ron: `fill_color` missing → using default");
+                SrgbColor { r: 0.20, g: 0.80, b: 0.20 }
+            }),
+            fill_color_mid: p.fill_color_mid.unwrap_or_else(|| {
+                warn!("hp_bar.ron: `fill_color_mid` missing → using default");
+                SrgbColor { r: 0.90, g: 0.80, b: 0.10 }
+            }),
+            fill_color_low: p.fill_color_low.unwrap_or_else(|| {
+                warn!("hp_bar.ron: `fill_color_low` missing → using default");
+                SrgbColor { r: 0.85, g: 0.20, b: 0.20 }
+            }),
+            track_color: p.track_color.unwrap_or_else(|| {
+                warn!("hp_bar.ron: `track_color` missing → using default");
+                SrgbColor { r: 0.10, g: 0.10, b: 0.10 }
+            }),
+            text_color: p.text_color.unwrap_or_else(|| {
+                warn!("hp_bar.ron: `text_color` missing → using default");
+                SrgbColor { r: 0.95, g: 0.90, b: 0.85 }
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`HpBarHudConfig`].
@@ -151,7 +217,8 @@ HpBarHudConfig(
 
     #[test]
     fn hp_bar_hud_config_deserialization() {
-        let cfg: HpBarHudConfig = ron::de::from_str(RON).expect("RON parse must succeed");
+        let partial: HpBarHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let cfg = HpBarHudConfig::from(partial);
         assert_eq!(cfg.bar_width, 200.0);
         assert_eq!(cfg.bar_height, 16.0);
         assert_eq!(cfg.bar_radius, 4.0);
@@ -164,7 +231,8 @@ HpBarHudConfig(
 
     #[test]
     fn hp_bar_dimensions_are_positive() {
-        let cfg: HpBarHudConfig = ron::de::from_str(RON).unwrap();
+        let partial: HpBarHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let cfg = HpBarHudConfig::from(partial);
         assert!(cfg.bar_width > 0.0);
         assert!(cfg.bar_height > 0.0);
         assert!(cfg.label_font_size > 0.0);

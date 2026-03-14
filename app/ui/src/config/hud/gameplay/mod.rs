@@ -26,17 +26,28 @@ pub mod timer;
 pub mod weapon_slots;
 pub mod xp_bar;
 
+pub(crate) use boss_hp_bar::BossHpBarHudConfigPartial;
 pub use boss_hp_bar::{BossHpBarHudConfig, BossHpBarHudConfigHandle, BossHpBarHudParams};
+pub(crate) use boss_warning::BossWarningHudConfigPartial;
 pub use boss_warning::{BossWarningHudConfig, BossWarningHudConfigHandle, BossWarningHudParams};
+pub(crate) use evolution_notification::EvolutionNotificationHudConfigPartial;
 pub use evolution_notification::{
     EvolutionNotificationHudConfig, EvolutionNotificationHudConfigHandle,
     EvolutionNotificationHudParams,
 };
+pub(crate) use gold::GoldHudConfigPartial;
 pub use gold::{GoldHudConfig, GoldHudConfigHandle, GoldHudParams};
+pub(crate) use hp_bar::HpBarHudConfigPartial;
 pub use hp_bar::{HpBarHudConfig, HpBarHudConfigHandle, HpBarHudParams};
+pub(crate) use kill_count::KillCountHudConfigPartial;
 pub use kill_count::{KillCountHudConfig, KillCountHudConfigHandle, KillCountHudParams};
+pub(crate) use layout::GameplayHudLayoutConfigPartial;
 pub use layout::{GameplayHudLayoutConfig, GameplayHudLayoutConfigHandle, GameplayHudLayoutParams};
+pub(crate) use level::LevelHudConfigPartial;
 pub use level::{LevelHudConfig, LevelHudConfigHandle, LevelHudParams};
+pub(crate) use timer::TimerHudConfigPartial;
 pub use timer::{TimerHudConfig, TimerHudConfigHandle, TimerHudParams};
+pub(crate) use weapon_slots::WeaponSlotsHudConfigPartial;
 pub use weapon_slots::{WeaponSlotsHudConfig, WeaponSlotsHudConfigHandle, WeaponSlotsHudParams};
+pub(crate) use xp_bar::XpBarHudConfigPartial;
 pub use xp_bar::{XpBarHudConfig, XpBarHudConfigHandle, XpBarHudParams};

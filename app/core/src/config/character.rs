@@ -10,17 +10,51 @@ use crate::types::{CharacterBaseStats, CharacterType};
 // Asset type
 // ---------------------------------------------------------------------------
 
+/// Deserialization mirror of [`CharacterConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "CharacterConfig")]
+pub(super) struct CharacterConfigPartial {
+    pub default_character: Option<CharacterBaseStats>,
+    pub magician: Option<CharacterBaseStats>,
+    pub thief: Option<CharacterBaseStats>,
+    pub knight: Option<CharacterBaseStats>,
+}
+
 /// Full character configuration, loaded from `assets/config/character.ron`.
 ///
 /// Contains one [`CharacterBaseStats`] block per playable character.
 /// Call [`CharacterConfig::stats_for`] to look up a character by type.
 /// Hot-reloading this file takes effect the next time a run starts.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct CharacterConfig {
     pub default_character: CharacterBaseStats,
     pub magician: CharacterBaseStats,
     pub thief: CharacterBaseStats,
     pub knight: CharacterBaseStats,
+}
+
+impl From<CharacterConfigPartial> for CharacterConfig {
+    fn from(p: CharacterConfigPartial) -> Self {
+        CharacterConfig {
+            default_character: p.default_character.unwrap_or_else(|| {
+                warn!("character.ron: `default_character` missing → using default zero stats");
+                crate::types::get_character_stats(CharacterType::DefaultCharacter)
+            }),
+            magician: p.magician.unwrap_or_else(|| {
+                warn!("character.ron: `magician` missing → using default zero stats");
+                crate::types::get_character_stats(CharacterType::Magician)
+            }),
+            thief: p.thief.unwrap_or_else(|| {
+                warn!("character.ron: `thief` missing → using default zero stats");
+                crate::types::get_character_stats(CharacterType::Thief)
+            }),
+            knight: p.knight.unwrap_or_else(|| {
+                warn!("character.ron: `knight` missing → using default zero stats");
+                crate::types::get_character_stats(CharacterType::Knight)
+            }),
+        }
+    }
 }
 
 impl CharacterConfig {
@@ -156,7 +190,8 @@ CharacterConfig(
 
     #[test]
     fn character_config_deserializes() {
-        let config: CharacterConfig = ron::de::from_str(sample_ron()).unwrap();
+        let partial: CharacterConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(sample_ron()).unwrap();
+        let config = CharacterConfig::from(partial);
         assert_eq!(config.default_character.max_hp, 100.0);
         assert_eq!(config.default_character.starting_weapon, WeaponType::Whip);
         assert_eq!(config.default_character.unlock_cost, 0);
@@ -173,7 +208,8 @@ CharacterConfig(
 
     #[test]
     fn stats_for_returns_correct_entry() {
-        let config: CharacterConfig = ron::de::from_str(sample_ron()).unwrap();
+        let partial: CharacterConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(sample_ron()).unwrap();
+        let config = CharacterConfig::from(partial);
         assert_eq!(
             config.stats_for(CharacterType::DefaultCharacter).max_hp,
             100.0
@@ -188,7 +224,8 @@ CharacterConfig(
 
     #[test]
     fn all_entries_have_positive_hp_and_speed() {
-        let config: CharacterConfig = ron::de::from_str(sample_ron()).unwrap();
+        let partial: CharacterConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(sample_ron()).unwrap();
+        let config = CharacterConfig::from(partial);
         for char_type in [
             CharacterType::DefaultCharacter,
             CharacterType::Magician,
@@ -211,7 +248,8 @@ CharacterConfig(
 
     #[test]
     fn all_entries_have_non_empty_name_and_description() {
-        let config: CharacterConfig = ron::de::from_str(sample_ron()).unwrap();
+        let partial: CharacterConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(sample_ron()).unwrap();
+        let config = CharacterConfig::from(partial);
         for char_type in [
             CharacterType::DefaultCharacter,
             CharacterType::Magician,

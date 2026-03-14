@@ -15,13 +15,37 @@ use crate::config::SrgbColor;
 const DEFAULT_FONT_SIZE: f32 = 28.0;
 const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
 
+/// Deserialization mirror of [`TimerHudConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "TimerHudConfig")]
+pub(crate) struct TimerHudConfigPartial {
+    pub font_size: Option<f32>,
+    pub text_color: Option<SrgbColor>,
+}
+
 /// Timer HUD config loaded from `config/ui/hud/gameplay/timer.ron`.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct TimerHudConfig {
     /// Font size of the timer text in points.
     pub font_size: f32,
     /// Timer text color.
     pub text_color: SrgbColor,
+}
+
+impl From<TimerHudConfigPartial> for TimerHudConfig {
+    fn from(p: TimerHudConfigPartial) -> Self {
+        TimerHudConfig {
+            font_size: p.font_size.unwrap_or_else(|| {
+                warn!("timer.ron: `font_size` missing → using default {DEFAULT_FONT_SIZE}");
+                DEFAULT_FONT_SIZE
+            }),
+            text_color: p.text_color.unwrap_or_else(|| {
+                warn!("timer.ron: `text_color` missing → using default");
+                SrgbColor { r: 0.95, g: 0.90, b: 0.85 }
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`TimerHudConfig`].
@@ -73,14 +97,16 @@ TimerHudConfig(
 
     #[test]
     fn timer_hud_config_deserialization() {
-        let cfg: TimerHudConfig = ron::de::from_str(RON).expect("RON parse must succeed");
+        let partial: TimerHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let cfg = TimerHudConfig::from(partial);
         assert_eq!(cfg.font_size, 28.0);
         assert!((cfg.text_color.r - 0.95).abs() < 1e-6);
     }
 
     #[test]
     fn timer_font_size_is_positive() {
-        let cfg: TimerHudConfig = ron::de::from_str(RON).unwrap();
+        let partial: TimerHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let cfg = TimerHudConfig::from(partial);
         assert!(cfg.font_size > 0.0);
     }
 }

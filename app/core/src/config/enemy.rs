@@ -107,12 +107,86 @@ pub struct EnemyStatsEntry {
 // Asset type
 // ---------------------------------------------------------------------------
 
+fn default_enemy_stats_entry(field_name: &str) -> EnemyStatsEntry {
+    warn!(
+        "enemy.ron: `{}` missing → using default zero stats",
+        field_name
+    );
+    EnemyStatsEntry {
+        base_hp: 1.0,
+        speed: 50.0,
+        damage: 1.0,
+        xp_value: 1,
+        gold_chance: 0.0,
+        collider_radius: 8.0,
+        spawn_weight: 0.0,
+    }
+}
+
+fn default_medusa_behavior(field_name: &str) -> MedusaBehaviorConfig {
+    warn!(
+        "enemy.ron: `{}` missing → using default zero stats",
+        field_name
+    );
+    MedusaBehaviorConfig {
+        keep_min_dist: 150.0,
+        keep_max_dist: 250.0,
+        attack_interval: 2.0,
+        projectile_speed: 180.0,
+        projectile_lifetime: 5.0,
+        projectile_radius: 5.0,
+    }
+}
+
+fn default_dragon_behavior(field_name: &str) -> DragonBehaviorConfig {
+    warn!(
+        "enemy.ron: `{}` missing → using default zero stats",
+        field_name
+    );
+    DragonBehaviorConfig {
+        attack_interval: 3.0,
+        fireball_speed: 200.0,
+        fireball_lifetime: 6.0,
+        fireball_radius: 7.0,
+    }
+}
+
+/// Deserialization mirror of [`EnemyConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "EnemyConfig")]
+pub(super) struct EnemyConfigPartial {
+    pub bat: Option<EnemyStatsEntry>,
+    pub skeleton: Option<EnemyStatsEntry>,
+    pub zombie: Option<EnemyStatsEntry>,
+    pub ghost: Option<EnemyStatsEntry>,
+    pub demon: Option<EnemyStatsEntry>,
+    pub medusa: Option<EnemyStatsEntry>,
+    pub dragon: Option<EnemyStatsEntry>,
+    pub boss_death: Option<EnemyStatsEntry>,
+    pub mini_death: Option<EnemyStatsEntry>,
+    pub mini_boss: Option<EnemyStatsEntry>,
+    pub spawn_base_interval: Option<f32>,
+    pub max_count: Option<usize>,
+    pub cull_distance: Option<f32>,
+    pub difficulty_max: Option<f32>,
+    pub spawn_margin: Option<f32>,
+    pub zombie_unlock_secs: Option<f32>,
+    pub ghost_unlock_secs: Option<f32>,
+    pub demon_unlock_secs: Option<f32>,
+    pub medusa_unlock_secs: Option<f32>,
+    pub dragon_unlock_secs: Option<f32>,
+    pub mini_boss_interval: Option<f32>,
+    pub medusa_behavior: Option<MedusaBehaviorConfig>,
+    pub dragon_behavior: Option<DragonBehaviorConfig>,
+}
+
 /// Full enemy configuration, loaded from `assets/config/enemy.ron`.
 ///
 /// Contains per-enemy stat blocks and global spawn/difficulty parameters.
 /// Hot-reloading this file affects enemies spawned after the reload;
 /// existing enemies keep their current stats.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct EnemyConfig {
     pub bat: EnemyStatsEntry,
     pub skeleton: EnemyStatsEntry,
@@ -148,6 +222,115 @@ pub struct EnemyConfig {
     pub medusa_behavior: MedusaBehaviorConfig,
     /// Dragon-specific fireball behavior parameters.
     pub dragon_behavior: DragonBehaviorConfig,
+}
+
+impl From<EnemyConfigPartial> for EnemyConfig {
+    fn from(p: EnemyConfigPartial) -> Self {
+        EnemyConfig {
+            bat: p
+                .bat
+                .unwrap_or_else(|| default_enemy_stats_entry("bat")),
+            skeleton: p
+                .skeleton
+                .unwrap_or_else(|| default_enemy_stats_entry("skeleton")),
+            zombie: p
+                .zombie
+                .unwrap_or_else(|| default_enemy_stats_entry("zombie")),
+            ghost: p
+                .ghost
+                .unwrap_or_else(|| default_enemy_stats_entry("ghost")),
+            demon: p
+                .demon
+                .unwrap_or_else(|| default_enemy_stats_entry("demon")),
+            medusa: p
+                .medusa
+                .unwrap_or_else(|| default_enemy_stats_entry("medusa")),
+            dragon: p
+                .dragon
+                .unwrap_or_else(|| default_enemy_stats_entry("dragon")),
+            boss_death: p
+                .boss_death
+                .unwrap_or_else(|| default_enemy_stats_entry("boss_death")),
+            mini_death: p
+                .mini_death
+                .unwrap_or_else(|| default_enemy_stats_entry("mini_death")),
+            mini_boss: p
+                .mini_boss
+                .unwrap_or_else(|| default_enemy_stats_entry("mini_boss")),
+            spawn_base_interval: p.spawn_base_interval.unwrap_or_else(|| {
+                warn!(
+                    "enemy.ron: `spawn_base_interval` missing → using default {DEFAULT_ENEMY_SPAWN_BASE_INTERVAL}"
+                );
+                DEFAULT_ENEMY_SPAWN_BASE_INTERVAL
+            }),
+            max_count: p.max_count.unwrap_or_else(|| {
+                warn!(
+                    "enemy.ron: `max_count` missing → using default {DEFAULT_MAX_ENEMY_COUNT}"
+                );
+                DEFAULT_MAX_ENEMY_COUNT
+            }),
+            cull_distance: p.cull_distance.unwrap_or_else(|| {
+                warn!(
+                    "enemy.ron: `cull_distance` missing → using default {DEFAULT_CULL_DISTANCE}"
+                );
+                DEFAULT_CULL_DISTANCE
+            }),
+            difficulty_max: p.difficulty_max.unwrap_or_else(|| {
+                warn!(
+                    "enemy.ron: `difficulty_max` missing → using default {DEFAULT_DIFFICULTY_MAX}"
+                );
+                DEFAULT_DIFFICULTY_MAX
+            }),
+            spawn_margin: p.spawn_margin.unwrap_or_else(|| {
+                warn!(
+                    "enemy.ron: `spawn_margin` missing → using default {DEFAULT_SPAWN_MARGIN}"
+                );
+                DEFAULT_SPAWN_MARGIN
+            }),
+            zombie_unlock_secs: p.zombie_unlock_secs.unwrap_or_else(|| {
+                warn!(
+                    "enemy.ron: `zombie_unlock_secs` missing → using default {DEFAULT_ZOMBIE_UNLOCK_SECS}"
+                );
+                DEFAULT_ZOMBIE_UNLOCK_SECS
+            }),
+            ghost_unlock_secs: p.ghost_unlock_secs.unwrap_or_else(|| {
+                warn!(
+                    "enemy.ron: `ghost_unlock_secs` missing → using default {DEFAULT_GHOST_UNLOCK_SECS}"
+                );
+                DEFAULT_GHOST_UNLOCK_SECS
+            }),
+            demon_unlock_secs: p.demon_unlock_secs.unwrap_or_else(|| {
+                warn!(
+                    "enemy.ron: `demon_unlock_secs` missing → using default {DEFAULT_DEMON_UNLOCK_SECS}"
+                );
+                DEFAULT_DEMON_UNLOCK_SECS
+            }),
+            medusa_unlock_secs: p.medusa_unlock_secs.unwrap_or_else(|| {
+                warn!(
+                    "enemy.ron: `medusa_unlock_secs` missing → using default {DEFAULT_MEDUSA_UNLOCK_SECS}"
+                );
+                DEFAULT_MEDUSA_UNLOCK_SECS
+            }),
+            dragon_unlock_secs: p.dragon_unlock_secs.unwrap_or_else(|| {
+                warn!(
+                    "enemy.ron: `dragon_unlock_secs` missing → using default {DEFAULT_DRAGON_UNLOCK_SECS}"
+                );
+                DEFAULT_DRAGON_UNLOCK_SECS
+            }),
+            mini_boss_interval: p.mini_boss_interval.unwrap_or_else(|| {
+                warn!(
+                    "enemy.ron: `mini_boss_interval` missing → using default {DEFAULT_MINI_BOSS_INTERVAL}"
+                );
+                DEFAULT_MINI_BOSS_INTERVAL
+            }),
+            medusa_behavior: p
+                .medusa_behavior
+                .unwrap_or_else(|| default_medusa_behavior("medusa_behavior")),
+            dragon_behavior: p
+                .dragon_behavior
+                .unwrap_or_else(|| default_dragon_behavior("dragon_behavior")),
+        }
+    }
 }
 
 impl EnemyConfig {
@@ -339,7 +522,8 @@ EnemyConfig(
     ),
 )
 "#;
-        let config: EnemyConfig = ron::de::from_str(ron_data).unwrap();
+        let partial: EnemyConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).unwrap();
+        let config = EnemyConfig::from(partial);
         assert_eq!(config.bat.base_hp, 10.0);
         assert_eq!(config.bat.speed, 150.0);
         assert_eq!(config.bat.collider_radius, 8.0);
@@ -409,7 +593,8 @@ EnemyConfig(
     ),
 )
 "#;
-        let config: EnemyConfig = ron::de::from_str(ron_data).unwrap();
+        let partial: EnemyConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).unwrap();
+        let config = EnemyConfig::from(partial);
         assert_eq!(config.stats_for(EnemyType::Bat).base_hp, 10.0);
         assert_eq!(config.stats_for(EnemyType::Bat).collider_radius, 8.0);
         assert_eq!(config.stats_for(EnemyType::BossDeath).base_hp, 5000.0);

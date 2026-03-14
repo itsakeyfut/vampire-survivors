@@ -15,13 +15,37 @@ use crate::config::SrgbColor;
 const DEFAULT_FONT_SIZE: f32 = 22.0;
 const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
 
+/// Deserialization mirror of [`LevelHudConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "LevelHudConfig")]
+pub(crate) struct LevelHudConfigPartial {
+    pub font_size: Option<f32>,
+    pub text_color: Option<SrgbColor>,
+}
+
 /// Level label HUD config loaded from `config/ui/hud/gameplay/level.ron`.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct LevelHudConfig {
     /// Font size of the level label in points.
     pub font_size: f32,
     /// Level label text color.
     pub text_color: SrgbColor,
+}
+
+impl From<LevelHudConfigPartial> for LevelHudConfig {
+    fn from(p: LevelHudConfigPartial) -> Self {
+        LevelHudConfig {
+            font_size: p.font_size.unwrap_or_else(|| {
+                warn!("level.ron: `font_size` missing → using default {DEFAULT_FONT_SIZE}");
+                DEFAULT_FONT_SIZE
+            }),
+            text_color: p.text_color.unwrap_or_else(|| {
+                warn!("level.ron: `text_color` missing → using default");
+                SrgbColor { r: 0.95, g: 0.90, b: 0.85 }
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`LevelHudConfig`].
@@ -73,14 +97,16 @@ LevelHudConfig(
 
     #[test]
     fn level_hud_config_deserialization() {
-        let cfg: LevelHudConfig = ron::de::from_str(RON).expect("RON parse must succeed");
+        let partial: LevelHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).expect("RON parse must succeed");
+        let cfg = LevelHudConfig::from(partial);
         assert_eq!(cfg.font_size, 22.0);
         assert!((cfg.text_color.b - 0.85).abs() < 1e-6);
     }
 
     #[test]
     fn level_font_size_is_positive() {
-        let cfg: LevelHudConfig = ron::de::from_str(RON).unwrap();
+        let partial: LevelHudConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(RON).unwrap();
+        let cfg = LevelHudConfig::from(partial);
         assert!(cfg.font_size > 0.0);
     }
 }

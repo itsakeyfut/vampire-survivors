@@ -6,8 +6,28 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use serde::Deserialize;
 
+// ---------------------------------------------------------------------------
+// Fallback constants (used while bible.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_ORB_COLLISION_RADIUS: f32 = 12.0;
+const DEFAULT_HIT_COOLDOWN_SECS: f32 = 1.5;
+
+/// Deserialization mirror of [`BibleConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "BibleConfig")]
+pub(crate) struct BibleConfigPartial {
+    pub damage_by_level: Option<Vec<f32>>,
+    pub orbit_radius_by_level: Option<Vec<f32>>,
+    pub orbit_speed_by_level: Option<Vec<f32>>,
+    pub count_by_level: Option<Vec<u32>>,
+    pub orb_collision_radius: Option<f32>,
+    pub hit_cooldown_secs: Option<f32>,
+}
+
 /// Tunable parameters for the Bible and its evolution UnholyVespers.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct BibleConfig {
     /// Damage per hit at each weapon level (index 0 = level 1).
     pub damage_by_level: Vec<f32>,
@@ -21,6 +41,41 @@ pub struct BibleConfig {
     pub orb_collision_radius: f32,
     /// Seconds before the same enemy can be hit again by the same orb.
     pub hit_cooldown_secs: f32,
+}
+
+impl From<BibleConfigPartial> for BibleConfig {
+    fn from(p: BibleConfigPartial) -> Self {
+        BibleConfig {
+            damage_by_level: p.damage_by_level.unwrap_or_else(|| {
+                warn!("bible.ron: `damage_by_level` missing → using default");
+                vec![]
+            }),
+            orbit_radius_by_level: p.orbit_radius_by_level.unwrap_or_else(|| {
+                warn!("bible.ron: `orbit_radius_by_level` missing → using default");
+                vec![]
+            }),
+            orbit_speed_by_level: p.orbit_speed_by_level.unwrap_or_else(|| {
+                warn!("bible.ron: `orbit_speed_by_level` missing → using default");
+                vec![]
+            }),
+            count_by_level: p.count_by_level.unwrap_or_else(|| {
+                warn!("bible.ron: `count_by_level` missing → using default");
+                vec![]
+            }),
+            orb_collision_radius: p.orb_collision_radius.unwrap_or_else(|| {
+                warn!(
+                    "bible.ron: `orb_collision_radius` missing → using default {DEFAULT_ORB_COLLISION_RADIUS}"
+                );
+                DEFAULT_ORB_COLLISION_RADIUS
+            }),
+            hit_cooldown_secs: p.hit_cooldown_secs.unwrap_or_else(|| {
+                warn!(
+                    "bible.ron: `hit_cooldown_secs` missing → using default {DEFAULT_HIT_COOLDOWN_SECS}"
+                );
+                DEFAULT_HIT_COOLDOWN_SECS
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`BibleConfig`].
@@ -69,7 +124,8 @@ BibleConfig(
 
     #[test]
     fn bible_config_deserialization() {
-        let cfg: BibleConfig = ron::de::from_str(full_ron()).unwrap();
+        let partial: BibleConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(full_ron()).unwrap();
+        let cfg = BibleConfig::from(partial);
         assert_eq!(cfg.damage_by_level[0], 20.0);
         assert_eq!(cfg.damage_by_level[7], 80.0);
         assert_eq!(cfg.orbit_radius_by_level[0], 80.0);
@@ -81,7 +137,8 @@ BibleConfig(
 
     #[test]
     fn bible_config_count_increases_with_level() {
-        let cfg: BibleConfig = ron::de::from_str(full_ron()).unwrap();
+        let partial: BibleConfigPartial = ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(full_ron()).unwrap();
+        let cfg = BibleConfig::from(partial);
         // Level 1/2 → 1 orb; Level 3/4 → 2 orbs; Level 5+ → 3 orbs
         assert_eq!(cfg.count_by_level[0], 1);
         assert_eq!(cfg.count_by_level[2], 2);

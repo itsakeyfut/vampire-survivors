@@ -37,11 +37,36 @@ const DEFAULT_ICON_COLOR_PASSIVE_UPGRADE: Color = Color::srgb(0.40, 0.90, 0.65);
 // Config asset
 // ---------------------------------------------------------------------------
 
+/// Deserialization mirror of [`UpgradeCardHudConfig`] — every field is `Option<T>` so
+/// RON files with missing fields still load and emit a `warn!` instead of failing.
+#[derive(Deserialize, Default)]
+#[serde(default, rename = "UpgradeCardHudConfig")]
+pub(crate) struct UpgradeCardHudConfigPartial {
+    pub card_width: Option<f32>,
+    pub card_height: Option<f32>,
+    pub card_gap: Option<f32>,
+    pub padding: Option<f32>,
+    pub inner_gap: Option<f32>,
+    pub card_normal: Option<SrgbColor>,
+    pub card_hover: Option<SrgbColor>,
+    pub card_pressed: Option<SrgbColor>,
+    pub subtitle_color: Option<SrgbColor>,
+    pub text_color: Option<SrgbColor>,
+    pub font_size_name: Option<f32>,
+    pub font_size_subtitle: Option<f32>,
+    pub font_size_desc: Option<f32>,
+    pub icon_size: Option<f32>,
+    pub icon_color_new_weapon: Option<SrgbColor>,
+    pub icon_color_weapon_upgrade: Option<SrgbColor>,
+    pub icon_color_new_passive: Option<SrgbColor>,
+    pub icon_color_passive_upgrade: Option<SrgbColor>,
+}
+
 /// Upgrade card HUD config loaded from `config/ui/hud/upgrade_card.ron`.
 ///
 /// Covers layout (dimensions, gaps, padding) and visuals (colors, font sizes)
 /// for each interactive upgrade card and the row that contains them.
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct UpgradeCardHudConfig {
     /// Card width in pixels.
     pub card_width: f32,
@@ -79,6 +104,95 @@ pub struct UpgradeCardHudConfig {
     pub icon_color_new_passive: SrgbColor,
     /// Icon placeholder color for "Passive Upgrade" cards.
     pub icon_color_passive_upgrade: SrgbColor,
+}
+
+impl From<UpgradeCardHudConfigPartial> for UpgradeCardHudConfig {
+    fn from(p: UpgradeCardHudConfigPartial) -> Self {
+        UpgradeCardHudConfig {
+            card_width: p.card_width.unwrap_or_else(|| {
+                warn!(
+                    "upgrade_card.ron: `card_width` missing → using default {DEFAULT_CARD_WIDTH}"
+                );
+                DEFAULT_CARD_WIDTH
+            }),
+            card_height: p.card_height.unwrap_or_else(|| {
+                warn!(
+                    "upgrade_card.ron: `card_height` missing → using default {DEFAULT_CARD_HEIGHT}"
+                );
+                DEFAULT_CARD_HEIGHT
+            }),
+            card_gap: p.card_gap.unwrap_or_else(|| {
+                warn!("upgrade_card.ron: `card_gap` missing → using default {DEFAULT_CARD_GAP}");
+                DEFAULT_CARD_GAP
+            }),
+            padding: p.padding.unwrap_or_else(|| {
+                warn!("upgrade_card.ron: `padding` missing → using default {DEFAULT_PADDING}");
+                DEFAULT_PADDING
+            }),
+            inner_gap: p.inner_gap.unwrap_or_else(|| {
+                warn!("upgrade_card.ron: `inner_gap` missing → using default {DEFAULT_INNER_GAP}");
+                DEFAULT_INNER_GAP
+            }),
+            card_normal: p.card_normal.unwrap_or_else(|| {
+                warn!("upgrade_card.ron: `card_normal` missing → using default");
+                SrgbColor { r: 0.12, g: 0.08, b: 0.28 }
+            }),
+            card_hover: p.card_hover.unwrap_or_else(|| {
+                warn!("upgrade_card.ron: `card_hover` missing → using default");
+                SrgbColor { r: 0.22, g: 0.14, b: 0.48 }
+            }),
+            card_pressed: p.card_pressed.unwrap_or_else(|| {
+                warn!("upgrade_card.ron: `card_pressed` missing → using default");
+                SrgbColor { r: 0.08, g: 0.05, b: 0.18 }
+            }),
+            subtitle_color: p.subtitle_color.unwrap_or_else(|| {
+                warn!("upgrade_card.ron: `subtitle_color` missing → using default");
+                SrgbColor { r: 0.85, g: 0.70, b: 0.30 }
+            }),
+            text_color: p.text_color.unwrap_or_else(|| {
+                warn!("upgrade_card.ron: `text_color` missing → using default");
+                SrgbColor { r: 0.95, g: 0.90, b: 0.85 }
+            }),
+            font_size_name: p.font_size_name.unwrap_or_else(|| {
+                warn!(
+                    "upgrade_card.ron: `font_size_name` missing → using default {DEFAULT_FONT_SIZE_NAME}"
+                );
+                DEFAULT_FONT_SIZE_NAME
+            }),
+            font_size_subtitle: p.font_size_subtitle.unwrap_or_else(|| {
+                warn!(
+                    "upgrade_card.ron: `font_size_subtitle` missing → using default {DEFAULT_FONT_SIZE_SUBTITLE}"
+                );
+                DEFAULT_FONT_SIZE_SUBTITLE
+            }),
+            font_size_desc: p.font_size_desc.unwrap_or_else(|| {
+                warn!(
+                    "upgrade_card.ron: `font_size_desc` missing → using default {DEFAULT_FONT_SIZE_DESC}"
+                );
+                DEFAULT_FONT_SIZE_DESC
+            }),
+            icon_size: p.icon_size.unwrap_or_else(|| {
+                warn!("upgrade_card.ron: `icon_size` missing → using default {DEFAULT_ICON_SIZE}");
+                DEFAULT_ICON_SIZE
+            }),
+            icon_color_new_weapon: p.icon_color_new_weapon.unwrap_or_else(|| {
+                warn!("upgrade_card.ron: `icon_color_new_weapon` missing → using default");
+                SrgbColor { r: 0.25, g: 0.50, b: 1.00 }
+            }),
+            icon_color_weapon_upgrade: p.icon_color_weapon_upgrade.unwrap_or_else(|| {
+                warn!("upgrade_card.ron: `icon_color_weapon_upgrade` missing → using default");
+                SrgbColor { r: 0.40, g: 0.70, b: 1.00 }
+            }),
+            icon_color_new_passive: p.icon_color_new_passive.unwrap_or_else(|| {
+                warn!("upgrade_card.ron: `icon_color_new_passive` missing → using default");
+                SrgbColor { r: 0.20, g: 0.75, b: 0.50 }
+            }),
+            icon_color_passive_upgrade: p.icon_color_passive_upgrade.unwrap_or_else(|| {
+                warn!("upgrade_card.ron: `icon_color_passive_upgrade` missing → using default");
+                SrgbColor { r: 0.40, g: 0.90, b: 0.65 }
+            }),
+        }
+    }
 }
 
 /// Resource holding the handle to the loaded [`UpgradeCardHudConfig`].
@@ -241,8 +355,9 @@ UpgradeCardHudConfig(
     icon_color_passive_upgrade: (r: 0.40, g: 0.90, b: 0.65),
 )
 "#;
-        let cfg: UpgradeCardHudConfig =
-            ron::de::from_str(ron_data).expect("RON parse must succeed");
+        let partial: UpgradeCardHudConfigPartial =
+            ron::Options::default().with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME).from_str(ron_data).expect("RON parse must succeed");
+        let cfg = UpgradeCardHudConfig::from(partial);
         assert_eq!(cfg.card_width, 260.0);
         assert_eq!(cfg.card_height, 320.0);
         assert_eq!(cfg.card_gap, 30.0);
