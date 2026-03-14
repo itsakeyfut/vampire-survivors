@@ -293,6 +293,18 @@ impl Plugin for UiConfigPlugin {
             .add_systems(
                 Update,
                 crate::hud::gameplay::weapon_slots::hot_reload_weapon_slots_hud,
+            )
+            .add_systems(
+                Update,
+                crate::hud::gameplay::boss_hp_bar::hot_reload_boss_hp_bar_hud,
+            )
+            .add_systems(
+                Update,
+                crate::hud::gameplay::boss_warning::hot_reload_boss_warning_hud,
+            )
+            .add_systems(
+                Update,
+                crate::hud::gameplay::evolution_notification::hot_reload_evolution_notification_hud,
             );
 
         info!("✅ UiConfigPlugin initialized");

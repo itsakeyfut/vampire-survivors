@@ -21,6 +21,9 @@ use bevy::prelude::*;
 use vs_core::components::Enemy;
 use vs_core::types::BossPhase;
 
+use crate::config::hud::gameplay::boss_hp_bar::BossHpBarHudConfigHandle;
+use crate::config::hud::gameplay::BossHpBarHudConfig;
+
 // ---------------------------------------------------------------------------
 // Fallback constants
 // ---------------------------------------------------------------------------
@@ -51,6 +54,18 @@ const Z_LABEL: f32 = 2.0;
 /// Used by [`maybe_spawn_boss_hp_bar`] to avoid re-spawning the bar on every frame.
 #[derive(Component, Debug)]
 pub struct BossHpBarAttached;
+
+/// Marks the background track sprite child.
+///
+/// Used by [`hot_reload_boss_hp_bar_hud`] to update the track color.
+#[derive(Component, Debug)]
+pub struct BossHpBarTrack;
+
+/// Marks the name label [`Text2d`] child.
+///
+/// Used by [`hot_reload_boss_hp_bar_hud`] to update the label color and font size.
+#[derive(Component, Debug)]
+pub struct BossHpBarLabel;
 
 /// Placed on the fill sprite child.
 ///
@@ -114,6 +129,7 @@ pub fn maybe_spawn_boss_hp_bar(
                         ..default()
                     },
                     Transform::from_xyz(0.0, y_offset, Z_TRACK),
+                    BossHpBarTrack,
                 ));
 
                 // Fill sprite — starts at 100%, scaled down by update_boss_hp_bar_world.
@@ -139,6 +155,7 @@ pub fn maybe_spawn_boss_hp_bar(
                     },
                     TextColor(text_color),
                     Transform::from_xyz(0.0, label_y, Z_LABEL),
+                    BossHpBarLabel,
                 ));
             });
     }
@@ -167,6 +184,65 @@ pub fn update_boss_hp_bar_world(
         sprite.custom_size = Some(Vec2::new(new_width, fill.height));
         // Keep the left edge pinned to the track's left edge.
         tf.translation.x = -fill.max_width / 2.0 + new_width / 2.0;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Hot-reload system
+// ---------------------------------------------------------------------------
+
+/// Updates boss HP bar appearance when `config/ui/hud/gameplay/boss_hp_bar.ron`
+/// is loaded or modified.
+///
+/// Applies new colors and font size to all existing bar children.  Geometry
+/// (bar width / height / y-offset) is intentionally not updated at runtime
+/// because the bar is world-space and resizing already-spawned sprites would
+/// require re-computing child transforms.
+pub fn hot_reload_boss_hp_bar_hud(
+    mut events: MessageReader<AssetEvent<BossHpBarHudConfig>>,
+    cfg_assets: Res<Assets<BossHpBarHudConfig>>,
+    cfg_handle: Option<Res<BossHpBarHudConfigHandle>>,
+    mut fill_q: Query<&mut Sprite, (With<BossHpBarFill>, Without<BossHpBarTrack>)>,
+    mut track_q: Query<&mut Sprite, (With<BossHpBarTrack>, Without<BossHpBarFill>)>,
+    mut label_q: Query<(&mut TextColor, &mut TextFont), With<BossHpBarLabel>>,
+) {
+    let Some(cfg_handle) = cfg_handle else {
+        return;
+    };
+
+    let mut needs_apply = false;
+    for event in events.read() {
+        match event {
+            AssetEvent::Added { .. } => {
+                info!("Boss HP bar HUD config loaded");
+                needs_apply = true;
+            }
+            AssetEvent::Modified { .. } => {
+                info!("Boss HP bar HUD config hot-reloaded");
+                needs_apply = true;
+            }
+            AssetEvent::Removed { .. } => {
+                warn!("Boss HP bar HUD config removed");
+            }
+            _ => {}
+        }
+    }
+
+    if needs_apply && let Some(cfg) = cfg_assets.get(&cfg_handle.0) {
+        let fill_color: Color = Color::from(&cfg.fill_color);
+        let track_color: Color = Color::from(&cfg.track_color);
+        let text_color: Color = Color::from(&cfg.text_color);
+
+        for mut sprite in fill_q.iter_mut() {
+            sprite.color = fill_color;
+        }
+        for mut sprite in track_q.iter_mut() {
+            sprite.color = track_color;
+        }
+        for (mut tc, mut font) in label_q.iter_mut() {
+            *tc = TextColor(text_color);
+            font.font_size = cfg.label_font_size;
+        }
     }
 }
 

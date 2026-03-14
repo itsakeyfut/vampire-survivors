@@ -24,7 +24,8 @@ use vs_core::states::AppState;
 use vs_core::systems::xp::treasure::WeaponEvolvedTrigger;
 use vs_core::types::WeaponType;
 
-use crate::config::EvolutionNotificationHudParams;
+use crate::config::hud::gameplay::evolution_notification::EvolutionNotificationHudConfigHandle;
+use crate::config::{EvolutionNotificationHudConfig, EvolutionNotificationHudParams};
 
 // ---------------------------------------------------------------------------
 // Fallback constants
@@ -183,6 +184,60 @@ pub fn update_evolution_notification(
 
         if let Ok(mut text_color) = text_q.get_mut(notif.text_entity) {
             text_color.0 = notif.text_color.with_alpha(alpha);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Hot-reload system
+// ---------------------------------------------------------------------------
+
+/// Updates active evolution notifications when
+/// `config/ui/hud/gameplay/evolution_notification.ron` is loaded or modified.
+///
+/// Already-spawned [`EvolutionNotification`] entities have their stored
+/// `text_color`, `duration`, and `fade_start` updated so the fade animation
+/// tracks the new values.  Future spawns pick up the new config automatically
+/// through [`EvolutionNotificationHudParams`] in [`on_weapon_evolved`].
+pub fn hot_reload_evolution_notification_hud(
+    mut events: MessageReader<AssetEvent<EvolutionNotificationHudConfig>>,
+    cfg_assets: Res<Assets<EvolutionNotificationHudConfig>>,
+    cfg_handle: Option<Res<EvolutionNotificationHudConfigHandle>>,
+    mut notif_q: Query<&mut EvolutionNotification>,
+    mut text_q: Query<(&mut TextColor, &mut TextFont)>,
+) {
+    let Some(cfg_handle) = cfg_handle else {
+        return;
+    };
+
+    let mut needs_apply = false;
+    for event in events.read() {
+        match event {
+            AssetEvent::Added { .. } => {
+                info!("Evolution notification HUD config loaded");
+                needs_apply = true;
+            }
+            AssetEvent::Modified { .. } => {
+                info!("Evolution notification HUD config hot-reloaded");
+                needs_apply = true;
+            }
+            AssetEvent::Removed { .. } => {
+                warn!("Evolution notification HUD config removed");
+            }
+            _ => {}
+        }
+    }
+
+    if needs_apply && let Some(cfg) = cfg_assets.get(&cfg_handle.0) {
+        let text_color: Color = Color::from(&cfg.text_color);
+        for mut notif in notif_q.iter_mut() {
+            notif.duration = cfg.display_duration;
+            notif.fade_start = cfg.fade_start;
+            notif.text_color = text_color;
+            if let Ok((mut tc, mut font)) = text_q.get_mut(notif.text_entity) {
+                *tc = TextColor(text_color);
+                font.font_size = cfg.font_size;
+            }
         }
     }
 }

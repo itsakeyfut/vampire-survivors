@@ -19,7 +19,8 @@ use bevy::state::state_scoped::DespawnOnExit;
 use vs_core::events::BossSpawnedEvent;
 use vs_core::states::AppState;
 
-use crate::config::hud::gameplay::BossWarningHudParams;
+use crate::config::hud::gameplay::boss_warning::BossWarningHudConfigHandle;
+use crate::config::hud::gameplay::{BossWarningHudConfig, BossWarningHudParams};
 
 // ---------------------------------------------------------------------------
 // Fallback constants
@@ -157,6 +158,60 @@ pub fn update_boss_warning(
 
         if let Ok(mut text_color) = text_q.get_mut(notif.text_entity) {
             text_color.0 = notif.text_color.with_alpha(alpha);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Hot-reload system
+// ---------------------------------------------------------------------------
+
+/// Updates active boss warning notifications when
+/// `config/ui/hud/gameplay/boss_warning.ron` is loaded or modified.
+///
+/// Already-spawned [`BossWarningNotification`] entities have their stored
+/// `text_color`, `duration`, and `fade_start` updated so the fade animation
+/// tracks the new values.  Future spawns pick up the new config automatically
+/// through [`BossWarningHudParams`] in [`spawn_boss_warning`].
+pub fn hot_reload_boss_warning_hud(
+    mut events: MessageReader<AssetEvent<BossWarningHudConfig>>,
+    cfg_assets: Res<Assets<BossWarningHudConfig>>,
+    cfg_handle: Option<Res<BossWarningHudConfigHandle>>,
+    mut notif_q: Query<&mut BossWarningNotification>,
+    mut text_q: Query<(&mut TextColor, &mut TextFont)>,
+) {
+    let Some(cfg_handle) = cfg_handle else {
+        return;
+    };
+
+    let mut needs_apply = false;
+    for event in events.read() {
+        match event {
+            AssetEvent::Added { .. } => {
+                info!("Boss warning HUD config loaded");
+                needs_apply = true;
+            }
+            AssetEvent::Modified { .. } => {
+                info!("Boss warning HUD config hot-reloaded");
+                needs_apply = true;
+            }
+            AssetEvent::Removed { .. } => {
+                warn!("Boss warning HUD config removed");
+            }
+            _ => {}
+        }
+    }
+
+    if needs_apply && let Some(cfg) = cfg_assets.get(&cfg_handle.0) {
+        let text_color: Color = Color::from(&cfg.text_color);
+        for mut notif in notif_q.iter_mut() {
+            notif.duration = cfg.display_duration;
+            notif.fade_start = cfg.fade_start;
+            notif.text_color = text_color;
+            if let Ok((mut tc, mut font)) = text_q.get_mut(notif.text_entity) {
+                *tc = TextColor(text_color);
+                font.font_size = cfg.font_size;
+            }
         }
     }
 }
