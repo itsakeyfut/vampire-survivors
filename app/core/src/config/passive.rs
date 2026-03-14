@@ -5,6 +5,20 @@ use bevy::prelude::*;
 use serde::Deserialize;
 
 // ---------------------------------------------------------------------------
+// Fallback constants (used while passive.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_SPINACH_DAMAGE_PER_LEVEL: f32 = 0.10;
+const DEFAULT_WINGS_SPEED_PER_LEVEL: f32 = 20.0;
+const DEFAULT_HOLLOW_HEART_HP_PER_LEVEL: f32 = 20.0;
+const DEFAULT_CLOVER_LUCK_PER_LEVEL: f32 = 0.10;
+const DEFAULT_EMPTY_TOME_CDR_PER_LEVEL: f32 = 0.08;
+const DEFAULT_BRACER_PROJ_SPEED_PER_LEVEL: f32 = 0.10;
+const DEFAULT_SPELLBINDER_DURATION_PER_LEVEL: f32 = 0.10;
+const DEFAULT_DUPLICATOR_PROJECTILES_PER_LEVEL: u32 = 1;
+const DEFAULT_PUMMAROLA_REGEN_PER_LEVEL: f32 = 0.5;
+
+// ---------------------------------------------------------------------------
 // Asset type
 // ---------------------------------------------------------------------------
 
@@ -62,6 +76,60 @@ impl<'w> PassiveParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn spinach_damage_per_level(&self) -> f32 {
+        self.get()
+            .map(|c| c.spinach_damage_per_level)
+            .unwrap_or(DEFAULT_SPINACH_DAMAGE_PER_LEVEL)
+    }
+
+    pub fn wings_speed_per_level(&self) -> f32 {
+        self.get()
+            .map(|c| c.wings_speed_per_level)
+            .unwrap_or(DEFAULT_WINGS_SPEED_PER_LEVEL)
+    }
+
+    pub fn hollow_heart_hp_per_level(&self) -> f32 {
+        self.get()
+            .map(|c| c.hollow_heart_hp_per_level)
+            .unwrap_or(DEFAULT_HOLLOW_HEART_HP_PER_LEVEL)
+    }
+
+    pub fn clover_luck_per_level(&self) -> f32 {
+        self.get()
+            .map(|c| c.clover_luck_per_level)
+            .unwrap_or(DEFAULT_CLOVER_LUCK_PER_LEVEL)
+    }
+
+    pub fn empty_tome_cdr_per_level(&self) -> f32 {
+        self.get()
+            .map(|c| c.empty_tome_cdr_per_level)
+            .unwrap_or(DEFAULT_EMPTY_TOME_CDR_PER_LEVEL)
+    }
+
+    pub fn bracer_proj_speed_per_level(&self) -> f32 {
+        self.get()
+            .map(|c| c.bracer_proj_speed_per_level)
+            .unwrap_or(DEFAULT_BRACER_PROJ_SPEED_PER_LEVEL)
+    }
+
+    pub fn spellbinder_duration_per_level(&self) -> f32 {
+        self.get()
+            .map(|c| c.spellbinder_duration_per_level)
+            .unwrap_or(DEFAULT_SPELLBINDER_DURATION_PER_LEVEL)
+    }
+
+    pub fn duplicator_projectiles_per_level(&self) -> u32 {
+        self.get()
+            .map(|c| c.duplicator_projectiles_per_level)
+            .unwrap_or(DEFAULT_DUPLICATOR_PROJECTILES_PER_LEVEL)
+    }
+
+    pub fn pummarola_regen_per_level(&self) -> f32 {
+        self.get()
+            .map(|c| c.pummarola_regen_per_level)
+            .unwrap_or(DEFAULT_PUMMAROLA_REGEN_PER_LEVEL)
     }
 }
 

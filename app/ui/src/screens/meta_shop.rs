@@ -43,16 +43,10 @@ use crate::i18n::{font_for_lang, t};
 // Fallback constants
 // ---------------------------------------------------------------------------
 
-/// Dark-purple background (#1a0a2e).
-const DEFAULT_BG_COLOR: Color = Color::srgb(0.102, 0.039, 0.180);
-/// Gold title color (#ffd700).
-const DEFAULT_TITLE_COLOR: Color = Color::srgb(1.0, 0.843, 0.0);
 /// Gold display text color (warm yellow).
 const DEFAULT_GOLD_TEXT_COLOR: Color = Color::srgb(1.0, 0.85, 0.20);
 /// Section heading color (light gray).
 const DEFAULT_SECTION_COLOR: Color = Color::srgb(0.75, 0.75, 0.75);
-/// Normal purchasable button color (#223366).
-const DEFAULT_BUTTON_NORMAL: Color = Color::srgb(0.133, 0.200, 0.400);
 /// Already-purchased / unlocked button color (dark gray).
 const DEFAULT_PURCHASED_COLOR: Color = Color::srgb(0.25, 0.25, 0.25);
 /// Unaffordable button color (dark red-brown).
@@ -62,8 +56,6 @@ const HOVER_DARKEN: f32 = 0.72;
 /// Brightness multiplier applied to the base color on press (darker still).
 const PRESS_DARKEN: f32 = 0.50;
 
-const DEFAULT_HEADING_FONT_SIZE: f32 = 48.0;
-const DEFAULT_HEADING_MARGIN: f32 = 0.0;
 const DEFAULT_GOLD_FONT_SIZE: f32 = 22.0;
 const DEFAULT_SECTION_FONT_SIZE: f32 = 20.0;
 const DEFAULT_ITEM_FONT_SIZE: f32 = 20.0;
@@ -101,7 +93,7 @@ pub enum MetaShopItemButton {
 /// Returns the base background color for a shop item button.
 ///
 /// `normal_color` is the theme color for an affordable, unpurchased item;
-/// it is read from [`MenuButtonHudParams`] with `DEFAULT_BUTTON_NORMAL` as fallback.
+/// it is read from [`MenuButtonHudParams`] via `color_normal()`.
 fn item_base_color(purchased: bool, affordable: bool, normal_color: Color) -> Color {
     if purchased {
         DEFAULT_PURCHASED_COLOR
@@ -183,26 +175,11 @@ pub fn setup_meta_shop_screen(
         .as_ref()
         .map(|s| s.load(font_for_lang(lang)))
         .unwrap_or_default();
-    let bg_color = ui_style
-        .get()
-        .map(|c| Color::from(&c.bg_color))
-        .unwrap_or(DEFAULT_BG_COLOR);
-    let title_color = ui_style
-        .get()
-        .map(|c| Color::from(&c.title_color))
-        .unwrap_or(DEFAULT_TITLE_COLOR);
-    let heading_font_size = heading_cfg
-        .get()
-        .map(|c| c.font_size)
-        .unwrap_or(DEFAULT_HEADING_FONT_SIZE);
-    let heading_margin = heading_cfg
-        .get()
-        .map(|c| c.margin_bottom)
-        .unwrap_or(DEFAULT_HEADING_MARGIN);
-    let color_normal = btn_cfg
-        .get()
-        .map(|c| Color::from(&c.color_normal))
-        .unwrap_or(DEFAULT_BUTTON_NORMAL);
+    let bg_color = ui_style.bg_color();
+    let title_color = ui_style.title_color();
+    let heading_font_size = heading_cfg.font_size();
+    let heading_margin = heading_cfg.margin_bottom();
+    let color_normal = btn_cfg.color_normal();
 
     // Character unlock affordability
     let char_cost = |ct: CharacterType| char_params.stats_for(ct).unlock_cost;
@@ -417,10 +394,7 @@ pub fn update_meta_shop_screen(
     mut gold_q: Query<&mut Text, With<MetaShopGoldLabel>>,
     mut item_q: Query<(&MetaShopItemButton, &mut BackgroundColor, &Interaction)>,
 ) {
-    let color_normal = btn_cfg
-        .get()
-        .map(|c| Color::from(&c.color_normal))
-        .unwrap_or(DEFAULT_BUTTON_NORMAL);
+    let color_normal = btn_cfg.color_normal();
 
     // Update gold balance label only when something changed.
     if meta.is_changed() || settings.is_changed() {

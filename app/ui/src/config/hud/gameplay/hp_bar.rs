@@ -8,6 +8,21 @@ use serde::Deserialize;
 
 use crate::config::SrgbColor;
 
+// ---------------------------------------------------------------------------
+// Fallback constants (used while hp_bar.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_BAR_WIDTH: f32 = 200.0;
+const DEFAULT_BAR_HEIGHT: f32 = 16.0;
+const DEFAULT_BAR_RADIUS: f32 = 4.0;
+const DEFAULT_LABEL_FONT_SIZE: f32 = 14.0;
+const DEFAULT_LABEL_GAP: f32 = 4.0;
+const DEFAULT_FILL_COLOR: Color = Color::srgb(0.20, 0.80, 0.20);
+const DEFAULT_FILL_COLOR_MID: Color = Color::srgb(0.90, 0.80, 0.10);
+const DEFAULT_FILL_COLOR_LOW: Color = Color::srgb(0.85, 0.20, 0.20);
+const DEFAULT_TRACK_COLOR: Color = Color::srgb(0.10, 0.10, 0.10);
+const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
+
 /// HP bar HUD config loaded from `config/ui/hud/gameplay/hp_bar.ron`.
 #[derive(Asset, TypePath, Deserialize, Debug, Clone)]
 pub struct HpBarHudConfig {
@@ -52,6 +67,62 @@ impl<'w> HpBarHudParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn bar_width(&self) -> f32 {
+        self.get().map(|c| c.bar_width).unwrap_or(DEFAULT_BAR_WIDTH)
+    }
+
+    pub fn bar_height(&self) -> f32 {
+        self.get()
+            .map(|c| c.bar_height)
+            .unwrap_or(DEFAULT_BAR_HEIGHT)
+    }
+
+    pub fn bar_radius(&self) -> f32 {
+        self.get()
+            .map(|c| c.bar_radius)
+            .unwrap_or(DEFAULT_BAR_RADIUS)
+    }
+
+    pub fn label_font_size(&self) -> f32 {
+        self.get()
+            .map(|c| c.label_font_size)
+            .unwrap_or(DEFAULT_LABEL_FONT_SIZE)
+    }
+
+    pub fn label_gap(&self) -> f32 {
+        self.get().map(|c| c.label_gap).unwrap_or(DEFAULT_LABEL_GAP)
+    }
+
+    pub fn fill_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.fill_color))
+            .unwrap_or(DEFAULT_FILL_COLOR)
+    }
+
+    pub fn fill_color_mid(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.fill_color_mid))
+            .unwrap_or(DEFAULT_FILL_COLOR_MID)
+    }
+
+    pub fn fill_color_low(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.fill_color_low))
+            .unwrap_or(DEFAULT_FILL_COLOR_LOW)
+    }
+
+    pub fn track_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.track_color))
+            .unwrap_or(DEFAULT_TRACK_COLOR)
+    }
+
+    pub fn text_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.text_color))
+            .unwrap_or(DEFAULT_TEXT_COLOR)
     }
 }
 

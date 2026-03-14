@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::config::enemy::DEFAULT_ENEMY_SPAWN_BASE_INTERVAL;
+const DEFAULT_ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
 
 /// Controls enemy spawn timing and difficulty scaling.
 #[derive(Resource, Debug)]

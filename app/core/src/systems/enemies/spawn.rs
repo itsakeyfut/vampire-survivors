@@ -416,8 +416,10 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::config::enemy::DEFAULT_ENEMY_SPAWN_BASE_INTERVAL;
     use crate::resources::GameData;
+
+    /// Matches `DEFAULT_ENEMY_SPAWN_BASE_INTERVAL` in `config/enemy.rs`.
+    const DEFAULT_ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
     use crate::states::AppState;
 
     // -----------------------------------------------------------------------

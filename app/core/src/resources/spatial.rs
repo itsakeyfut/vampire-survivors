@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use crate::config::game::DEFAULT_SPATIAL_GRID_CELL_SIZE;
+/// Default cell size for the spatial grid (pixels). Matches `game.ron → spatial_grid_cell_size`.
+const DEFAULT_SPATIAL_GRID_CELL_SIZE: f32 = 64.0;
 
 /// Grid-based spatial partitioning used to accelerate collision detection.
 ///

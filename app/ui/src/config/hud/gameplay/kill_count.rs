@@ -8,6 +8,13 @@ use serde::Deserialize;
 
 use crate::config::SrgbColor;
 
+// ---------------------------------------------------------------------------
+// Fallback constants (used while kill_count.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_FONT_SIZE: f32 = 14.0;
+const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
+
 /// Kill count HUD config loaded from `config/ui/hud/gameplay/kill_count.ron`.
 #[derive(Asset, TypePath, Deserialize, Debug, Clone)]
 pub struct KillCountHudConfig {
@@ -36,6 +43,16 @@ impl<'w> KillCountHudParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn font_size(&self) -> f32 {
+        self.get().map(|c| c.font_size).unwrap_or(DEFAULT_FONT_SIZE)
+    }
+
+    pub fn text_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.text_color))
+            .unwrap_or(DEFAULT_TEXT_COLOR)
     }
 }
 

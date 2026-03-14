@@ -8,6 +8,14 @@ use serde::Deserialize;
 
 use crate::config::SrgbColor;
 
+// ---------------------------------------------------------------------------
+// Fallback constants (used while xp_bar.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_BAR_HEIGHT: f32 = 10.0;
+const DEFAULT_FILL_COLOR: Color = Color::srgb(0.25, 0.65, 1.00);
+const DEFAULT_TRACK_COLOR: Color = Color::srgb(0.05, 0.08, 0.20);
+
 /// XP bar HUD config loaded from `config/ui/hud/gameplay/xp_bar.ron`.
 #[derive(Asset, TypePath, Deserialize, Debug, Clone)]
 pub struct XpBarHudConfig {
@@ -38,6 +46,24 @@ impl<'w> XpBarHudParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn bar_height(&self) -> f32 {
+        self.get()
+            .map(|c| c.bar_height)
+            .unwrap_or(DEFAULT_BAR_HEIGHT)
+    }
+
+    pub fn fill_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.fill_color))
+            .unwrap_or(DEFAULT_FILL_COLOR)
+    }
+
+    pub fn track_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.track_color))
+            .unwrap_or(DEFAULT_TRACK_COLOR)
     }
 }
 

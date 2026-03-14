@@ -15,26 +15,31 @@ use crate::types::MetaUpgradeType;
 // ---------------------------------------------------------------------------
 
 // --- inventory caps ---
-pub(crate) const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
-pub(crate) const DEFAULT_MAX_PASSIVE_LEVEL: u8 = 5;
-pub(crate) const DEFAULT_MAX_WEAPONS: usize = 6;
-pub(crate) const DEFAULT_MAX_PASSIVES: usize = 6;
+const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
+const DEFAULT_MAX_PASSIVE_LEVEL: u8 = 5;
+const DEFAULT_MAX_WEAPONS: usize = 6;
+const DEFAULT_MAX_PASSIVES: usize = 6;
 
 // --- XP / levelling ---
-pub(crate) const DEFAULT_XP_LEVEL_BASE: u32 = 20;
-pub(crate) const DEFAULT_XP_LEVEL_MULTIPLIER: f32 = 1.2;
-pub(crate) const DEFAULT_CHOICE_COUNT: usize = 3;
-pub(crate) const DEFAULT_LUCK_BONUS_CHOICE_THRESHOLD: f32 = 1.5;
+const DEFAULT_XP_LEVEL_BASE: u32 = 20;
+const DEFAULT_XP_LEVEL_MULTIPLIER: f32 = 1.2;
+const DEFAULT_CHOICE_COUNT: usize = 3;
+const DEFAULT_LUCK_BONUS_CHOICE_THRESHOLD: f32 = 1.5;
 
 // --- spatial grid ---
-pub(crate) const DEFAULT_SPATIAL_GRID_CELL_SIZE: f32 = 64.0;
+const DEFAULT_SPATIAL_GRID_CELL_SIZE: f32 = 64.0;
 
 // --- treasure chests ---
-pub(crate) const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
-pub(crate) const DEFAULT_TREASURE_GOLD: u32 = 50;
-pub(crate) const DEFAULT_TREASURE_HP_RECOVERY_PCT: f32 = 0.3;
-pub(crate) const DEFAULT_TREASURE_GLOW_DISTANCE: f32 = 150.0;
-pub(crate) const DEFAULT_TREASURE_SPAWN_FLASH_DURATION: f32 = 0.35;
+const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
+const DEFAULT_TREASURE_GOLD: u32 = 50;
+const DEFAULT_TREASURE_HP_RECOVERY_PCT: f32 = 0.3;
+const DEFAULT_TREASURE_GLOW_DISTANCE: f32 = 150.0;
+const DEFAULT_TREASURE_SPAWN_FLASH_DURATION: f32 = 0.35;
+
+// --- boss and game timing ---
+const DEFAULT_BOSS_SPAWN_TIME: f32 = 1800.0;
+const DEFAULT_TREASURE_SPAWN_INTERVAL: f32 = 180.0;
+const DEFAULT_CAMERA_LERP_SPEED: f32 = 10.0;
 
 // --- meta shop costs ---
 const DEFAULT_SHOP_UPGRADE_COST_HP: u32 = 300;
@@ -45,13 +50,13 @@ const DEFAULT_SHOP_UPGRADE_COST_WEAPON: u32 = 500;
 
 // --- meta upgrade stat bonuses ---
 /// Flat HP bonus per BonusHp purchase (same magnitude as HollowHeart per level).
-pub(crate) const DEFAULT_META_UPGRADE_HP_BONUS: f32 = 20.0;
+const DEFAULT_META_UPGRADE_HP_BONUS: f32 = 20.0;
 /// Flat speed bonus (px/s) per BonusSpeed purchase (same magnitude as Wings per level).
-pub(crate) const DEFAULT_META_UPGRADE_SPEED_BONUS: f32 = 20.0;
+const DEFAULT_META_UPGRADE_SPEED_BONUS: f32 = 20.0;
 /// Damage multiplier added per BonusDamage purchase (same magnitude as Spinach per level).
-pub(crate) const DEFAULT_META_UPGRADE_DAMAGE_BONUS: f32 = 0.1;
+const DEFAULT_META_UPGRADE_DAMAGE_BONUS: f32 = 0.1;
 /// XP multiplier added per BonusXp purchase (10 % more XP per upgrade).
-pub(crate) const DEFAULT_META_UPGRADE_XP_BONUS: f32 = 0.1;
+const DEFAULT_META_UPGRADE_XP_BONUS: f32 = 0.1;
 
 fn default_upgrade_cost(upgrade: MetaUpgradeType) -> u32 {
     match upgrade {
@@ -336,6 +341,24 @@ impl<'w> GameParams<'w> {
         self.get()
             .map(|c| c.spatial_grid_cell_size)
             .unwrap_or(DEFAULT_SPATIAL_GRID_CELL_SIZE)
+    }
+
+    pub fn boss_spawn_time(&self) -> f32 {
+        self.get()
+            .map(|c| c.boss_spawn_time)
+            .unwrap_or(DEFAULT_BOSS_SPAWN_TIME)
+    }
+
+    pub fn treasure_spawn_interval(&self) -> f32 {
+        self.get()
+            .map(|c| c.treasure_spawn_interval)
+            .unwrap_or(DEFAULT_TREASURE_SPAWN_INTERVAL)
+    }
+
+    pub fn camera_lerp_speed(&self) -> f32 {
+        self.get()
+            .map(|c| c.camera_lerp_speed)
+            .unwrap_or(DEFAULT_CAMERA_LERP_SPEED)
     }
 }
 

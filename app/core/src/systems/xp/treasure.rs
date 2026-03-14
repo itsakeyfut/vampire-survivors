@@ -444,14 +444,15 @@ mod tests {
     use super::*;
     use crate::{
         components::{CircleCollider, PassiveInventory, PlayerStats, WeaponInventory},
-        config::game::{
-            DEFAULT_TREASURE_GOLD, DEFAULT_TREASURE_HP_RECOVERY_PCT, DEFAULT_TREASURE_RADIUS,
-        },
         events::TreasureOpenedEvent,
         resources::{GameData, MetaProgress},
         states::AppState,
         types::{PassiveItemType, PassiveState, UpgradeChoice, WeaponState, WeaponType},
     };
+
+    const DEFAULT_TREASURE_RADIUS: f32 = 20.0;
+    const DEFAULT_TREASURE_GOLD: u32 = 50;
+    const DEFAULT_TREASURE_HP_RECOVERY_PCT: f32 = 0.3;
     use bevy::state::app::StatesPlugin;
 
     fn build_app() -> App {

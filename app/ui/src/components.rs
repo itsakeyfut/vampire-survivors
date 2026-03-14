@@ -14,15 +14,6 @@ use vs_core::types::{CharacterType, MetaUpgradeType, get_character_stats, upgrad
 use crate::config::MenuButtonHudParams;
 
 // ---------------------------------------------------------------------------
-// Fallback constants
-// ---------------------------------------------------------------------------
-
-// Button colors per docs/04_ui_ux.md: #223366 normal, #3355aa hover, #162244 pressed.
-const DEFAULT_BUTTON_NORMAL: Color = Color::srgb(0.133, 0.200, 0.400);
-const DEFAULT_BUTTON_HOVER: Color = Color::srgb(0.200, 0.333, 0.667);
-const DEFAULT_BUTTON_PRESSED: Color = Color::srgb(0.086, 0.133, 0.267);
-
-// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -88,8 +79,8 @@ pub enum ButtonAction {
 ///
 /// Changes the button background color on hover / press, and triggers the
 /// appropriate [`AppState`] transition when a button is clicked.
-/// Colors are read from [`MenuButtonHudParams`]; `DEFAULT_BUTTON_*` constants
-/// are used as fallbacks while the config is loading.
+/// Colors are read from [`MenuButtonHudParams`] via typed accessor methods,
+/// which apply built-in fallbacks while the config is loading.
 #[allow(clippy::too_many_arguments)]
 pub fn handle_button_interaction(
     mut interaction_query: Query<
@@ -104,18 +95,9 @@ pub fn handle_button_interaction(
     char_params: CharacterParams,
     game_params: GameParams,
 ) {
-    let color_normal = btn_cfg
-        .get()
-        .map(|c| Color::from(&c.color_normal))
-        .unwrap_or(DEFAULT_BUTTON_NORMAL);
-    let color_hover = btn_cfg
-        .get()
-        .map(|c| Color::from(&c.color_hover))
-        .unwrap_or(DEFAULT_BUTTON_HOVER);
-    let color_pressed = btn_cfg
-        .get()
-        .map(|c| Color::from(&c.color_pressed))
-        .unwrap_or(DEFAULT_BUTTON_PRESSED);
+    let color_normal = btn_cfg.color_normal();
+    let color_hover = btn_cfg.color_hover();
+    let color_pressed = btn_cfg.color_pressed();
 
     for (interaction, button, mut bg) in interaction_query.iter_mut() {
         match *interaction {

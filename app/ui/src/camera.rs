@@ -3,13 +3,6 @@ use vs_core::components::Player;
 use vs_core::config::GameParams;
 
 // ---------------------------------------------------------------------------
-// Fallback constants (used when RON config is not yet loaded)
-// ---------------------------------------------------------------------------
-
-/// Camera follow speed; higher = tighter/faster follow.
-const DEFAULT_CAMERA_LERP_SPEED: f32 = 10.0;
-
-// ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
 
@@ -30,7 +23,7 @@ pub fn setup_camera(mut commands: Commands) {
 ///
 /// Uses exponential lerp (`current.lerp(target, speed × Δt)`) so the camera
 /// closes the gap quickly when far away and decelerates as it catches up.
-/// Speed is read from [`GameParams`], falling back to [`DEFAULT_CAMERA_LERP_SPEED`].
+/// Speed is read from [`GameParams`] via `camera_lerp_speed()`.
 ///
 /// Only runs while in [`AppState::Playing`] (registered by [`GameUIPlugin`]).
 pub fn camera_follow_player(
@@ -46,10 +39,7 @@ pub fn camera_follow_player(
         return;
     };
 
-    let lerp_speed = game_cfg
-        .get()
-        .map(|c| c.camera_lerp_speed)
-        .unwrap_or(DEFAULT_CAMERA_LERP_SPEED);
+    let lerp_speed = game_cfg.camera_lerp_speed();
 
     let target = player_tf.translation.truncate();
     let current = camera_tf.translation.truncate();

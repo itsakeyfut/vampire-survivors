@@ -26,15 +26,14 @@ use crate::config::hud::gameplay::{BossWarningHudConfig, BossWarningHudParams};
 // Fallback constants
 // ---------------------------------------------------------------------------
 
-/// Total display duration in seconds (hold + fade).
+/// Total display duration in seconds (hold + fade) — used in tests.
+#[cfg(test)]
 const DEFAULT_DISPLAY_DURATION: f32 = 4.0;
-/// Time at which the alpha fade-out begins (seconds).
+/// Time at which the alpha fade-out begins (seconds) — used in tests.
+#[cfg(test)]
 const DEFAULT_FADE_START: f32 = 2.0;
-/// Font size for the warning text.
-const DEFAULT_FONT_SIZE: f32 = 52.0;
-/// Vertical position as a percentage of screen height.
-const DEFAULT_TOP_PERCENT: f32 = 35.0;
-/// Warning text color: bright red.
+/// Warning text color: bright red — used in tests.
+#[cfg(test)]
 const DEFAULT_TEXT_COLOR: Color = Color::srgb(1.0, 0.15, 0.15);
 
 // ---------------------------------------------------------------------------
@@ -74,23 +73,11 @@ pub fn spawn_boss_warning(
     cfg: BossWarningHudParams,
 ) {
     for _ in events.read() {
-        let font_size = cfg.get().map(|c| c.font_size).unwrap_or(DEFAULT_FONT_SIZE);
-        let top_percent = cfg
-            .get()
-            .map(|c| c.top_percent)
-            .unwrap_or(DEFAULT_TOP_PERCENT);
-        let duration = cfg
-            .get()
-            .map(|c| c.display_duration)
-            .unwrap_or(DEFAULT_DISPLAY_DURATION);
-        let fade_start = cfg
-            .get()
-            .map(|c| c.fade_start)
-            .unwrap_or(DEFAULT_FADE_START);
-        let text_color = cfg
-            .get()
-            .map(|c| Color::from(&c.text_color))
-            .unwrap_or(DEFAULT_TEXT_COLOR);
+        let font_size = cfg.font_size();
+        let top_percent = cfg.top_percent();
+        let duration = cfg.display_duration();
+        let fade_start = cfg.fade_start();
+        let text_color = cfg.text_color();
 
         let text_entity = commands
             .spawn((

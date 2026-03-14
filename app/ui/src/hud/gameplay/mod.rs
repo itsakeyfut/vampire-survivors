@@ -53,14 +53,11 @@ use crate::config::hud::gameplay::{
 use crate::i18n::font_for_lang;
 
 // ---------------------------------------------------------------------------
-// Fallback constants
+// Constants
 // ---------------------------------------------------------------------------
 
-const DEFAULT_EDGE_MARGIN: f32 = 12.0;
 /// Height of the XP bar (10 px) plus a small gap — positions bottom widgets above it.
 const BOTTOM_WIDGET_OFFSET: f32 = 18.0;
-/// Fallback vertical offset for the gold label when `gold.ron` has not loaded yet.
-const DEFAULT_GOLD_WIDGET_EXTRA_OFFSET: f32 = 20.0;
 
 // ---------------------------------------------------------------------------
 // Anchor marker components
@@ -122,10 +119,7 @@ pub fn setup_gameplay_hud(
         .map(|s| s.load(font_for_lang(lang)))
         .unwrap_or_default();
 
-    let edge = layout_cfg
-        .get()
-        .map(|c| c.edge_margin)
-        .unwrap_or(DEFAULT_EDGE_MARGIN);
+    let edge = layout_cfg.edge_margin();
 
     commands
         .spawn((
@@ -207,10 +201,7 @@ pub fn setup_gameplay_hud(
             // ------------------------------------------------------------------
             // Bottom-right: Gold label (above kill count, above XP bar)
             // ------------------------------------------------------------------
-            let gold_extra = gold_cfg
-                .get()
-                .map(|c| c.vertical_offset)
-                .unwrap_or(DEFAULT_GOLD_WIDGET_EXTRA_OFFSET);
+            let gold_extra = gold_cfg.vertical_offset();
             root.spawn((
                 Node {
                     position_type: PositionType::Absolute,

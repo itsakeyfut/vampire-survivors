@@ -11,10 +11,37 @@ use crate::types::EnemyType;
 // ---------------------------------------------------------------------------
 
 /// Base enemy spawn interval in seconds when difficulty multiplier is 1.0.
-///
-/// Single source of truth — import this instead of redefining the constant
-/// in each system file.
-pub(crate) const DEFAULT_ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
+const DEFAULT_ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
+
+/// Hard cap for the difficulty multiplier.
+const DEFAULT_DIFFICULTY_MAX: f32 = 10.0;
+
+/// Maximum number of enemies that can exist simultaneously.
+const DEFAULT_MAX_ENEMY_COUNT: usize = 500;
+
+/// Distance from the player at which enemies are culled.
+const DEFAULT_CULL_DISTANCE: f32 = 2000.0;
+
+/// Extra pixels beyond the viewport edge at which enemies spawn.
+const DEFAULT_SPAWN_MARGIN: f32 = 60.0;
+
+/// Seconds before Zombies appear in the spawn table.
+const DEFAULT_ZOMBIE_UNLOCK_SECS: f32 = 300.0;
+
+/// Seconds before Ghosts appear in the spawn table.
+const DEFAULT_GHOST_UNLOCK_SECS: f32 = 600.0;
+
+/// Seconds before Demons appear in the spawn table.
+const DEFAULT_DEMON_UNLOCK_SECS: f32 = 900.0;
+
+/// Seconds before Medusas appear in the spawn table.
+const DEFAULT_MEDUSA_UNLOCK_SECS: f32 = 1200.0;
+
+/// Seconds before Dragons appear in the spawn table.
+const DEFAULT_DRAGON_UNLOCK_SECS: f32 = 1500.0;
+
+/// Seconds between mini-boss spawns.
+const DEFAULT_MINI_BOSS_INTERVAL: f32 = 180.0;
 
 // ---------------------------------------------------------------------------
 // Medusa AI behavior config
@@ -170,11 +197,71 @@ impl<'w> EnemyParams<'w> {
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
     }
 
-    /// Returns the base spawn interval, falling back to [`DEFAULT_ENEMY_SPAWN_BASE_INTERVAL`].
+    /// Returns the base spawn interval, falling back to the default constant.
     pub fn spawn_base_interval(&self) -> f32 {
         self.get()
             .map(|c| c.spawn_base_interval)
             .unwrap_or(DEFAULT_ENEMY_SPAWN_BASE_INTERVAL)
+    }
+
+    pub fn difficulty_max(&self) -> f32 {
+        self.get()
+            .map(|c| c.difficulty_max)
+            .unwrap_or(DEFAULT_DIFFICULTY_MAX)
+    }
+
+    pub fn max_count(&self) -> usize {
+        self.get()
+            .map(|c| c.max_count)
+            .unwrap_or(DEFAULT_MAX_ENEMY_COUNT)
+    }
+
+    pub fn cull_distance(&self) -> f32 {
+        self.get()
+            .map(|c| c.cull_distance)
+            .unwrap_or(DEFAULT_CULL_DISTANCE)
+    }
+
+    pub fn spawn_margin(&self) -> f32 {
+        self.get()
+            .map(|c| c.spawn_margin)
+            .unwrap_or(DEFAULT_SPAWN_MARGIN)
+    }
+
+    pub fn zombie_unlock_secs(&self) -> f32 {
+        self.get()
+            .map(|c| c.zombie_unlock_secs)
+            .unwrap_or(DEFAULT_ZOMBIE_UNLOCK_SECS)
+    }
+
+    pub fn ghost_unlock_secs(&self) -> f32 {
+        self.get()
+            .map(|c| c.ghost_unlock_secs)
+            .unwrap_or(DEFAULT_GHOST_UNLOCK_SECS)
+    }
+
+    pub fn demon_unlock_secs(&self) -> f32 {
+        self.get()
+            .map(|c| c.demon_unlock_secs)
+            .unwrap_or(DEFAULT_DEMON_UNLOCK_SECS)
+    }
+
+    pub fn medusa_unlock_secs(&self) -> f32 {
+        self.get()
+            .map(|c| c.medusa_unlock_secs)
+            .unwrap_or(DEFAULT_MEDUSA_UNLOCK_SECS)
+    }
+
+    pub fn dragon_unlock_secs(&self) -> f32 {
+        self.get()
+            .map(|c| c.dragon_unlock_secs)
+            .unwrap_or(DEFAULT_DRAGON_UNLOCK_SECS)
+    }
+
+    pub fn mini_boss_interval(&self) -> f32 {
+        self.get()
+            .map(|c| c.mini_boss_interval)
+            .unwrap_or(DEFAULT_MINI_BOSS_INTERVAL)
     }
 }
 

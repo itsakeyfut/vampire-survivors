@@ -32,10 +32,6 @@ const DEFAULT_LABEL_FONT_SIZE: f32 = 14.0;
 const DEFAULT_LABEL_GAP: f32 = 4.0;
 /// Green: HP > 50%.
 const DEFAULT_FILL_COLOR_HIGH: Color = Color::srgb(0.20, 0.80, 0.20);
-/// Yellow: HP 25–50%.
-const DEFAULT_FILL_COLOR_MID: Color = Color::srgb(0.90, 0.80, 0.10);
-/// Red: HP ≤ 25%.
-const DEFAULT_FILL_COLOR_LOW: Color = Color::srgb(0.85, 0.20, 0.20);
 const DEFAULT_TRACK_COLOR: Color = Color::srgb(0.10, 0.10, 0.10);
 const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
 
@@ -186,17 +182,11 @@ pub fn update_hp_bar(
 
     // Dynamic fill color.
     bg.0 = if pct > HP_THRESHOLD_HIGH {
-        cfg.get()
-            .map(|c| Color::from(&c.fill_color))
-            .unwrap_or(DEFAULT_FILL_COLOR_HIGH)
+        cfg.fill_color()
     } else if pct > HP_THRESHOLD_LOW {
-        cfg.get()
-            .map(|c| Color::from(&c.fill_color_mid))
-            .unwrap_or(DEFAULT_FILL_COLOR_MID)
+        cfg.fill_color_mid()
     } else {
-        cfg.get()
-            .map(|c| Color::from(&c.fill_color_low))
-            .unwrap_or(DEFAULT_FILL_COLOR_LOW)
+        cfg.fill_color_low()
     };
 
     // HP number label.

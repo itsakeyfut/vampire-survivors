@@ -27,25 +27,6 @@ use crate::hud::screen_heading::spawn_screen_heading;
 use crate::i18n::{font_for_lang, t};
 
 // ---------------------------------------------------------------------------
-// Fallback constants
-// ---------------------------------------------------------------------------
-
-/// Dark-purple background (#1a0a2e) per docs/04_ui_ux.md.
-const DEFAULT_BG_COLOR: Color = Color::srgb(0.102, 0.039, 0.180);
-/// Red tone used for the "GAME OVER" heading (fallback).
-const DEFAULT_HEADING_COLOR: Color = Color::srgb(0.8, 0.2, 0.2);
-/// Muted white for stat text lines.
-const DEFAULT_STAT_COLOR: Color = Color::srgb(0.85, 0.85, 0.85);
-/// Font size for stat lines.
-const DEFAULT_STAT_FONT_SIZE: f32 = 24.0;
-/// Top margin between heading and stats container (pixels).
-const DEFAULT_STATS_MARGIN_TOP: f32 = 16.0;
-/// Top margin between stats and buttons (pixels).
-const DEFAULT_BUTTON_MARGIN_TOP: f32 = 48.0;
-/// Vertical gap between individual stat lines and between buttons (pixels).
-const DEFAULT_ROW_GAP: f32 = 8.0;
-
-// ---------------------------------------------------------------------------
 // Marker components
 // ---------------------------------------------------------------------------
 
@@ -62,7 +43,7 @@ pub struct GameOverScreenBg;
 /// Reads [`GameData`] to display run statistics (survival time, level
 /// reached, enemies defeated, gold earned).  Visual tunables are loaded from
 /// `config/ui/screen/game_over.ron` via [`GameOverScreenParams`]; the private
-/// `DEFAULT_*` constants above serve as fallbacks while the file loads.
+/// Fallback values are provided by the typed accessor methods on each Params type.
 #[allow(clippy::too_many_arguments)]
 pub fn setup_game_over_screen(
     mut commands: Commands,
@@ -78,34 +59,13 @@ pub fn setup_game_over_screen(
     let font: Handle<Font> = asset_server
         .map(|s| s.load(font_for_lang(lang)))
         .unwrap_or_default();
-    let bg_color = ui_style
-        .get()
-        .map(|c| Color::from(&c.bg_color))
-        .unwrap_or(DEFAULT_BG_COLOR);
-    let stat_color = game_over_cfg
-        .get()
-        .map(|c| Color::from(&c.stat_color))
-        .unwrap_or(DEFAULT_STAT_COLOR);
-    let stat_font_size = game_over_cfg
-        .get()
-        .map(|c| c.stat_font_size)
-        .unwrap_or(DEFAULT_STAT_FONT_SIZE);
-    let stats_margin_top = game_over_cfg
-        .get()
-        .map(|c| c.stats_margin_top)
-        .unwrap_or(DEFAULT_STATS_MARGIN_TOP);
-    let button_margin_top = game_over_cfg
-        .get()
-        .map(|c| c.button_margin_top)
-        .unwrap_or(DEFAULT_BUTTON_MARGIN_TOP);
-    let row_gap = game_over_cfg
-        .get()
-        .map(|c| c.row_gap)
-        .unwrap_or(DEFAULT_ROW_GAP);
-    let heading_color = game_over_cfg
-        .get()
-        .map(|c| Color::from(&c.heading_color))
-        .unwrap_or(DEFAULT_HEADING_COLOR);
+    let bg_color = ui_style.bg_color();
+    let stat_color = game_over_cfg.stat_color();
+    let stat_font_size = game_over_cfg.stat_font_size();
+    let stats_margin_top = game_over_cfg.stats_margin_top();
+    let button_margin_top = game_over_cfg.button_margin_top();
+    let row_gap = game_over_cfg.row_gap();
+    let heading_color = game_over_cfg.heading_color();
 
     let clear_time = format_elapsed(game_data.elapsed_time as u32);
     let level = game_data.current_level;

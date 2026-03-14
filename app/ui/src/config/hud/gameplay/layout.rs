@@ -7,6 +7,12 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use serde::Deserialize;
 
+// ---------------------------------------------------------------------------
+// Fallback constants (used while layout.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_EDGE_MARGIN: f32 = 12.0;
+
 /// Gameplay HUD layout config loaded from `config/ui/hud/gameplay/layout.ron`.
 #[derive(Asset, TypePath, Deserialize, Debug, Clone)]
 pub struct GameplayHudLayoutConfig {
@@ -33,6 +39,12 @@ impl<'w> GameplayHudLayoutParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn edge_margin(&self) -> f32 {
+        self.get()
+            .map(|c| c.edge_margin)
+            .unwrap_or(DEFAULT_EDGE_MARGIN)
     }
 }
 

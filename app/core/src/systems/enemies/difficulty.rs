@@ -22,7 +22,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    config::{EnemyParams, enemy::DEFAULT_ENEMY_SPAWN_BASE_INTERVAL},
+    config::EnemyParams,
     resources::{EnemySpawner, GameData},
 };
 
@@ -30,7 +30,11 @@ use crate::{
 // Fallback constants (used when RON config is not yet loaded)
 // ---------------------------------------------------------------------------
 
-/// Hard cap for the difficulty multiplier.
+/// Base enemy spawn interval in seconds when difficulty multiplier is 1.0.
+const DEFAULT_ENEMY_SPAWN_BASE_INTERVAL: f32 = 0.5;
+
+/// Hard cap for the difficulty multiplier — used in tests.
+#[cfg(test)]
 const DEFAULT_DIFFICULTY_MAX: f32 = 10.0;
 
 // ---------------------------------------------------------------------------
@@ -41,7 +45,7 @@ const DEFAULT_DIFFICULTY_MAX: f32 = 10.0;
 ///
 /// Grows by `0.1` per minute elapsed, starting at `1.0`, and is capped at
 /// `max` to prevent sub-frame spawn intervals at extreme runtimes.
-/// Pass [`DEFAULT_DIFFICULTY_MAX`] as the cap when no RON config is loaded.
+/// In production, pass the value from `enemy_cfg.difficulty_max()` as the cap.
 pub fn difficulty_from_elapsed(elapsed_secs: f32, max: f32) -> f32 {
     let minutes = (elapsed_secs / 60.0).floor();
     (1.0 + minutes * 0.1).min(max)
@@ -77,10 +81,7 @@ pub fn update_difficulty(
     enemy_cfg: EnemyParams,
 ) {
     let base_interval = enemy_cfg.spawn_base_interval();
-    let diff_max = enemy_cfg
-        .get()
-        .map(|c| c.difficulty_max)
-        .unwrap_or(DEFAULT_DIFFICULTY_MAX);
+    let diff_max = enemy_cfg.difficulty_max();
 
     spawner.difficulty_multiplier = difficulty_from_elapsed(game_data.elapsed_time, diff_max);
     spawner.spawn_interval = base_interval / spawner.difficulty_multiplier.max(1.0);

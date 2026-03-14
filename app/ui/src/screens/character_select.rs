@@ -33,54 +33,20 @@ use crate::hud::screen_heading::ScreenHeadingHud;
 use crate::i18n::{font_for_lang, t};
 
 // ---------------------------------------------------------------------------
-// Fallback constants
+// Constants
 // ---------------------------------------------------------------------------
 
-/// Dark-purple background (#1a0a2e) per docs/04_ui_ux.md.
-const DEFAULT_BG_COLOR: Color = Color::srgb(0.102, 0.039, 0.180);
-/// Gold title color (#ffd700) per docs/04_ui_ux.md.
-const DEFAULT_TITLE_COLOR: Color = Color::srgb(1.0, 0.843, 0.0);
-const DEFAULT_HEADING_FONT_SIZE: f32 = 48.0;
-const DEFAULT_HEADING_MARGIN: f32 = 32.0;
+/// Vertical gap between root layout children.
 const DEFAULT_ROOT_ROW_GAP: f32 = 24.0;
 
-/// Width of each character card in pixels.
-const DEFAULT_CARD_W: f32 = 160.0;
-/// Height of each character card in pixels.
-const DEFAULT_CARD_H: f32 = 140.0;
-/// Horizontal gap between cards.
-const DEFAULT_CARD_GAP: f32 = 16.0;
-/// Font size for the character name inside each card.
-const DEFAULT_CARD_NAME_FONT_SIZE: f32 = 18.0;
-
-/// Card background when unlocked and not selected.
-const DEFAULT_CARD_COLOR_UNLOCKED: Color = Color::srgb(0.133, 0.200, 0.400);
-/// Card background when unlocked and selected.
+/// Card background when unlocked and selected — used by tests to verify
+/// that the initially selected card has the correct color.
+#[cfg(test)]
 const DEFAULT_CARD_COLOR_SELECTED: Color = Color::srgb(0.300, 0.500, 0.900);
-/// Card background when hovered (unlocked).
-const DEFAULT_CARD_COLOR_HOVER: Color = Color::srgb(0.200, 0.350, 0.650);
-/// Card background when pressed.
-const DEFAULT_CARD_COLOR_PRESSED: Color = Color::srgb(0.086, 0.133, 0.267);
-/// Card background for locked characters.
+/// Card background for locked characters — used by tests to verify that
+/// locked cards render with the correct color on spawn.
+#[cfg(test)]
 const DEFAULT_CARD_COLOR_LOCKED: Color = Color::srgb(0.10, 0.10, 0.15);
-/// Hover color for locked cards.
-const DEFAULT_CARD_COLOR_LOCKED_HOVER: Color = Color::srgb(0.13, 0.13, 0.18);
-
-/// Card name text color when unlocked.
-const DEFAULT_CARD_TEXT_COLOR: Color = Color::srgb(1.0, 1.0, 1.0);
-/// Card name text color when locked.
-const DEFAULT_CARD_TEXT_LOCKED_COLOR: Color = Color::srgb(0.5, 0.5, 0.55);
-
-/// Detail panel background color.
-const DEFAULT_DETAIL_BG_COLOR: Color = Color::srgb(0.08, 0.04, 0.16);
-/// Detail panel text color for unlocked characters.
-const DEFAULT_DETAIL_TEXT_COLOR: Color = Color::srgb(0.90, 0.90, 0.90);
-/// Detail panel text color when a locked character is selected.
-const DEFAULT_DETAIL_LOCKED_COLOR: Color = Color::srgb(0.50, 0.50, 0.55);
-/// Font size for the detail panel text.
-const DEFAULT_DETAIL_FONT_SIZE: f32 = 20.0;
-/// Width of the detail panel.
-const DEFAULT_DETAIL_PANEL_W: f32 = 580.0;
 
 // ---------------------------------------------------------------------------
 // Marker components
@@ -199,61 +165,26 @@ pub fn setup_character_select_screen(
     let font: Handle<Font> = asset_server
         .map(|s| s.load(font_for_lang(lang)))
         .unwrap_or_default();
-    let bg_color = ui_style
-        .get()
-        .map(|c| Color::from(&c.bg_color))
-        .unwrap_or(DEFAULT_BG_COLOR);
-    let title_color = ui_style
-        .get()
-        .map(|c| Color::from(&c.title_color))
-        .unwrap_or(DEFAULT_TITLE_COLOR);
-    let heading_font_size = heading_cfg
-        .get()
-        .map(|c| c.font_size)
-        .unwrap_or(DEFAULT_HEADING_FONT_SIZE);
-    let heading_margin = heading_cfg
-        .get()
-        .map(|c| c.margin_bottom)
-        .unwrap_or(DEFAULT_HEADING_MARGIN);
+    let bg_color = ui_style.bg_color();
+    let title_color = ui_style.title_color();
+    let heading_font_size = heading_cfg.font_size();
+    let heading_margin = heading_cfg.margin_bottom();
 
-    // Card and detail values from RON config with hardcoded fallbacks.
-    let cs = cs_params.get();
-    let card_w = cs.map(|c| c.card_width).unwrap_or(DEFAULT_CARD_W);
-    let card_h = cs.map(|c| c.card_height).unwrap_or(DEFAULT_CARD_H);
-    let card_gap = cs.map(|c| c.card_gap).unwrap_or(DEFAULT_CARD_GAP);
-    let card_name_font_size = cs
-        .map(|c| c.card_name_font_size)
-        .unwrap_or(DEFAULT_CARD_NAME_FONT_SIZE);
-    let color_selected = cs
-        .map(|c| Color::from(&c.card_color_selected))
-        .unwrap_or(DEFAULT_CARD_COLOR_SELECTED);
-    let color_unlocked = cs
-        .map(|c| Color::from(&c.card_color_unlocked))
-        .unwrap_or(DEFAULT_CARD_COLOR_UNLOCKED);
-    let color_locked = cs
-        .map(|c| Color::from(&c.card_color_locked))
-        .unwrap_or(DEFAULT_CARD_COLOR_LOCKED);
-    let card_text_color = cs
-        .map(|c| Color::from(&c.card_text_color))
-        .unwrap_or(DEFAULT_CARD_TEXT_COLOR);
-    let card_text_locked_color = cs
-        .map(|c| Color::from(&c.card_text_locked_color))
-        .unwrap_or(DEFAULT_CARD_TEXT_LOCKED_COLOR);
-    let detail_bg_color = cs
-        .map(|c| Color::from(&c.detail_bg_color))
-        .unwrap_or(DEFAULT_DETAIL_BG_COLOR);
-    let detail_text_color = cs
-        .map(|c| Color::from(&c.detail_text_color))
-        .unwrap_or(DEFAULT_DETAIL_TEXT_COLOR);
-    let detail_locked_color = cs
-        .map(|c| Color::from(&c.detail_locked_color))
-        .unwrap_or(DEFAULT_DETAIL_LOCKED_COLOR);
-    let detail_font_size = cs
-        .map(|c| c.detail_font_size)
-        .unwrap_or(DEFAULT_DETAIL_FONT_SIZE);
-    let detail_panel_w = cs
-        .map(|c| c.detail_panel_width)
-        .unwrap_or(DEFAULT_DETAIL_PANEL_W);
+    // Card and detail values from RON config with accessor fallbacks.
+    let card_w = cs_params.card_width();
+    let card_h = cs_params.card_height();
+    let card_gap = cs_params.card_gap();
+    let card_name_font_size = cs_params.card_name_font_size();
+    let color_selected = cs_params.card_color_selected();
+    let color_unlocked = cs_params.card_color_unlocked();
+    let color_locked = cs_params.card_color_locked();
+    let card_text_color = cs_params.card_text_color();
+    let card_text_locked_color = cs_params.card_text_locked_color();
+    let detail_bg_color = cs_params.detail_bg_color();
+    let detail_text_color = cs_params.detail_text_color();
+    let detail_locked_color = cs_params.detail_locked_color();
+    let detail_font_size = cs_params.detail_font_size();
+    let detail_panel_w = cs_params.detail_panel_width();
 
     let current_selected = selected
         .as_deref()
@@ -444,32 +375,15 @@ pub fn update_character_select(
     };
     let lang = settings.as_deref().map(|s| s.language).unwrap_or_default();
 
-    // Extract card/detail colors from config with hardcoded fallbacks.
-    let cs = cs_params.get();
-    let color_selected = cs
-        .map(|c| Color::from(&c.card_color_selected))
-        .unwrap_or(DEFAULT_CARD_COLOR_SELECTED);
-    let color_unlocked = cs
-        .map(|c| Color::from(&c.card_color_unlocked))
-        .unwrap_or(DEFAULT_CARD_COLOR_UNLOCKED);
-    let color_locked = cs
-        .map(|c| Color::from(&c.card_color_locked))
-        .unwrap_or(DEFAULT_CARD_COLOR_LOCKED);
-    let color_hover = cs
-        .map(|c| Color::from(&c.card_color_hover))
-        .unwrap_or(DEFAULT_CARD_COLOR_HOVER);
-    let color_pressed = cs
-        .map(|c| Color::from(&c.card_color_pressed))
-        .unwrap_or(DEFAULT_CARD_COLOR_PRESSED);
-    let color_locked_hover = cs
-        .map(|c| Color::from(&c.card_color_locked_hover))
-        .unwrap_or(DEFAULT_CARD_COLOR_LOCKED_HOVER);
-    let detail_text_color = cs
-        .map(|c| Color::from(&c.detail_text_color))
-        .unwrap_or(DEFAULT_DETAIL_TEXT_COLOR);
-    let detail_locked_color = cs
-        .map(|c| Color::from(&c.detail_locked_color))
-        .unwrap_or(DEFAULT_DETAIL_LOCKED_COLOR);
+    // Extract card/detail colors from config with accessor fallbacks.
+    let color_selected = cs_params.card_color_selected();
+    let color_unlocked = cs_params.card_color_unlocked();
+    let color_locked = cs_params.card_color_locked();
+    let color_hover = cs_params.card_color_hover();
+    let color_pressed = cs_params.card_color_pressed();
+    let color_locked_hover = cs_params.card_color_locked_hover();
+    let detail_text_color = cs_params.detail_text_color();
+    let detail_locked_color = cs_params.detail_locked_color();
 
     let char_type = selected.0;
     let stats = char_params.stats_for(char_type);
