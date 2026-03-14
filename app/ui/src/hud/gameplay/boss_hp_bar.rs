@@ -21,8 +21,8 @@ use bevy::prelude::*;
 use vs_core::components::Enemy;
 use vs_core::types::BossPhase;
 
-use crate::config::hud::gameplay::boss_hp_bar::BossHpBarHudConfigHandle;
 use crate::config::hud::gameplay::BossHpBarHudConfig;
+use crate::config::hud::gameplay::boss_hp_bar::BossHpBarHudConfigHandle;
 
 // ---------------------------------------------------------------------------
 // Fallback constants
