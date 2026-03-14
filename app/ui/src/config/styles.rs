@@ -65,6 +65,13 @@ impl From<&SrgbaColor> for Color {
 }
 
 // ---------------------------------------------------------------------------
+// Fallback constants (used while styles.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_BG_COLOR: Color = Color::srgb(0.05, 0.05, 0.08);
+const DEFAULT_TITLE_COLOR: Color = Color::srgb(0.85, 0.15, 0.15);
+
+// ---------------------------------------------------------------------------
 // UiStyleConfig
 // ---------------------------------------------------------------------------
 
@@ -108,6 +115,18 @@ impl<'w> UiStyleParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn bg_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.bg_color))
+            .unwrap_or(DEFAULT_BG_COLOR)
+    }
+
+    pub fn title_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.title_color))
+            .unwrap_or(DEFAULT_TITLE_COLOR)
     }
 }
 

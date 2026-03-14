@@ -8,6 +8,16 @@ use serde::Deserialize;
 
 use crate::config::SrgbColor;
 
+// ---------------------------------------------------------------------------
+// Fallback constants (used while boss_warning.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_DISPLAY_DURATION: f32 = 4.0;
+const DEFAULT_FADE_START: f32 = 2.0;
+const DEFAULT_FONT_SIZE: f32 = 52.0;
+const DEFAULT_TOP_PERCENT: f32 = 35.0;
+const DEFAULT_TEXT_COLOR: Color = Color::srgb(1.0, 0.15, 0.15);
+
 /// Boss warning HUD config loaded from
 /// `config/ui/hud/gameplay/boss_warning.ron`.
 #[derive(Asset, TypePath, Deserialize, Debug, Clone)]
@@ -43,6 +53,34 @@ impl<'w> BossWarningHudParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn display_duration(&self) -> f32 {
+        self.get()
+            .map(|c| c.display_duration)
+            .unwrap_or(DEFAULT_DISPLAY_DURATION)
+    }
+
+    pub fn fade_start(&self) -> f32 {
+        self.get()
+            .map(|c| c.fade_start)
+            .unwrap_or(DEFAULT_FADE_START)
+    }
+
+    pub fn font_size(&self) -> f32 {
+        self.get().map(|c| c.font_size).unwrap_or(DEFAULT_FONT_SIZE)
+    }
+
+    pub fn top_percent(&self) -> f32 {
+        self.get()
+            .map(|c| c.top_percent)
+            .unwrap_or(DEFAULT_TOP_PERCENT)
+    }
+
+    pub fn text_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.text_color))
+            .unwrap_or(DEFAULT_TEXT_COLOR)
     }
 }
 

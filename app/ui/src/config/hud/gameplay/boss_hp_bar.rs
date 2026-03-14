@@ -12,6 +12,20 @@ use serde::Deserialize;
 use crate::config::SrgbColor;
 
 // ---------------------------------------------------------------------------
+// Fallback constants (used while boss_hp_bar.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_LABEL_TEXT: &str = "DEATH";
+const DEFAULT_BAR_WIDTH: f32 = 160.0;
+const DEFAULT_BAR_HEIGHT: f32 = 8.0;
+const DEFAULT_LABEL_FONT_SIZE: f32 = 12.0;
+const DEFAULT_LABEL_GAP: f32 = 4.0;
+const DEFAULT_Y_OFFSET: f32 = -90.0;
+const DEFAULT_FILL_COLOR: Color = Color::srgb(0.65, 0.10, 0.85);
+const DEFAULT_TRACK_COLOR: Color = Color::srgb(0.15, 0.05, 0.20);
+const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
+
+// ---------------------------------------------------------------------------
 // Config asset
 // ---------------------------------------------------------------------------
 
@@ -64,6 +78,54 @@ impl<'w> BossHpBarHudParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn label_text(&self) -> &str {
+        self.get()
+            .map(|c| c.label_text.as_str())
+            .unwrap_or(DEFAULT_LABEL_TEXT)
+    }
+
+    pub fn bar_width(&self) -> f32 {
+        self.get().map(|c| c.bar_width).unwrap_or(DEFAULT_BAR_WIDTH)
+    }
+
+    pub fn bar_height(&self) -> f32 {
+        self.get()
+            .map(|c| c.bar_height)
+            .unwrap_or(DEFAULT_BAR_HEIGHT)
+    }
+
+    pub fn label_font_size(&self) -> f32 {
+        self.get()
+            .map(|c| c.label_font_size)
+            .unwrap_or(DEFAULT_LABEL_FONT_SIZE)
+    }
+
+    pub fn label_gap(&self) -> f32 {
+        self.get().map(|c| c.label_gap).unwrap_or(DEFAULT_LABEL_GAP)
+    }
+
+    pub fn y_offset(&self) -> f32 {
+        self.get().map(|c| c.y_offset).unwrap_or(DEFAULT_Y_OFFSET)
+    }
+
+    pub fn fill_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.fill_color))
+            .unwrap_or(DEFAULT_FILL_COLOR)
+    }
+
+    pub fn track_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.track_color))
+            .unwrap_or(DEFAULT_TRACK_COLOR)
+    }
+
+    pub fn text_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.text_color))
+            .unwrap_or(DEFAULT_TEXT_COLOR)
     }
 }
 

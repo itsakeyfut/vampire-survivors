@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::config::game::DEFAULT_XP_LEVEL_BASE;
+const DEFAULT_XP_LEVEL_BASE: u32 = 20;
 
 /// Global game-session data. Reset at the start of each run.
 #[derive(Resource, Debug)]

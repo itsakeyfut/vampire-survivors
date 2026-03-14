@@ -10,6 +10,13 @@ use serde::Deserialize;
 use super::{SrgbColor, SrgbaColor};
 
 // ---------------------------------------------------------------------------
+// Fallback constants (used while pause.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_OVERLAY_COLOR: Color = Color::srgba(0.02, 0.02, 0.06, 0.88);
+const DEFAULT_HEADING_COLOR: Color = Color::srgb(1.0, 0.85, 0.20);
+
+// ---------------------------------------------------------------------------
 // Config asset
 // ---------------------------------------------------------------------------
 
@@ -50,6 +57,18 @@ impl<'w> PauseScreenParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn overlay_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.overlay_color))
+            .unwrap_or(DEFAULT_OVERLAY_COLOR)
+    }
+
+    pub fn heading_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.heading_color))
+            .unwrap_or(DEFAULT_HEADING_COLOR)
     }
 }
 

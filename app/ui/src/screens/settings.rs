@@ -37,12 +37,6 @@ use crate::i18n::{TranslatableText, font_for_lang, t};
 // Fallback constants
 // ---------------------------------------------------------------------------
 
-/// Dark-purple background (#1a0a2e) per docs/04_ui_ux.md.
-const DEFAULT_BG_COLOR: Color = Color::srgb(0.102, 0.039, 0.180);
-/// Gold title color (#ffd700) per docs/04_ui_ux.md.
-const DEFAULT_TITLE_COLOR: Color = Color::srgb(1.0, 0.843, 0.0);
-const DEFAULT_FONT_SIZE: f32 = 48.0;
-const DEFAULT_MARGIN_BOTTOM: f32 = 48.0;
 const DEFAULT_ROW_GAP: f32 = 24.0;
 const DEFAULT_LABEL_FONT_SIZE: f32 = 20.0;
 const DEFAULT_LABEL_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
@@ -84,34 +78,16 @@ pub fn setup_settings_screen(
         .map(|s| s.load(font_for_lang(lang)))
         .unwrap_or_default();
 
-    let bg_color = ui_style
-        .get()
-        .map(|c| Color::from(&c.bg_color))
-        .unwrap_or(DEFAULT_BG_COLOR);
-    let title_color = ui_style
-        .get()
-        .map(|c| Color::from(&c.title_color))
-        .unwrap_or(DEFAULT_TITLE_COLOR);
-    let heading_font_size = heading_cfg
-        .get()
-        .map(|c| c.font_size)
-        .unwrap_or(DEFAULT_FONT_SIZE);
-    let heading_margin = heading_cfg
-        .get()
-        .map(|c| c.margin_bottom)
-        .unwrap_or(DEFAULT_MARGIN_BOTTOM);
+    let bg_color = ui_style.bg_color();
+    let title_color = ui_style.title_color();
+    let heading_font_size = heading_cfg.font_size();
+    let heading_margin = heading_cfg.margin_bottom();
 
-    let btn_width = btn_cfg.get().map(|c| c.width).unwrap_or(280.0);
-    let btn_height = btn_cfg.get().map(|c| c.height).unwrap_or(60.0);
-    let btn_font_size = btn_cfg.get().map(|c| c.font_size).unwrap_or(32.0);
-    let btn_normal = btn_cfg
-        .get()
-        .map(|c| Color::from(&c.color_normal))
-        .unwrap_or(Color::srgb(0.133, 0.200, 0.400));
-    let btn_text_color = btn_cfg
-        .get()
-        .map(|c| Color::from(&c.text_color))
-        .unwrap_or(Color::srgb(1.0, 1.0, 1.0));
+    let btn_width = btn_cfg.width();
+    let btn_height = btn_cfg.height();
+    let btn_font_size = btn_cfg.font_size();
+    let btn_normal = btn_cfg.color_normal();
+    let btn_text_color = btn_cfg.text_color();
 
     commands
         .spawn((

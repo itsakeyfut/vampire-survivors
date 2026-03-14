@@ -7,6 +7,31 @@ use serde::Deserialize;
 use crate::{resources::MetaProgress, types::MetaUpgradeType};
 
 // ---------------------------------------------------------------------------
+// Fallback constants (used while player.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_BASE_HP: f32 = 100.0;
+const DEFAULT_BASE_SPEED: f32 = 200.0;
+const DEFAULT_BASE_DAMAGE_MULT: f32 = 1.0;
+const DEFAULT_BASE_COOLDOWN_REDUCTION: f32 = 0.0;
+const DEFAULT_BASE_PROJECTILE_SPEED: f32 = 1.0;
+const DEFAULT_BASE_DURATION_MULT: f32 = 1.0;
+const DEFAULT_BASE_AREA_MULT: f32 = 1.0;
+const DEFAULT_BASE_LUCK: f32 = 1.0;
+const DEFAULT_BASE_HP_REGEN: f32 = 0.0;
+const DEFAULT_BASE_XP_MULT: f32 = 1.0;
+const DEFAULT_PICKUP_RADIUS: f32 = 80.0;
+const DEFAULT_INVINCIBILITY_TIME: f32 = 0.5;
+const DEFAULT_COLLIDER_RADIUS: f32 = 12.0;
+const DEFAULT_COLLIDER_PROJECTILE_SMALL: f32 = 5.0;
+const DEFAULT_COLLIDER_PROJECTILE_LARGE: f32 = 10.0;
+const DEFAULT_COLLIDER_XP_GEM: f32 = 6.0;
+const DEFAULT_COLLIDER_GOLD_COIN: f32 = 6.0;
+const DEFAULT_COLLIDER_TREASURE: f32 = 20.0;
+const DEFAULT_GEM_ATTRACTION_SPEED: f32 = 200.0;
+const DEFAULT_GEM_ABSORPTION_RADIUS: f32 = 8.0;
+
+// ---------------------------------------------------------------------------
 // Asset type
 // ---------------------------------------------------------------------------
 
@@ -69,6 +94,122 @@ impl<'w> PlayerParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn base_hp(&self) -> f32 {
+        self.get().map(|c| c.base_hp).unwrap_or(DEFAULT_BASE_HP)
+    }
+
+    pub fn base_speed(&self) -> f32 {
+        self.get()
+            .map(|c| c.base_speed)
+            .unwrap_or(DEFAULT_BASE_SPEED)
+    }
+
+    pub fn base_damage_mult(&self) -> f32 {
+        self.get()
+            .map(|c| c.base_damage_mult)
+            .unwrap_or(DEFAULT_BASE_DAMAGE_MULT)
+    }
+
+    pub fn base_cooldown_reduction(&self) -> f32 {
+        self.get()
+            .map(|c| c.base_cooldown_reduction)
+            .unwrap_or(DEFAULT_BASE_COOLDOWN_REDUCTION)
+    }
+
+    pub fn base_projectile_speed(&self) -> f32 {
+        self.get()
+            .map(|c| c.base_projectile_speed)
+            .unwrap_or(DEFAULT_BASE_PROJECTILE_SPEED)
+    }
+
+    pub fn base_duration_mult(&self) -> f32 {
+        self.get()
+            .map(|c| c.base_duration_mult)
+            .unwrap_or(DEFAULT_BASE_DURATION_MULT)
+    }
+
+    pub fn base_area_mult(&self) -> f32 {
+        self.get()
+            .map(|c| c.base_area_mult)
+            .unwrap_or(DEFAULT_BASE_AREA_MULT)
+    }
+
+    pub fn base_luck(&self) -> f32 {
+        self.get().map(|c| c.base_luck).unwrap_or(DEFAULT_BASE_LUCK)
+    }
+
+    pub fn base_hp_regen(&self) -> f32 {
+        self.get()
+            .map(|c| c.base_hp_regen)
+            .unwrap_or(DEFAULT_BASE_HP_REGEN)
+    }
+
+    pub fn base_xp_mult(&self) -> f32 {
+        self.get()
+            .map(|c| c.base_xp_mult)
+            .unwrap_or(DEFAULT_BASE_XP_MULT)
+    }
+
+    pub fn pickup_radius(&self) -> f32 {
+        self.get()
+            .map(|c| c.pickup_radius)
+            .unwrap_or(DEFAULT_PICKUP_RADIUS)
+    }
+
+    pub fn invincibility_time(&self) -> f32 {
+        self.get()
+            .map(|c| c.invincibility_time)
+            .unwrap_or(DEFAULT_INVINCIBILITY_TIME)
+    }
+
+    pub fn collider_radius(&self) -> f32 {
+        self.get()
+            .map(|c| c.collider_radius)
+            .unwrap_or(DEFAULT_COLLIDER_RADIUS)
+    }
+
+    pub fn collider_projectile_small(&self) -> f32 {
+        self.get()
+            .map(|c| c.collider_projectile_small)
+            .unwrap_or(DEFAULT_COLLIDER_PROJECTILE_SMALL)
+    }
+
+    pub fn collider_projectile_large(&self) -> f32 {
+        self.get()
+            .map(|c| c.collider_projectile_large)
+            .unwrap_or(DEFAULT_COLLIDER_PROJECTILE_LARGE)
+    }
+
+    pub fn collider_xp_gem(&self) -> f32 {
+        self.get()
+            .map(|c| c.collider_xp_gem)
+            .unwrap_or(DEFAULT_COLLIDER_XP_GEM)
+    }
+
+    pub fn collider_gold_coin(&self) -> f32 {
+        self.get()
+            .map(|c| c.collider_gold_coin)
+            .unwrap_or(DEFAULT_COLLIDER_GOLD_COIN)
+    }
+
+    pub fn collider_treasure(&self) -> f32 {
+        self.get()
+            .map(|c| c.collider_treasure)
+            .unwrap_or(DEFAULT_COLLIDER_TREASURE)
+    }
+
+    pub fn gem_attraction_speed(&self) -> f32 {
+        self.get()
+            .map(|c| c.gem_attraction_speed)
+            .unwrap_or(DEFAULT_GEM_ATTRACTION_SPEED)
+    }
+
+    pub fn gem_absorption_radius(&self) -> f32 {
+        self.get()
+            .map(|c| c.gem_absorption_radius)
+            .unwrap_or(DEFAULT_GEM_ABSORPTION_RADIUS)
     }
 }
 

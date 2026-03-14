@@ -11,6 +11,28 @@ use serde::Deserialize;
 use super::SrgbColor;
 
 // ---------------------------------------------------------------------------
+// Fallback constants (used while character_select.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_CARD_WIDTH: f32 = 160.0;
+const DEFAULT_CARD_HEIGHT: f32 = 140.0;
+const DEFAULT_CARD_GAP: f32 = 16.0;
+const DEFAULT_CARD_NAME_FONT_SIZE: f32 = 18.0;
+const DEFAULT_CARD_COLOR_UNLOCKED: Color = Color::srgb(0.133, 0.200, 0.400);
+const DEFAULT_CARD_COLOR_SELECTED: Color = Color::srgb(0.300, 0.500, 0.900);
+const DEFAULT_CARD_COLOR_HOVER: Color = Color::srgb(0.200, 0.350, 0.650);
+const DEFAULT_CARD_COLOR_PRESSED: Color = Color::srgb(0.086, 0.133, 0.267);
+const DEFAULT_CARD_COLOR_LOCKED: Color = Color::srgb(0.100, 0.100, 0.150);
+const DEFAULT_CARD_COLOR_LOCKED_HOVER: Color = Color::srgb(0.130, 0.130, 0.180);
+const DEFAULT_CARD_TEXT_COLOR: Color = Color::srgb(1.000, 1.000, 1.000);
+const DEFAULT_CARD_TEXT_LOCKED_COLOR: Color = Color::srgb(0.500, 0.500, 0.550);
+const DEFAULT_DETAIL_BG_COLOR: Color = Color::srgb(0.080, 0.040, 0.160);
+const DEFAULT_DETAIL_TEXT_COLOR: Color = Color::srgb(0.900, 0.900, 0.900);
+const DEFAULT_DETAIL_LOCKED_COLOR: Color = Color::srgb(0.500, 0.500, 0.550);
+const DEFAULT_DETAIL_FONT_SIZE: f32 = 20.0;
+const DEFAULT_DETAIL_PANEL_WIDTH: f32 = 580.0;
+
+// ---------------------------------------------------------------------------
 // Config asset
 // ---------------------------------------------------------------------------
 
@@ -82,6 +104,106 @@ impl<'w> CharacterSelectScreenParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn card_width(&self) -> f32 {
+        self.get()
+            .map(|c| c.card_width)
+            .unwrap_or(DEFAULT_CARD_WIDTH)
+    }
+
+    pub fn card_height(&self) -> f32 {
+        self.get()
+            .map(|c| c.card_height)
+            .unwrap_or(DEFAULT_CARD_HEIGHT)
+    }
+
+    pub fn card_gap(&self) -> f32 {
+        self.get().map(|c| c.card_gap).unwrap_or(DEFAULT_CARD_GAP)
+    }
+
+    pub fn card_name_font_size(&self) -> f32 {
+        self.get()
+            .map(|c| c.card_name_font_size)
+            .unwrap_or(DEFAULT_CARD_NAME_FONT_SIZE)
+    }
+
+    pub fn card_color_unlocked(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.card_color_unlocked))
+            .unwrap_or(DEFAULT_CARD_COLOR_UNLOCKED)
+    }
+
+    pub fn card_color_selected(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.card_color_selected))
+            .unwrap_or(DEFAULT_CARD_COLOR_SELECTED)
+    }
+
+    pub fn card_color_hover(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.card_color_hover))
+            .unwrap_or(DEFAULT_CARD_COLOR_HOVER)
+    }
+
+    pub fn card_color_pressed(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.card_color_pressed))
+            .unwrap_or(DEFAULT_CARD_COLOR_PRESSED)
+    }
+
+    pub fn card_color_locked(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.card_color_locked))
+            .unwrap_or(DEFAULT_CARD_COLOR_LOCKED)
+    }
+
+    pub fn card_color_locked_hover(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.card_color_locked_hover))
+            .unwrap_or(DEFAULT_CARD_COLOR_LOCKED_HOVER)
+    }
+
+    pub fn card_text_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.card_text_color))
+            .unwrap_or(DEFAULT_CARD_TEXT_COLOR)
+    }
+
+    pub fn card_text_locked_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.card_text_locked_color))
+            .unwrap_or(DEFAULT_CARD_TEXT_LOCKED_COLOR)
+    }
+
+    pub fn detail_bg_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.detail_bg_color))
+            .unwrap_or(DEFAULT_DETAIL_BG_COLOR)
+    }
+
+    pub fn detail_text_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.detail_text_color))
+            .unwrap_or(DEFAULT_DETAIL_TEXT_COLOR)
+    }
+
+    pub fn detail_locked_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.detail_locked_color))
+            .unwrap_or(DEFAULT_DETAIL_LOCKED_COLOR)
+    }
+
+    pub fn detail_font_size(&self) -> f32 {
+        self.get()
+            .map(|c| c.detail_font_size)
+            .unwrap_or(DEFAULT_DETAIL_FONT_SIZE)
+    }
+
+    pub fn detail_panel_width(&self) -> f32 {
+        self.get()
+            .map(|c| c.detail_panel_width)
+            .unwrap_or(DEFAULT_DETAIL_PANEL_WIDTH)
     }
 }
 

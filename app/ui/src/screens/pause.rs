@@ -21,13 +21,6 @@ use crate::hud::screen_heading::spawn_screen_heading;
 use crate::i18n::{font_for_lang, t};
 
 // ---------------------------------------------------------------------------
-// Fallback constants
-// ---------------------------------------------------------------------------
-
-const DEFAULT_OVERLAY_COLOR: Color = Color::srgba(0.02, 0.02, 0.06, 0.88);
-const DEFAULT_HEADING_COLOR: Color = Color::srgb(1.0, 0.85, 0.20);
-
-// ---------------------------------------------------------------------------
 // Marker components
 // ---------------------------------------------------------------------------
 
@@ -53,21 +46,8 @@ pub fn setup_pause_screen(
         .map(|s| s.load(font_for_lang(lang)))
         .unwrap_or_default();
 
-    let overlay_color = pause_cfg
-        .get()
-        .map(|c| {
-            Color::srgba(
-                c.overlay_color.r,
-                c.overlay_color.g,
-                c.overlay_color.b,
-                c.overlay_color.a,
-            )
-        })
-        .unwrap_or(DEFAULT_OVERLAY_COLOR);
-    let heading_color = pause_cfg
-        .get()
-        .map(|c| Color::from(&c.heading_color))
-        .unwrap_or(DEFAULT_HEADING_COLOR);
+    let overlay_color = pause_cfg.overlay_color();
+    let heading_color = pause_cfg.heading_color();
 
     commands
         .spawn((

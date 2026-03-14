@@ -17,8 +17,6 @@ use crate::config::hud::upgrade_card::{UpgradeCardHudConfig, UpgradeCardHudParam
 // ---------------------------------------------------------------------------
 
 const DEFAULT_CARD_NORMAL: Color = Color::srgb(0.12, 0.08, 0.28);
-const DEFAULT_CARD_HOVER: Color = Color::srgb(0.22, 0.14, 0.48);
-const DEFAULT_CARD_PRESSED: Color = Color::srgb(0.08, 0.05, 0.18);
 const DEFAULT_SUBTITLE_COLOR: Color = Color::srgb(0.85, 0.70, 0.30);
 const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
 const DEFAULT_CARD_WIDTH: f32 = 260.0;
@@ -377,19 +375,9 @@ pub fn handle_card_interaction(
     mut card_q: Query<(&Interaction, &mut BackgroundColor), ChangedCard>,
     card_cfg: UpgradeCardHudParams,
 ) {
-    let (normal, hover, pressed) = if let Some(c) = card_cfg.get() {
-        (
-            Color::from(&c.card_normal),
-            Color::from(&c.card_hover),
-            Color::from(&c.card_pressed),
-        )
-    } else {
-        (
-            DEFAULT_CARD_NORMAL,
-            DEFAULT_CARD_HOVER,
-            DEFAULT_CARD_PRESSED,
-        )
-    };
+    let normal = card_cfg.card_normal();
+    let hover = card_cfg.card_hover();
+    let pressed = card_cfg.card_pressed();
 
     for (interaction, mut bg) in card_q.iter_mut() {
         *bg = BackgroundColor(match interaction {

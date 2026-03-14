@@ -9,6 +9,13 @@ use bevy::prelude::*;
 use serde::Deserialize;
 
 // ---------------------------------------------------------------------------
+// Fallback constants (used while screen_heading.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_FONT_SIZE: f32 = 72.0;
+const DEFAULT_MARGIN_BOTTOM: f32 = 80.0;
+
+// ---------------------------------------------------------------------------
 // Config asset
 // ---------------------------------------------------------------------------
 
@@ -49,6 +56,16 @@ impl<'w> ScreenHeadingHudParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn font_size(&self) -> f32 {
+        self.get().map(|c| c.font_size).unwrap_or(DEFAULT_FONT_SIZE)
+    }
+
+    pub fn margin_bottom(&self) -> f32 {
+        self.get()
+            .map(|c| c.margin_bottom)
+            .unwrap_or(DEFAULT_MARGIN_BOTTOM)
     }
 }
 

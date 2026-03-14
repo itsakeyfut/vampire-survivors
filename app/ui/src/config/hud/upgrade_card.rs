@@ -11,6 +11,29 @@ use serde::Deserialize;
 use crate::config::SrgbColor;
 
 // ---------------------------------------------------------------------------
+// Fallback constants (used while upgrade_card.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_CARD_WIDTH: f32 = 260.0;
+const DEFAULT_CARD_HEIGHT: f32 = 320.0;
+const DEFAULT_CARD_GAP: f32 = 30.0;
+const DEFAULT_PADDING: f32 = 16.0;
+const DEFAULT_INNER_GAP: f32 = 12.0;
+const DEFAULT_CARD_NORMAL: Color = Color::srgb(0.12, 0.08, 0.28);
+const DEFAULT_CARD_HOVER: Color = Color::srgb(0.22, 0.14, 0.48);
+const DEFAULT_CARD_PRESSED: Color = Color::srgb(0.08, 0.05, 0.18);
+const DEFAULT_SUBTITLE_COLOR: Color = Color::srgb(0.85, 0.70, 0.30);
+const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
+const DEFAULT_FONT_SIZE_NAME: f32 = 32.0;
+const DEFAULT_FONT_SIZE_SUBTITLE: f32 = 24.0;
+const DEFAULT_FONT_SIZE_DESC: f32 = 24.0;
+const DEFAULT_ICON_SIZE: f32 = 64.0;
+const DEFAULT_ICON_COLOR_NEW_WEAPON: Color = Color::srgb(0.25, 0.50, 1.00);
+const DEFAULT_ICON_COLOR_WEAPON_UPGRADE: Color = Color::srgb(0.40, 0.70, 1.00);
+const DEFAULT_ICON_COLOR_NEW_PASSIVE: Color = Color::srgb(0.20, 0.75, 0.50);
+const DEFAULT_ICON_COLOR_PASSIVE_UPGRADE: Color = Color::srgb(0.40, 0.90, 0.65);
+
+// ---------------------------------------------------------------------------
 // Config asset
 // ---------------------------------------------------------------------------
 
@@ -83,6 +106,106 @@ impl<'w> UpgradeCardHudParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn card_width(&self) -> f32 {
+        self.get()
+            .map(|c| c.card_width)
+            .unwrap_or(DEFAULT_CARD_WIDTH)
+    }
+
+    pub fn card_height(&self) -> f32 {
+        self.get()
+            .map(|c| c.card_height)
+            .unwrap_or(DEFAULT_CARD_HEIGHT)
+    }
+
+    pub fn card_gap(&self) -> f32 {
+        self.get().map(|c| c.card_gap).unwrap_or(DEFAULT_CARD_GAP)
+    }
+
+    pub fn padding(&self) -> f32 {
+        self.get().map(|c| c.padding).unwrap_or(DEFAULT_PADDING)
+    }
+
+    pub fn inner_gap(&self) -> f32 {
+        self.get().map(|c| c.inner_gap).unwrap_or(DEFAULT_INNER_GAP)
+    }
+
+    pub fn card_normal(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.card_normal))
+            .unwrap_or(DEFAULT_CARD_NORMAL)
+    }
+
+    pub fn card_hover(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.card_hover))
+            .unwrap_or(DEFAULT_CARD_HOVER)
+    }
+
+    pub fn card_pressed(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.card_pressed))
+            .unwrap_or(DEFAULT_CARD_PRESSED)
+    }
+
+    pub fn subtitle_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.subtitle_color))
+            .unwrap_or(DEFAULT_SUBTITLE_COLOR)
+    }
+
+    pub fn text_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.text_color))
+            .unwrap_or(DEFAULT_TEXT_COLOR)
+    }
+
+    pub fn font_size_name(&self) -> f32 {
+        self.get()
+            .map(|c| c.font_size_name)
+            .unwrap_or(DEFAULT_FONT_SIZE_NAME)
+    }
+
+    pub fn font_size_subtitle(&self) -> f32 {
+        self.get()
+            .map(|c| c.font_size_subtitle)
+            .unwrap_or(DEFAULT_FONT_SIZE_SUBTITLE)
+    }
+
+    pub fn font_size_desc(&self) -> f32 {
+        self.get()
+            .map(|c| c.font_size_desc)
+            .unwrap_or(DEFAULT_FONT_SIZE_DESC)
+    }
+
+    pub fn icon_size(&self) -> f32 {
+        self.get().map(|c| c.icon_size).unwrap_or(DEFAULT_ICON_SIZE)
+    }
+
+    pub fn icon_color_new_weapon(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.icon_color_new_weapon))
+            .unwrap_or(DEFAULT_ICON_COLOR_NEW_WEAPON)
+    }
+
+    pub fn icon_color_weapon_upgrade(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.icon_color_weapon_upgrade))
+            .unwrap_or(DEFAULT_ICON_COLOR_WEAPON_UPGRADE)
+    }
+
+    pub fn icon_color_new_passive(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.icon_color_new_passive))
+            .unwrap_or(DEFAULT_ICON_COLOR_NEW_PASSIVE)
+    }
+
+    pub fn icon_color_passive_upgrade(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.icon_color_passive_upgrade))
+            .unwrap_or(DEFAULT_ICON_COLOR_PASSIVE_UPGRADE)
     }
 }
 

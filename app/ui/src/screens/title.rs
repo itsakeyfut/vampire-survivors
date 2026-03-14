@@ -27,12 +27,6 @@ use crate::i18n::{font_for_lang, t};
 // Fallback constants
 // ---------------------------------------------------------------------------
 
-/// Dark-purple background (#1a0a2e) per docs/04_ui_ux.md.
-const DEFAULT_BG_COLOR: Color = Color::srgb(0.102, 0.039, 0.180);
-/// Gold title color (#ffd700) per docs/04_ui_ux.md.
-const DEFAULT_TITLE_COLOR: Color = Color::srgb(1.0, 0.843, 0.0);
-const DEFAULT_FONT_SIZE: f32 = 72.0;
-const DEFAULT_MARGIN_BOTTOM: f32 = 80.0;
 /// Gap between the title column's children (heading, gold label, buttons).
 const DEFAULT_BUTTON_GAP: f32 = 16.0;
 const DEFAULT_GOLD_FONT_SIZE: f32 = 20.0;
@@ -67,22 +61,10 @@ pub fn setup_title_screen(
     let font: Handle<Font> = asset_server
         .map(|s| s.load(font_for_lang(lang)))
         .unwrap_or_default();
-    let bg_color = ui_style
-        .get()
-        .map(|c| Color::from(&c.bg_color))
-        .unwrap_or(DEFAULT_BG_COLOR);
-    let title_color = ui_style
-        .get()
-        .map(|c| Color::from(&c.title_color))
-        .unwrap_or(DEFAULT_TITLE_COLOR);
-    let heading_font_size = heading_cfg
-        .get()
-        .map(|c| c.font_size)
-        .unwrap_or(DEFAULT_FONT_SIZE);
-    let heading_margin = heading_cfg
-        .get()
-        .map(|c| c.margin_bottom)
-        .unwrap_or(DEFAULT_MARGIN_BOTTOM);
+    let bg_color = ui_style.bg_color();
+    let title_color = ui_style.title_color();
+    let heading_font_size = heading_cfg.font_size();
+    let heading_margin = heading_cfg.margin_bottom();
 
     commands
         .spawn((

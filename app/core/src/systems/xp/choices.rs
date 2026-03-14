@@ -185,13 +185,15 @@ mod tests {
     use super::*;
     use crate::{
         components::{PassiveInventory, Player, WeaponInventory},
-        config::game::{
-            DEFAULT_CHOICE_COUNT, DEFAULT_MAX_PASSIVE_LEVEL, DEFAULT_MAX_PASSIVES,
-            DEFAULT_MAX_WEAPON_LEVEL, DEFAULT_MAX_WEAPONS,
-        },
         resources::LevelUpChoices,
         types::{PassiveState, WeaponState, WeaponType},
     };
+
+    const DEFAULT_CHOICE_COUNT: usize = 3;
+    const DEFAULT_MAX_WEAPON_LEVEL: u8 = 8;
+    const DEFAULT_MAX_PASSIVE_LEVEL: u8 = 5;
+    const DEFAULT_MAX_WEAPONS: usize = 6;
+    const DEFAULT_MAX_PASSIVES: usize = 6;
 
     fn build_app() -> App {
         let mut app = App::new();

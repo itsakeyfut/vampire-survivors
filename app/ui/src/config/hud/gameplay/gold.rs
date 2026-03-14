@@ -8,6 +8,14 @@ use serde::Deserialize;
 
 use crate::config::SrgbColor;
 
+// ---------------------------------------------------------------------------
+// Fallback constants (used while gold.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_FONT_SIZE: f32 = 14.0;
+const DEFAULT_TEXT_COLOR: Color = Color::srgb(1.0, 0.85, 0.2);
+const DEFAULT_VERTICAL_OFFSET: f32 = 20.0;
+
 /// Gold HUD config loaded from `config/ui/hud/gameplay/gold.ron`.
 #[derive(Asset, TypePath, Deserialize, Debug, Clone)]
 pub struct GoldHudConfig {
@@ -39,6 +47,22 @@ impl<'w> GoldHudParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn font_size(&self) -> f32 {
+        self.get().map(|c| c.font_size).unwrap_or(DEFAULT_FONT_SIZE)
+    }
+
+    pub fn text_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.text_color))
+            .unwrap_or(DEFAULT_TEXT_COLOR)
+    }
+
+    pub fn vertical_offset(&self) -> f32 {
+        self.get()
+            .map(|c| c.vertical_offset)
+            .unwrap_or(DEFAULT_VERTICAL_OFFSET)
     }
 }
 

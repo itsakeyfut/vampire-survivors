@@ -11,6 +11,17 @@ use serde::Deserialize;
 use super::SrgbColor;
 
 // ---------------------------------------------------------------------------
+// Fallback constants (used while game_over.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_HEADING_COLOR: Color = Color::srgb(0.8, 0.2, 0.2);
+const DEFAULT_STAT_COLOR: Color = Color::srgb(0.85, 0.85, 0.85);
+const DEFAULT_STAT_FONT_SIZE: f32 = 24.0;
+const DEFAULT_STATS_MARGIN_TOP: f32 = 16.0;
+const DEFAULT_BUTTON_MARGIN_TOP: f32 = 48.0;
+const DEFAULT_ROW_GAP: f32 = 8.0;
+
+// ---------------------------------------------------------------------------
 // Config asset
 // ---------------------------------------------------------------------------
 
@@ -59,6 +70,40 @@ impl<'w> GameOverScreenParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn heading_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.heading_color))
+            .unwrap_or(DEFAULT_HEADING_COLOR)
+    }
+
+    pub fn stat_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.stat_color))
+            .unwrap_or(DEFAULT_STAT_COLOR)
+    }
+
+    pub fn stat_font_size(&self) -> f32 {
+        self.get()
+            .map(|c| c.stat_font_size)
+            .unwrap_or(DEFAULT_STAT_FONT_SIZE)
+    }
+
+    pub fn stats_margin_top(&self) -> f32 {
+        self.get()
+            .map(|c| c.stats_margin_top)
+            .unwrap_or(DEFAULT_STATS_MARGIN_TOP)
+    }
+
+    pub fn button_margin_top(&self) -> f32 {
+        self.get()
+            .map(|c| c.button_margin_top)
+            .unwrap_or(DEFAULT_BUTTON_MARGIN_TOP)
+    }
+
+    pub fn row_gap(&self) -> f32 {
+        self.get().map(|c| c.row_gap).unwrap_or(DEFAULT_ROW_GAP)
     }
 }
 

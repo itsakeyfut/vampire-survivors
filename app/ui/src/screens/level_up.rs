@@ -18,14 +18,6 @@ use crate::hud::upgrade_card::spawn_upgrade_card;
 use crate::i18n::{font_for_lang, t};
 
 // ---------------------------------------------------------------------------
-// Fallback constants
-// ---------------------------------------------------------------------------
-
-const DEFAULT_OVERLAY_COLOR: Color = Color::srgba(0.02, 0.02, 0.06, 0.92);
-const DEFAULT_HEADING_COLOR: Color = Color::srgb(1.0, 0.85, 0.20);
-const DEFAULT_CARD_GAP: f32 = 30.0;
-
-// ---------------------------------------------------------------------------
 // Marker components
 // ---------------------------------------------------------------------------
 
@@ -71,19 +63,9 @@ pub fn setup_level_up_screen(
         .map(|s| s.load(font_for_lang(lang)))
         .unwrap_or_default();
 
-    let overlay_color = screen_cfg
-        .get()
-        .map(|c| Color::from(&c.overlay_color))
-        .unwrap_or(DEFAULT_OVERLAY_COLOR);
-    let heading_color = screen_cfg
-        .get()
-        .map(|c| Color::from(&c.heading_color))
-        .unwrap_or(DEFAULT_HEADING_COLOR);
-    let card_gap = card_cfg
-        .get()
-        .map(|c| c.card_gap)
-        .unwrap_or(DEFAULT_CARD_GAP)
-        .max(0.0);
+    let overlay_color = screen_cfg.overlay_color();
+    let heading_color = screen_cfg.heading_color();
+    let card_gap = card_cfg.card_gap().max(0.0);
 
     commands
         .spawn((

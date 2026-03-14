@@ -11,6 +11,18 @@ use serde::Deserialize;
 use crate::config::SrgbColor;
 
 // ---------------------------------------------------------------------------
+// Fallback constants (used while menu_button.ron is still loading)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_WIDTH: f32 = 280.0;
+const DEFAULT_HEIGHT: f32 = 80.0;
+const DEFAULT_FONT_SIZE: f32 = 48.0;
+const DEFAULT_COLOR_NORMAL: Color = Color::srgb(0.30, 0.05, 0.05);
+const DEFAULT_COLOR_HOVER: Color = Color::srgb(0.60, 0.10, 0.10);
+const DEFAULT_COLOR_PRESSED: Color = Color::srgb(0.20, 0.02, 0.02);
+const DEFAULT_TEXT_COLOR: Color = Color::srgb(0.95, 0.90, 0.85);
+
+// ---------------------------------------------------------------------------
 // Config asset
 // ---------------------------------------------------------------------------
 
@@ -61,6 +73,42 @@ impl<'w> MenuButtonHudParams<'w> {
         self.handle
             .as_ref()
             .and_then(|h| self.assets.as_ref().and_then(|a| a.get(&h.0)))
+    }
+
+    pub fn width(&self) -> f32 {
+        self.get().map(|c| c.width).unwrap_or(DEFAULT_WIDTH)
+    }
+
+    pub fn height(&self) -> f32 {
+        self.get().map(|c| c.height).unwrap_or(DEFAULT_HEIGHT)
+    }
+
+    pub fn font_size(&self) -> f32 {
+        self.get().map(|c| c.font_size).unwrap_or(DEFAULT_FONT_SIZE)
+    }
+
+    pub fn color_normal(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.color_normal))
+            .unwrap_or(DEFAULT_COLOR_NORMAL)
+    }
+
+    pub fn color_hover(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.color_hover))
+            .unwrap_or(DEFAULT_COLOR_HOVER)
+    }
+
+    pub fn color_pressed(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.color_pressed))
+            .unwrap_or(DEFAULT_COLOR_PRESSED)
+    }
+
+    pub fn text_color(&self) -> Color {
+        self.get()
+            .map(|c| Color::from(&c.text_color))
+            .unwrap_or(DEFAULT_TEXT_COLOR)
     }
 }
 
