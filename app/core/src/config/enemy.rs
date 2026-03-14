@@ -204,7 +204,9 @@ impl EnemyStatsEntryPartial {
                 0.0
             }),
             collider_radius: self.collider_radius.unwrap_or_else(|| {
-                warn!("enemy.ron: `{field_prefix}.collider_radius` missing → using built-in baseline");
+                warn!(
+                    "enemy.ron: `{field_prefix}.collider_radius` missing → using built-in baseline"
+                );
                 8.0
             }),
             spawn_weight: self.spawn_weight.unwrap_or_else(|| {

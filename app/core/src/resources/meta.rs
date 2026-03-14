@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-use crate::types::{CharacterType, MetaUpgradeType};
+use crate::types::{CharacterType, MetaUpgradeType, StageType};
 
 /// Path to the save directory, relative to the working directory.
 const DEFAULT_SAVE_DIR: &str = "save";
@@ -17,6 +17,16 @@ pub struct SelectedCharacter(pub CharacterType);
 impl Default for SelectedCharacter {
     fn default() -> Self {
         Self(CharacterType::DefaultCharacter)
+    }
+}
+
+/// Which stage the player selected on the stage-select screen.
+#[derive(Resource, Debug)]
+pub struct SelectedStage(pub StageType);
+
+impl Default for SelectedStage {
+    fn default() -> Self {
+        Self(StageType::MadForest)
     }
 }
 

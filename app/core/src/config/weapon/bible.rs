@@ -12,12 +12,9 @@ use serde::Deserialize;
 
 const DEFAULT_ORB_COLLISION_RADIUS: f32 = 12.0;
 const DEFAULT_HIT_COOLDOWN_SECS: f32 = 1.5;
-const DEFAULT_DAMAGE_BY_LEVEL: &[f32] =
-    &[20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0, 80.0];
-const DEFAULT_ORBIT_RADIUS_BY_LEVEL: &[f32] =
-    &[80.0, 80.0, 80.0, 90.0, 90.0, 100.0, 100.0, 110.0];
-const DEFAULT_ORBIT_SPEED_BY_LEVEL: &[f32] =
-    &[2.0, 2.0, 2.3, 2.3, 2.5, 2.5, 2.8, 3.0];
+const DEFAULT_DAMAGE_BY_LEVEL: &[f32] = &[20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0, 80.0];
+const DEFAULT_ORBIT_RADIUS_BY_LEVEL: &[f32] = &[80.0, 80.0, 80.0, 90.0, 90.0, 100.0, 100.0, 110.0];
+const DEFAULT_ORBIT_SPEED_BY_LEVEL: &[f32] = &[2.0, 2.0, 2.3, 2.3, 2.5, 2.5, 2.8, 3.0];
 const DEFAULT_COUNT_BY_LEVEL: &[u32] = &[1, 1, 2, 2, 3, 3, 3, 3];
 
 /// Deserialization mirror of [`BibleConfig`] — every field is `Option<T>` so

@@ -15,9 +15,9 @@ use bevy::prelude::*;
 
 use crate::{
     components::{CircleCollider, Enemy, EnemyAI, GameSessionEntity, Player},
-    config::GameParams,
+    config::{GameParams, StageParams},
     events::BossSpawnedEvent,
-    resources::{EnemySpawner, GameData},
+    resources::{EnemySpawner, GameData, SelectedStage},
     types::{AIType, BossPhase, EnemyType},
 };
 
@@ -42,12 +42,15 @@ const BOSS_SPAWN_OFFSET_Y: f32 = 700.0;
 ///
 /// This is a no-op once `game_data.boss_spawned` is `true`, so it is safe to
 /// keep registered in `Update` without any per-frame cost after the trigger.
+#[allow(clippy::too_many_arguments)]
 pub fn check_boss_spawn(
     mut commands: Commands,
     mut game_data: ResMut<GameData>,
     mut enemy_spawner: ResMut<EnemySpawner>,
     mut boss_events: MessageWriter<BossSpawnedEvent>,
     game_cfg: GameParams,
+    stage_params: StageParams,
+    selected_stage: Option<Res<SelectedStage>>,
     player_q: Query<&Transform, With<Player>>,
 ) {
     // Already spawned — nothing to do.
@@ -78,7 +81,21 @@ pub fn check_boss_spawn(
         .unwrap_or(offset);
 
     // HP is fixed at the base value — no difficulty scaling per design spec.
-    let enemy = Enemy::from_type(EnemyType::BossDeath, 1.0);
+    // Stage boss multipliers are applied on top of the base stats.
+    let (boss_hp_mult, boss_speed_mult) = selected_stage
+        .as_deref()
+        .and_then(|s| stage_params.get().map(|c| c.entry_for(s.0)))
+        .map(|e| (e.boss_hp_multiplier, e.boss_speed_multiplier))
+        .unwrap_or((1.0, 1.0));
+
+    let mut enemy = Enemy::from_type(EnemyType::BossDeath, 1.0);
+    if (boss_hp_mult - 1.0).abs() > f32::EPSILON {
+        enemy.max_hp *= boss_hp_mult;
+        enemy.current_hp = enemy.max_hp;
+    }
+    if (boss_speed_mult - 1.0).abs() > f32::EPSILON {
+        enemy.move_speed *= boss_speed_mult;
+    }
 
     commands.spawn((
         GameSessionEntity,

@@ -14,8 +14,7 @@ const DEFAULT_EFFECT_DURATION: f32 = 0.2;
 const DEFAULT_VISUAL_SIZE: f32 = 24.0;
 const DEFAULT_STRIKE_Z: f32 = 6.0;
 const DEFAULT_TARGET_RANGE: f32 = 800.0;
-const DEFAULT_DAMAGE_BY_LEVEL: &[f32] =
-    &[40.0, 50.0, 60.0, 60.0, 70.0, 80.0, 90.0, 100.0];
+const DEFAULT_DAMAGE_BY_LEVEL: &[f32] = &[40.0, 50.0, 60.0, 60.0, 70.0, 80.0, 90.0, 100.0];
 const DEFAULT_COUNT_BY_LEVEL: &[u32] = &[1, 1, 2, 2, 3, 3, 3, 4];
 
 /// Deserialization mirror of [`ThunderRingConfig`] — every field is `Option<T>` so

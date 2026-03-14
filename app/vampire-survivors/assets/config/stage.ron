@@ -1,0 +1,52 @@
+// Stage configuration — per-stage enemy pools and difficulty multipliers.
+// Hot-reloading this file takes effect on the next run started from StageSelect.
+// Existing runs are not affected.
+//
+// Per-stage fields (each entry below uses this same set of parameters):
+// - display_name:               Stage name shown in the UI
+// - enemy_types:                Whitelist of EnemyType variants that may spawn in this stage
+// - enemy_hp_multiplier:        Multiplier applied to enemy HP (stacks with difficulty scaling)
+// - enemy_speed_multiplier:     Multiplier applied to enemy movement speed
+// - spawn_interval_multiplier:  Multiplier applied to the spawn interval
+//                               (< 1.0 → shorter interval → more frequent spawns)
+// - max_enemies_multiplier:     Multiplier applied to the maximum simultaneous enemy count
+// - boss_hp_multiplier:         Multiplier applied to Boss Death's HP
+// - boss_speed_multiplier:      Multiplier applied to Boss Death's movement speed
+//
+// Stage difficulty overview:
+// - mad_forest:     Beginner — slow, fragile enemies. Baseline ×1.0.
+// - inlaid_library: Intermediate — tanky zombies and evasive ghosts. HP ×1.2, speed ×1.1.
+// - dairy_plant:    Advanced — high-damage demons and ranged medusas. HP ×1.5, speed ×1.2.
+
+StageConfig(
+    mad_forest: (
+        display_name: "Mad Forest",
+        enemy_types: [Bat, Skeleton],
+        enemy_hp_multiplier: 1.0,
+        enemy_speed_multiplier: 1.0,
+        spawn_interval_multiplier: 1.0,
+        max_enemies_multiplier: 1.0,
+        boss_hp_multiplier: 1.0,
+        boss_speed_multiplier: 1.0,
+    ),
+    inlaid_library: (
+        display_name: "Inlaid Library",
+        enemy_types: [Zombie, Ghost],
+        enemy_hp_multiplier: 1.2,
+        enemy_speed_multiplier: 1.1,
+        spawn_interval_multiplier: 0.9,
+        max_enemies_multiplier: 1.1,
+        boss_hp_multiplier: 1.2,
+        boss_speed_multiplier: 1.1,
+    ),
+    dairy_plant: (
+        display_name: "Dairy Plant",
+        enemy_types: [Demon, Medusa],
+        enemy_hp_multiplier: 1.5,
+        enemy_speed_multiplier: 1.2,
+        spawn_interval_multiplier: 0.8,
+        max_enemies_multiplier: 1.2,
+        boss_hp_multiplier: 1.5,
+        boss_speed_multiplier: 1.2,
+    ),
+)

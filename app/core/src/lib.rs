@@ -16,7 +16,7 @@ use events::{
 use materials::GlowMaterialPlugin;
 use resources::{
     EnemySpawner, GameData, GameSettings, LevelUpChoices, MetaProgress, PendingUpgradeIndex,
-    SelectedCharacter, SpatialGrid, TreasureSpawner,
+    SelectedCharacter, SelectedStage, SpatialGrid, TreasureSpawner,
 };
 use states::AppState;
 use systems::{
@@ -81,6 +81,7 @@ impl Plugin for GameCorePlugin {
             .insert_resource(LevelUpChoices::default())
             .insert_resource(PendingUpgradeIndex::default())
             .insert_resource(SelectedCharacter::default())
+            .insert_resource(SelectedStage::default())
             // ---------------------------------------------------------------
             // Persistent meta-progression (loaded from save/meta.json)
             // ---------------------------------------------------------------
@@ -119,6 +120,13 @@ impl Plugin for GameCorePlugin {
             .add_systems(
                 OnTransition {
                     exited: AppState::CharacterSelect,
+                    entered: AppState::Playing,
+                },
+                reset_per_run_resources,
+            )
+            .add_systems(
+                OnTransition {
+                    exited: AppState::StageSelect,
                     entered: AppState::Playing,
                 },
                 reset_per_run_resources,

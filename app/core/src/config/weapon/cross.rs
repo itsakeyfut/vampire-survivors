@@ -12,10 +12,8 @@ use serde::Deserialize;
 
 const DEFAULT_SPREAD_ANGLE_DEG: f32 = 30.0;
 const DEFAULT_COLLIDER_RADIUS: f32 = 8.0;
-const DEFAULT_DAMAGE_BY_LEVEL: &[f32] =
-    &[50.0, 60.0, 70.0, 80.0, 90.0, 110.0, 130.0, 160.0];
-const DEFAULT_SPEED_BY_LEVEL: &[f32] =
-    &[300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 430.0, 460.0];
+const DEFAULT_DAMAGE_BY_LEVEL: &[f32] = &[50.0, 60.0, 70.0, 80.0, 90.0, 110.0, 130.0, 160.0];
+const DEFAULT_SPEED_BY_LEVEL: &[f32] = &[300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 430.0, 460.0];
 const DEFAULT_MAX_RANGE_BY_LEVEL: &[f32] =
     &[150.0, 160.0, 175.0, 190.0, 205.0, 220.0, 235.0, 250.0];
 const DEFAULT_COUNT_BY_LEVEL: &[u32] = &[1, 1, 1, 1, 2, 2, 2, 2];
