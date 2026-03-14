@@ -89,6 +89,17 @@ pub fn save_meta_on_shop_exit(meta: Res<MetaProgress>) {
 }
 
 // ---------------------------------------------------------------------------
+// GameSettings auto-save
+// ---------------------------------------------------------------------------
+
+/// Saves [`GameSettings`] to `save/settings.json` when the player exits the
+/// [`crate::states::AppState::Settings`] screen.
+pub fn save_settings_on_exit(settings: Res<GameSettings>) {
+    info!("Saving settings (settings screen exit)…");
+    settings.save();
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -170,15 +181,4 @@ mod tests {
         let meta = app.world().resource::<MetaProgress>();
         assert_eq!(meta.total_gold, u32::MAX, "should saturate at u32::MAX");
     }
-}
-
-// ---------------------------------------------------------------------------
-// GameSettings auto-save
-// ---------------------------------------------------------------------------
-
-/// Saves [`GameSettings`] to `save/settings.json` when the player exits the
-/// [`crate::states::AppState::Settings`] screen.
-pub fn save_settings_on_exit(settings: Res<GameSettings>) {
-    info!("Saving settings (settings screen exit)…");
-    settings.save();
 }
